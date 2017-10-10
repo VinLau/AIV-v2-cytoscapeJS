@@ -1,0 +1,17 @@
+/*
+ * Bootstrap overrides 
+ * Author: Asher
+ * Date: July 2017
+ */
+
+.navbar-nav > li > a {
+	padding-top: 22px;
+}
+
+#cy {
+	height: 800px;
+	width: 100%;
+	position: relative;
+	z-index: 999;
+}
+
