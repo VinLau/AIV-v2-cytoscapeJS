@@ -1,157 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="description" content="Arabidopsis Interactions Viewer 2.0">
-		<meta name="viewport" content="width=device-width, shrink-to-fit=no, initial-scale=1">
-		<title>Arabidopsis Interactions Viewer (AIV) 2. </title>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="Arabidopsis Interactions Viewer 2.0">
+        <meta name="viewport" content="width=device-width, shrink-to-fit=no, initial-scale=1">
+        <title>Arabidopsis Interactions Viewer (AIV) 2.0 </title>
 
-		<!-- Latest compiled and minified CSS -->
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-		
-		<!-- jQuery library -->
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-	
-	  	<!-- Latest compiled and minified JavaScript -->
-		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+              integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
-		<!-- Side bar -->
-		<!-- Acknowledgement: https://blackrockdigital.github.io/startbootstrap-simple-sidebar/ -->
-		<link rel="stylesheet" href="styles/simple-sidebar.css"> 
-		
-		<!-- Stylesheet for AIV 2.0 -->
-		<link rel="stylesheet" href="styles/aiv.css">
+        <!-- jQuery library -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-		<!-- Cytoscape -->
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.1.4/cytoscape.min.js" integrity="sha256-j3gF/jWVW36Y45OocaTinmpLUIc8VhO31YlQE43AeRM=" crossorigin="anonymous"></script>
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+                integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
-		<!-- Layout -->
-		<script src="https://cdn.rawgit.com/maxkfranz/weaver/v1.2.0/dist/weaver.min.js"></script>
-		<script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-spread/1.3.0/cytoscape-spread.js"></script>
+        <!-- Side bar -->
+        <!-- Acknowledgement: https://blackrockdigital.github.io/startbootstrap-simple-sidebar/ -->
+        <link rel="stylesheet" href="styles/simple-sidebar.css">
 
-	</head>
+        <!-- Stylesheet for AIV 2.0 -->
+        <link rel="stylesheet" href="styles/aiv.css">
 
-	<body>
-		<nav class="navbar navbar-default">
-			<div class="container-fluid">
-				<div class="navbar-header">
-					<a href="//bar.utoronto.ca"><img src="//bar.utoronto.ca/BAR/images/BAR.png" id="logo" class="img-responsive center-block"></a>
-				</div>
-				<ul class="nav navbar-nav">
-					<li><h3 class="active">Arabidopsis Interactions Viewer 2.0</h3></li>
-					<li><a id="settings" href="#">Show/Hide Settings</a></li>
-					<li><a id="showLegendModal" href="#">Legend</a></li>
-					<li><a id="showAboutModal" href="#">About AIV</a></li>
-				</ul>
-			</div>
-		</nav>
-		<div id="wrapper" class="toggled">
-			<div id="sidebar-wrapper">
-				<form id="input_form">
-					<div class="form-group">
-						<label for="genes">Please enter a list of genes:</label>
-						<textarea class="form-control" row="20" id="genes"></textarea>
-						<br>
-						<p>Select options:</p>
-						
-						<div class="checkbox">
-						<label><input type="checkbox" id="filter" value="">Filter output to include only AGI IDs in input set</label>
-						</div>
-						
-						<div class="checkbox">
-						<label><input id="published" type="checkbox" value="">Show only interactions from published data sets</label>
-						</div>
-						
-						<div class="checkbox">
-						<label><input type="checkbox" value="">Query MapMan for additional protein information</label>
-						</div>
-						
-						<div class="checkbox">
-						<label><input id="recursive" type="checkbox" value="">Search for interactions between interactors</label>
-						</div>
+        <!-- Cytoscape -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.3/cytoscape.min.js"
+                integrity="sha256-QhzYeiC5pY6ik5/W5PxuvmooABk44UR+vVW4N8GHytc=" crossorigin="anonymous"></script>
 
-						<p>Select databases to query:</p>
-						
-						<div class="checkbox">
-							<label><input type="checkbox" value="">Query interactions from BioGrid</label>
-						</div>
-						
-						<div class="checkbox">
-							<label><input type="checkbox" value="">Query interactions from IntAct</label>
-						</div>
-	
-						<div class="checkbox">
-							<label><input type="checkbox" value="" checked="checked">Query protein-protein interactions from BAR</label>
-						</div>
-						
-						<div class="checkbox">
-							<label><input id="queryDna" type="checkbox" value="">Query protein-DNA interactions from BAR</label>
-						</div>
-					
-						<hr>	
-						<div class="row">
+        <!-- Layout -->
+        <script src="https://cdn.rawgit.com/maxkfranz/weaver/v1.2.0/dist/weaver.min.js"></script>
+        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-spread/9ce8be33/cytoscape-spread.js"></script>
 
-							<div class="col-md-4">
-								<input type="submit" id="submit" class="btn btn-success center-block" value="Submit">
-							</div>
+        <!-- To simplify coding TODO: Remove this during launch -->
+        <script src="http://livejs.com/live.js"></script>
 
-							<div class="col-md-4">
-								<input type="reset" class="btn btn-success center-block" value="Reset">
-							</div>
-							
-							<div class="col-md-4">
-								<button type="button" class="btn btn-success center-block" id="example">Example</button>
-							</div>
-						</div>
-					</div>
-				</form>
-			</div> <!-- sibebar wrapper -->
-			
-			<!-- Page content -->
-			<div id="page-content-wrapper">
-				Welcome to AIV 2.0!
-				<div id="cy"></div>
-			</div> <!-- Page content -->
+    </head>
 
-		</div> <!-- wrapper -->
+    <body>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a href="//bar.utoronto.ca"><img src="//bar.utoronto.ca/BAR/images/BAR.png" id="logo" class="img-responsive center-block"></a>
+                </div>
+                <ul class="nav navbar-nav">
+                    <li><h3 class="active">Arabidopsis Interactions Viewer 2.0</h3></li>
+                    <li><a id="settings" href="#">Show/Hide Settings</a></li>
+                    <li><a id="showLegendModal" href="#">Legend</a></li>
+                    <li><a id="showAboutModal" href="#">About AIV</a></li>
+                </ul>
+            </div>
+        </nav>
+        <div id="wrapper" class="toggled">
+            <div id="sidebar-wrapper">
+                <form id="input_form">
+                    <div class="form-group">
+                        <label for="genes">Please enter a list of genes:</label>
+                        <textarea class="form-control" row="20" id="genes"></textarea>
+                        <br>
+                        <p>Select options:</p>
 
-		<!-- Modals -->
-		<!-- About -->
-		<div id="AboutModal" class="modal fade">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4>About AIV 2.0</h4>
-					</div>
-					<div class="modal-body">
-						<p>The Arabidopsis Interactions Viewer queries a database of 70944 predicted and 36352 confirmed Arabidopsis interacting proteins. The predicted interactions (interologs) were generated by Drs Matt Geisler and Jane Geisler-Lee at the Southern Illinois University. Their current version is Interactome 2.0. The confirmed Arabidopsis interacting proteins come from BIND, the Biomolecular Interaction Network Database, from high-density Arabidopsis protein microarrays (Popescu et al., 2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. These localisations do not include predicted localisations. Additional protein function data is from MapMan.</p>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-			</div>
-		</div> <!-- About AIV 2.0 -->
-		
-		<!-- Legend -->
-		<div id="LegendModal" class="modal fade">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4>Legend</h4>
-					</div>
-					<div class="modal-body">
-						<img src="images/legendAIV.png" alt="Legend">
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-			</div>
-		</div> <!-- Legend -->
+                        <div class="checkbox">
+                            <label><input type="checkbox" id="filter" value="">Filter output to include only AGI IDs in input set</label>
+                        </div>
 
-	</body>
-	<!-- AIV 2.0 JS -->
-	<script src="scripts/aiv.js"></script>
+                        <div class="checkbox">
+                            <label><input id="published" type="checkbox" value="">Show only interactions from published data sets</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label><input type="checkbox" value="">Query MapMan for additional protein information</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label><input id="recursive" type="checkbox" value="">Search for interactions between interactors</label>
+                        </div>
+
+                        <p>Select databases to query:</p>
+
+                        <div class="checkbox">
+                            <label><input type="checkbox" value="">Query interactions from BioGrid</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label><input type="checkbox" value="">Query interactions from IntAct</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label><input type="checkbox" value="" checked="checked">Query protein-protein interactions from BAR</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label><input id="queryDna" type="checkbox" value="">Query protein-DNA interactions from BAR</label>
+                        </div>
+
+                        <hr>
+                        <div class="row">
+
+                            <div class="col-md-4">
+                                <input type="submit" id="submit" class="btn btn-success center-block" value="Submit">
+                            </div>
+
+                            <div class="col-md-4">
+                                <input type="reset" class="btn btn-success center-block" value="Reset">
+                            </div>
+
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-success center-block" id="example">Example</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div> <!-- sibebar wrapper -->
+
+            <!-- Page content -->
+            <div id="page-content-wrapper">
+                Welcome to AIV 2.0!
+                <div id="cy"></div>
+            </div> <!-- Page content -->
+
+        </div> <!-- wrapper -->
+
+        <!-- Modals -->
+        <!-- About -->
+        <div id="AboutModal" class="modal fade">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4>About AIV 2.0</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>The Arabidopsis Interactions Viewer queries a database of 70944 predicted and 36352 confirmed Arabidopsis interacting
+                            proteins. The predicted interactions (interologs) were generated by Drs Matt Geisler and Jane Geisler-Lee at the Southern
+                            Illinois University. Their current version is Interactome 2.0. The confirmed Arabidopsis interacting proteins come from
+                            BIND, the Biomolecular Interaction Network Database, from high-density Arabidopsis protein microarrays (Popescu et al.,
+                            2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein
+                            INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several
+                            different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to
+                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. All subcellular
+                            localisation data is from SUBA, the Arabidopsis Subcellular Database. These localisations do not include predicted
+                            localisations. Additional protein function data is from MapMan.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- About AIV 2.0 -->
+
+        <!-- Legend -->
+        <div id="LegendModal" class="modal fade">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4>Legend</h4>
+                    </div>
+                    <div class="modal-body">
+                        <img src="images/legendAIV.png" alt="Legend">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- Legend -->
+
+    </body>
+    <!-- AIV 2.0 JS -->
+    <script src="scripts/aiv.js"></script>
 </html>
 

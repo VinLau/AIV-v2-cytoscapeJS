@@ -1,6 +1,6 @@
 /*
  * AIV 2.0
- * By Asher Pasha, et al. 2017 asdasdasdasasdasddasasdasdasdds
+ * By Asher Pasha and Vincent Lau, et al. 2017
  *
  */
 (function(window, $, cytoscape, undefined) {
@@ -62,7 +62,7 @@
 				if (typeof AIV.cy !== 'undefined') {
 					AIV.cy.destroy();
 				}
-				AIV.intializeCy();
+				AIV.initializeCy();
 
 				AIV.loadData();
 			} else {
@@ -70,14 +70,14 @@
 			}
 		});
 
-		// Set height of genes textbox 
+		// Set height of genes textbox TODO: reformat this with responsive CSS instead of jQuery
 		var genesHeight = $(window).height() - 530;
 		if (genesHeight > 0) {
 			$('#genes').css('height', genesHeight + 'px');
 		}
 	};
 
-	/** 
+	/**
 	 * Returns layout for Cytoscape
 	 */
 	AIV.getCyLayout = function() {
@@ -93,11 +93,11 @@
 	 * Returns style of Cytoscape
 	 */
 	AIV.getCyStyle = function() {
-		let style = {};
-		style = cytoscape.stylesheet()
+		return (
+		    cytoscape.stylesheet()
   			.selector('node')
   				.style({
-  				  'content': 'data(name)',
+  				  'label': 'data(name)', //'label' is alias for 'content'
 				  'font-size': 8,
   				  'background-color': '#ea8a31'
   				})
@@ -119,16 +119,16 @@
 					'shape': 'hexagon',
 					'background-color': '#00FF00'
 				})
-		return style;
+        );
 	};
 
 
 	/**
 	 * Initailize Cytoscape
 	 */
-	AIV.intializeCy = function() {
+	AIV.initializeCy = function() {
 		this.cy = cytoscape({
-  			container: document.querySelector('#cy'),
+  			container: document.getElementById('cy'),
 
   			boxSelectionEnabled: false,
 
@@ -160,7 +160,7 @@
 	/**
 	 * Get Colour
 	 */
-	AIV.getColor = function(correlation_coefficient, published, index) {
+	AIV.getEdgeColor = function(correlation_coefficient, published, index) {
 		correlation_coefficient = Math.abs(parseFloat(correlation_coefficient)); // Make the value positive
 		if (index == '2') {
 			return '#557e00';
@@ -189,7 +189,7 @@
 		
 		// Add the node
 		this.cy.add([
-			{ group: "nodes", data: {id: node_id, name: node}}
+			{ group: "nodes", data: {id: node_id, name: node}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
 		]);
 		
 		// Add class
@@ -216,7 +216,7 @@
 			// Add Query node
 			this.addNode(this.genesList[i], 'Protein');
 
-			let dataSubset = data[this.genesList[i]];
+			let dataSubset = data[this.genesList[i]]; //'[]' expression to access an object property
 
 			console.log(dataSubset);
 
@@ -224,7 +224,7 @@
 			for (var j = 0; j < dataSubset.length - 1; j++) {
 				let typeSource = '';
 				let typeTarget = '';
-				let colour = '#000000';	 // Default color of Black
+				let edgeColour = '#000000';	 // Default color of Black
 				let style = 'solid';
 				let width = '5';
 				
@@ -233,7 +233,7 @@
 					typeSource = 'Protein';
 				} else {
 					typeSource = 'Effector';
-				} 
+				}
 
 				// Target
 				if (dataSubset[j].target.match(/^At/i)) {
@@ -247,7 +247,7 @@
 				}
 
 				// Get color
-				colour = this.getColor(dataSubset[j].correlation_coefficient, dataSubset[j].published, dataSubset[j].index);
+				edgeColour = this.getEdgeColor(dataSubset[j].correlation_coefficient, dataSubset[j].published, dataSubset[j].index);
 
 				// Get Line Style
 				style = ((dataSubset[j].interolog_confidence <= 2 && dataSubset[j].interolog_confidence > 0) ? "dashed" : "solid");
@@ -265,10 +265,10 @@
 				if (this.filter) {
 					// If both source and target are in gene list, add
 					if ($.inArray(dataSubset[j].source, AIV.genesList) >= 0 && $.inArray(dataSubset[j].target, AIV.genesList >= 0)) {
-						this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, colour, style, width);
+						this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width);
 					}
 				} else {
-					this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, colour, style, width);
+					this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width);
 				}
 			}
 		}
@@ -324,7 +324,7 @@
 			AIV.filter = false;
 		}
 
-		var serviceURL = 'http://bar.utoronto.ca/~vlau/new_aiv/cgi-bin/get_interactions_dapseq.php' + req;
+		var serviceURL = 'http://bar.utoronto.ca/~vlau/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
 
 		$.ajax({
 			url: serviceURL,
@@ -346,5 +346,3 @@
 		AIV.initialize();
 	});
 })(window, jQuery, cytoscape);
-
-
