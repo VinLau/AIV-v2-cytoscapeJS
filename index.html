@@ -13,7 +13,7 @@
         <!-- jQuery library -->
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-        <!-- Latest compiled and minified JavaScript -->
+        <!-- Latest compiled and minified Bootstrap Javascript -->
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
                 integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
@@ -32,8 +32,13 @@
         <script src="https://cdn.rawgit.com/maxkfranz/weaver/v1.2.0/dist/weaver.min.js"></script>
         <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-spread/9ce8be33/cytoscape-spread.js"></script>
 
+        <!-- qtip2 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.js" integrity="sha256-a+PRq3NbyK3G08Boio9X6+yFiHpTSIrbE7uzZvqmDac=" crossorigin="anonymous"></script>
+        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-qtip/02ebf16c/cytoscape-qtip.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css"/>
+
         <!-- To simplify coding TODO: Remove this during launch -->
-        <script src="http://livejs.com/live.js"></script>
+        <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
 
     </head>
 
@@ -87,11 +92,11 @@
                         </div>
 
                         <div class="checkbox">
-                            <label><input type="checkbox" value="" checked="checked">Query protein-protein interactions from BAR</label>
+                            <label><input type="checkbox" value="" checked>Query protein-protein interactions from BAR</label>
                         </div>
 
                         <div class="checkbox">
-                            <label><input id="queryDna" type="checkbox" value="">Query protein-DNA interactions from BAR</label>
+                            <label><input id="queryDna" type="checkbox" value="" checked >Query protein-DNA interactions from BAR</label>
                         </div>
 
                         <hr>

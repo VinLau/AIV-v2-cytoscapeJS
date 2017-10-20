@@ -15,3 +15,11 @@
 	z-index: 999;
 }
 
+.qtip-tipped > .qtip-titlebar {
+	font-size: 1.1rem;
+}
+
+.qtip-tipped > .qtip-content {
+  font-family: "Bodoni MT", "Arial Black", "arial", "sans-serif";
+  font-size: 1.75rem;
+}

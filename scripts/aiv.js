@@ -23,7 +23,7 @@
 	AIV.bindUIEvents = function() {
 		// Example button 
 		$('#example').click(function() {
-			$('#genes').val("At5g20920\nAt2g34970");
+			$('#genes').val("AT5G20920\nAT2G34970\nAT1G04880");
 		});
 
 		// Settings button 
@@ -164,7 +164,7 @@
 		correlation_coefficient = Math.abs(parseFloat(correlation_coefficient)); // Make the value positive
 		if (index == '2') {
 			return '#557e00';
-		} else if (published) {
+		} else if (published) { //published PPIs not published PDIs
 			return '#99cc00';
 		} else if (correlation_coefficient > 0.8) {
 			return '#ac070e';
@@ -179,7 +179,13 @@
 		} else {
 			return '#000000';
 		}
-	}
+	};
+
+	AIV.modifyProString = function(string) {
+	    var newString = string.replace(/PROTEIN_/gi, '');
+	    newString = newString.toUpperCase();
+	    return newString;
+    };
 
 	/**
 	 * Add Nodes
@@ -207,6 +213,33 @@
 			{ group: "edges", data: { id: edge_id, source: source, target: target, edgeColor: colour, edgeStyle: style, edgeWidth: width }}
 		]);
 	};
+
+    AIV.addProteinNodeQtips = function() {
+        this.cy.nodes().filter('[id^="Protein"]').forEach(function(node) {
+            node.qtip(
+                {
+                    content : { text : "Protein " + node.data("name") } ,
+                    style   : { classes : 'qtip-bootstrap'},
+                }
+            );
+        });
+    };
+
+    AIV.addPPIEdgeQtips = function() {
+        var that = this;
+        this.cy.edges().filter('[source^="Protein"][target^="Protein"]').forEach(function (edge){ //TODO: add another filter for interolog confidence (see checklist on Trello)
+            edge.qtip(
+                {
+                    content:
+                        {
+                            title: "Edge " + edge.data("source") + " to " + edge.data("target"),
+                            text : "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + that.modifyProString(edge.data("source")) + "&id2=" + that.modifyProString(edge.data("target")) + "' target='_blank' " + "style='color:" + edge.data('edgeColor') + ";'" + "> Predicted Structural Interaction </a>"
+                        },
+                    style  : { classes : 'qtip-tipped' }
+                }
+            );
+        });
+    };
 
 	/**
 	 * This function parses interactions data
@@ -275,9 +308,11 @@
 
 		
 		// Need to update style after adding
+        this.addProteinNodeQtips();
+		this.addPPIEdgeQtips();
 		this.cy.style(this.getCyStyle()).update();
 		this.cy.layout(this.getCyLayout()).run();
-	}
+	};
 
 	/** 
 	 * Load data main function
