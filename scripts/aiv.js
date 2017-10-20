@@ -23,7 +23,7 @@
 	AIV.bindUIEvents = function() {
 		// Example button 
 		$('#example').click(function() {
-			$('#genes').val("AT5G20920\nAT2G34970\nAT1G04880");
+			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880");
 		});
 
 		// Settings button 
@@ -181,12 +181,6 @@
 		}
 	};
 
-	AIV.modifyProString = function(string) {
-	    var newString = string.replace(/PROTEIN_/gi, '');
-	    newString = newString.toUpperCase();
-	    return newString;
-    };
-
 	/**
 	 * Add Nodes
 	 */
@@ -215,15 +209,46 @@
 	};
 
     AIV.addProteinNodeQtips = function() {
-        this.cy.nodes().filter('[id^="Protein"]').forEach(function(node) {
-            node.qtip(
+        this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
+            var protein = event.target;
+            protein.qtip(
                 {
-                    content : { text : "Protein " + node.data("name") } ,
-                    style   : { classes : 'qtip-bootstrap'},
+                    overwrite: false, //make sure tooltip won't be overriden once created
+                    content  : { text : "Protein " + protein.data("name") } ,
+                    style    : { classes : 'qtip-bootstrap q-tip-protein-node'},
+                    show:
+                        {
+                            solo : true,
+                            event: `${event.type}`, // Use the same show event as triggered event handler
+                            ready: true, // Show the tooltip immediately upon creation
+                        },
+                    hide : { event : 'mouseout'}
                 }
             );
         });
     };
+
+    AIV.addEffectorNodeQtips = function() {
+        this.cy.on('mouseover', 'node[id^="Effector"]', function(event) {
+            var effector = event.target;
+            effector.qtip(
+                {
+                    overwrite: false, //make sure tooltip won't be overriden once created
+                    content  : { text : "Effector " + effector.data("name") } ,
+                    style    : { classes : 'qtip-bootstrap q-tip-effector-node'},
+                    show:
+                        {
+                            solo : true,
+                            event: `${event.type}`, // Use the same show event as triggered event handler
+                            ready: true, // Show the tooltip immediately upon creation
+                        },
+                    hide : { event : 'mouseout'}
+                }
+            );
+        });
+    };
+
+    AIV.modifyProString = string => string.replace(/PROTEIN_/gi, '').toUpperCase();
 
     AIV.addPPIEdgeQtips = function() {
         var that = this;
@@ -233,7 +258,7 @@
                     content:
                         {
                             title: "Edge " + edge.data("source") + " to " + edge.data("target"),
-                            text : "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + that.modifyProString(edge.data("source")) + "&id2=" + that.modifyProString(edge.data("target")) + "' target='_blank' " + "style='color:" + edge.data('edgeColor') + ";'" + "> Predicted Structural Interaction </a>"
+                            text : "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + that.modifyProString(edge.data("source")) + "&id2=" + that.modifyProString(edge.data("target")) + "' target='_blank'> Predicted Structural Interaction </a>"
                         },
                     style  : { classes : 'qtip-tipped' }
                 }
@@ -310,6 +335,7 @@
 		// Need to update style after adding
         this.addProteinNodeQtips();
 		this.addPPIEdgeQtips();
+		this.addEffectorNodeQtips();
 		this.cy.style(this.getCyStyle()).update();
 		this.cy.layout(this.getCyLayout()).run();
 	};

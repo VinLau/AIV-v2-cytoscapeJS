@@ -23,3 +23,11 @@
   font-family: "Bodoni MT", "Arial Black", "arial", "sans-serif";
   font-size: 1.75rem;
 }
+
+.qtip-bootstrap.q-tip-effector-node {
+  background-color: lightcyan;
+}
+
+.qtip-bootstrap.q-tip-protein-node {
+  background-color: lemonchiffon;
+}
