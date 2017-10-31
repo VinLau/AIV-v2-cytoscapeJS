@@ -103,13 +103,15 @@
   				})
   			.selector('edge')
   				.style({
-  				  'curve-style': 'haystack',
+  				  'curve-style': 'data(curveStyle)',
 				  'haystack-radius': 0,
 				  'width': 'data(edgeWidth)',
 				  'opacity': 0.666,
 				  'line-color': 'data(edgeColor)',
-				  'line-style': 'data(edgeStyle)'
-  				})
+				  'line-style': 'data(edgeStyle)',
+				  'control-point-distances' : '50', // only for unbunlded-bezier edges (DNA edges)
+				  'control-point-weights'   : '0.65',
+                })
 			.selector('.DNA')
 				.style({
 					'shape': 'square'
@@ -143,29 +145,31 @@
 	/** 
 	 * Get Edge Style
 	 */
-	AIV.getWidth = function(interolog_confidence) {
-		if (interolog_confidence > 10) {
-			return '4';
-		} else if (interolog_confidence > 5) {
+	AIV.getWidth = function(interolog_confidence) { // Changed return values to 5,4,3,2,1 from 4,3,2,1,1
+		if (interolog_confidence > 10 || (interolog_confidence >= -1 && interolog_confidence <= -2401)){
+			return '7';
+		} else if (interolog_confidence > 5 || (interolog_confidence > -2401 && interolog_confidence <= -4802)) {
+			return '5';
+		} else if (interolog_confidence > 2 || (interolog_confidence > -4802 && interolog_confidence <= -7203)) {
 			return '3';
-		} else if (interolog_confidence > 2) {
-			return '2';
-		} else if (interolog_confidence <= 2 && interolog_confidence > 0) {
+		} else if (interolog_confidence <= 2 && interolog_confidence > 0 || (interolog_confidence > -7203 && interolog_confidence <= -9605)) {
 			return '1';
-		} else {
-			return '1';
+		} else { //i.e. interlog confidence of '0',
+			return '10';
 		}
-	}
+	};
 
 	/**
 	 * Get Colour
 	 */
-	AIV.getEdgeColor = function(correlation_coefficient, published, index) {
+	AIV.getEdgeColor = function(correlation_coefficient, published, index, interolog_confidence) {
 		correlation_coefficient = Math.abs(parseFloat(correlation_coefficient)); // Make the value positive
-		if (index == '2') {
+		if (index === '2') {
 			return '#557e00';
 		} else if (published) { //published PPIs not published PDIs
 			return '#99cc00';
+		} else if (interolog_confidence < 0){
+			return '#041959';
 		} else if (correlation_coefficient > 0.8) {
 			return '#ac070e';
 		} else if (correlation_coefficient > 0.7) {
@@ -192,19 +196,36 @@
 			{ group: "nodes", data: {id: node_id, name: node}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
 		]);
 		
-		// Add class
+		// Add class such that .Protein, .DNA, .Effector
 		this.cy.$('#' + node_id).addClass(type);
 	};
 
 	/** 
 	 * Add edges
 	 */
-	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width) {
+	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published) {
 		let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
+		if (reference !== "None"){
+			console.log(reference, " ", width);
+		}
 		this.cy.add([
-			{ group: "edges", data: { id: edge_id, source: source, target: target, edgeColor: colour, edgeStyle: style, edgeWidth: width }}
+			{
+				group: "edges",
+				data:
+				{
+					id: edge_id,
+					source: source,
+					target: target,
+					edgeColor: colour,
+					edgeStyle: style,
+					edgeWidth: width,
+					published: published,
+					reference: published ? reference : false,
+					curveStyle: typeTarget === "DNA" ? "unbundled-bezier" : "haystack",
+				},
+			}
 		]);
 	};
 
@@ -250,20 +271,41 @@
 
     AIV.modifyProString = string => string.replace(/PROTEIN_/gi, '').toUpperCase();
 
+    AIV.showDockerLink = (source, target, DOIorPMID, published) => {
+        if (!published) {
+            return "";
+        }
+        else {
+            return "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + AIV.modifyProString(source) + "&id2=" + AIV.modifyProString(target) + "' target='_blank'> " +
+					"Predicted Structural Interaction " +
+				"</a>" +
+				"<span>" +
+                	DOIorPMID +
+				"</span>";
+        }
+    };
+
     AIV.addPPIEdgeQtips = function() {
         var that = this;
-        this.cy.edges().filter('[source^="Protein"][target^="Protein"]').forEach(function (edge){ //TODO: add another filter for interolog confidence (see checklist on Trello)
-            edge.qtip(
-                {
+        this.cy.on('mouseover', 'edge[source^="Protein"][target^="Protein"]', function(event){
+        	var ppiEdge = event.target;
+        	ppiEdge.qtip(
+				{
                     content:
                         {
-                            title: "Edge " + edge.data("source") + " to " + edge.data("target"),
-                            text : "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + that.modifyProString(edge.data("source")) + "&id2=" + that.modifyProString(edge.data("target")) + "' target='_blank'> Predicted Structural Interaction </a>"
+                            title: "Edge " + ppiEdge.data("source") + " to " + ppiEdge.data("target"),
+                            text : that.showDockerLink( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('published') ),
                         },
-                    style  : { classes : 'qtip-tipped' }
-                }
-            );
-        });
+                    style  : { classes : 'qtip-bootstrap' },
+                    show:
+                        {
+                            solo : true,
+                            event: `${event.type}`, // Use the same show event as triggered event handler
+                        },
+                    hide : { event : 'mouseout'}
+				}
+			);
+		});
     };
 
 	/**
@@ -305,7 +347,7 @@
 				}
 
 				// Get color
-				edgeColour = this.getEdgeColor(dataSubset[j].correlation_coefficient, dataSubset[j].published, dataSubset[j].index);
+				edgeColour = this.getEdgeColor(dataSubset[j].correlation_coefficient, dataSubset[j].published, dataSubset[j].index, dataSubset[j].interolog_confidence);
 
 				// Get Line Style
 				style = ((dataSubset[j].interolog_confidence <= 2 && dataSubset[j].interolog_confidence > 0) ? "dashed" : "solid");
@@ -323,10 +365,10 @@
 				if (this.filter) {
 					// If both source and target are in gene list, add
 					if ($.inArray(dataSubset[j].source, AIV.genesList) >= 0 && $.inArray(dataSubset[j].target, AIV.genesList >= 0)) {
-						this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width);
+						this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width, dataSubset[j].reference, dataSubset[j].published);
 					}
 				} else {
-					this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width);
+					this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width, dataSubset[j].reference, dataSubset[j].published);
 				}
 			}
 		}
