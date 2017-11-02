@@ -23,7 +23,7 @@
 	AIV.bindUIEvents = function() {
 		// Example button 
 		$('#example').click(function() {
-			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880");
+			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880\nAT1G25420");
 		});
 
 		// Settings button 
@@ -196,9 +196,47 @@
 			{ group: "nodes", data: {id: node_id, name: node}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
 		]);
 		
-		// Add class such that .Protein, .DNA, .Effector
-		this.cy.$('#' + node_id).addClass(type);
-	};
+		this.cy.$('#' + node_id).addClass(type); // Add class such that .Protein, .DNA, .Effector
+    };
+
+	AIV.chromosomesAdded = {};
+
+	AIV.addDNANodesToAIVObj = function(DNAObjectData) {
+	    var chrNum = DNAObjectData.target.charAt(2).toUpperCase();
+	    var name = chrNum;
+
+	    if (chrNum === "M") {
+	        name = "Chloroplast";
+        }
+        else if (chrNum === "C"){
+	        name = "Mitochondria";
+        }
+
+        console.log("addDNANodes", DNAObjectData, "\n chrNum");
+	    if (AIV.chromosomesAdded.hasOwnProperty(chrNum)){ //i.e. if it was At2g04880 then it'd '2'
+            console.log("chromosome property already added");
+            AIV.chromosomesAdded[chrNum].push(DNAObjectData);
+            AIV.addChromosomeToCytoscape(DNAObjectData, chrNum, name);
+	    }
+        else {
+            AIV.chromosomesAdded[chrNum] = [];
+            AIV.chromosomesAdded[chrNum].push(DNAObjectData);
+        }
+    };
+
+	AIV.addChromosomeToCytoscape = function(DNAObject, chrNumber, chrName) {
+        this.cy.add(
+            {
+                group: "nodes",
+                data:
+                    {
+                        id: "Chr" + chrNumber,
+                        name: "Chr-" + chrName
+                    },
+                classes: 'DNA'
+            }
+        );
+    };
 
 	/** 
 	 * Add edges
@@ -357,10 +395,12 @@
 
 				if (this.filter) {
 					// It should automatically filter all
-				} else {
+				} else if (typeTarget === "Protein" || typeTarget === "Effector") {
 					this.addNode(dataSubset[j].source, typeSource);
 					this.addNode(dataSubset[j].target, typeTarget);
-				}
+				} else { //i.e. typeTarget === "DNA"
+				    this.addDNANodesToAIVObj(dataSubset[j]); //pass the DNA in the JSON format we GET on
+                }
 				
 				if (this.filter) {
 					// If both source and target are in gene list, add
