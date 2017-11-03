@@ -1,15 +1,15 @@
 /*
  * AIV 2.0
- * By Asher Pasha and Vincent Lau, et al. 2017
- *
+ * By Asher Pasha and Vincent Lau, 2017
  */
 (function(window, $, cytoscape, undefined) {
 	'use strict';
 
 	// The AIV namespace 
 	var AIV = {};
+    AIV.chromosomesAdded = {}; //Object property for'state' of how many PDI chromosomes exist
 
-	/**
+    /**
 	 * Initialize
 	 */
 	AIV.initialize = function() {
@@ -23,7 +23,7 @@
 	AIV.bindUIEvents = function() {
 		// Example button 
 		$('#example').click(function() {
-			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880\nAT1G25420");
+			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880\nAT1G25420\nAT5G43700");
 		});
 
 		// Settings button 
@@ -61,6 +61,7 @@
 				// Clear existing data
 				if (typeof AIV.cy !== 'undefined') {
 					AIV.cy.destroy();
+                    AIV.chromosomesAdded = {}; //clear existing built-in DNA data from previous query
 				}
 				AIV.initializeCy();
 
@@ -81,13 +82,14 @@
 	 * Returns layout for Cytoscape
 	 */
 	AIV.getCyLayout = function() {
-		// For now use spread layout
 		let layout = {};
 		layout.name = 'spread';
 		layout.minDist = 20;
-	
+		layout.padding = 1;
+        layout.boundingBox = {x1:0 , y1:55, w:this.cy.width(), h:this.cy.height()}; //set boundaries to allow for clearer PDIs (DNA nodes are ~55px and are locked to start at x:50,y:0)
+		// layout.stop = function() {}; //For manually adjusting position of nodes after layout is done
 		return layout;
-	}
+	};
 	
 	/**
 	 * Returns style of Cytoscape
@@ -97,24 +99,36 @@
 		    cytoscape.stylesheet()
   			.selector('node')
   				.style({
-  				  'label': 'data(name)', //'label' is alias for 'content'
-				  'font-size': 8,
-  				  'background-color': '#ea8a31'
-  				})
+					'label': 'data(name)', //'label' is alias for 'content'
+				  	'font-size': 8,
+				  	'background-color': '#ea8a31',
+                    "text-wrap": "wrap" //mulitline support
+                })
   			.selector('edge')
   				.style({
-  				  'curve-style': 'data(curveStyle)',
-				  'haystack-radius': 0,
-				  'width': 'data(edgeWidth)',
-				  'opacity': 0.666,
-				  'line-color': 'data(edgeColor)',
-				  'line-style': 'data(edgeStyle)',
-				  'control-point-distances' : '50', // only for unbunlded-bezier edges (DNA edges)
-				  'control-point-weights'   : '0.65',
+					'curve-style': 'data(curveStyle)',
+					'haystack-radius': 0,
+					'width': 'data(edgeWidth)',
+					'opacity': 0.666,
+					'line-color': 'data(edgeColor)',
+					'line-style': 'data(edgeStyle)',
+					'control-point-distances' : '50', // only for unbunlded-bezier edges (DNA edges)
+					'control-point-weights'   : '0.65',
+					'target-arrow-color' : '#1c1b1d',
+                    'target-arrow-shape': 'data(arrowEdges)',
                 })
 			.selector('.DNA')
 				.style({
-					'shape': 'square'
+                    'background-color': '#fed7ff',
+                    'font-size': '1.1em',
+                    "text-valign": "center",
+                    "text-halign": "center",
+					"border-style": "solid",
+					"border-color": "#fff72d",
+					"border-width": "2px",
+					'shape': 'square',
+					'height': '55px',
+					'width': '55px',
 				})
 			.selector('.Effector')
 				.style({
@@ -138,7 +152,7 @@
 
   			style: this.getCyStyle(),
 
-			layout: this.getCyLayout()
+			layout: {name: 'null'} //the init layout has 0 nodes so it doesn't matter what the layout is
 		});
 	};
 
@@ -155,7 +169,7 @@
 		} else if (interolog_confidence <= 2 && interolog_confidence > 0 || (interolog_confidence > -7203 && interolog_confidence <= -9605)) {
 			return '1';
 		} else { //i.e. interlog confidence of '0',
-			return '10';
+			return '11';
 		}
 	};
 
@@ -199,11 +213,9 @@
 		this.cy.$('#' + node_id).addClass(type); // Add class such that .Protein, .DNA, .Effector
     };
 
-	AIV.chromosomesAdded = {};
-
 	AIV.addDNANodesToAIVObj = function(DNAObjectData) {
-	    var chrNum = DNAObjectData.target.charAt(2).toUpperCase();
-	    var name = chrNum;
+	    var chrNum = DNAObjectData.target.charAt(2).toUpperCase(); //if it was At2g04880 then it'd '2'
+	    var name = chrNum; // Just for 'm' and 'c'
 
 	    if (chrNum === "M") {
 	        name = "Chloroplast";
@@ -212,15 +224,15 @@
 	        name = "Mitochondria";
         }
 
-        console.log("addDNANodes", DNAObjectData, "\n chrNum");
-	    if (AIV.chromosomesAdded.hasOwnProperty(chrNum)){ //i.e. if it was At2g04880 then it'd '2'
+        console.log("addDNANodes", DNAObjectData, "chrNum");
+	    if (AIV.chromosomesAdded.hasOwnProperty(chrNum)){
             console.log("chromosome property already added");
             AIV.chromosomesAdded[chrNum].push(DNAObjectData);
-            AIV.addChromosomeToCytoscape(DNAObjectData, chrNum, name);
 	    }
-        else {
+        else { // Adding chromosome to DOM as it does not exist on app yet
+            AIV.addChromosomeToCytoscape(DNAObjectData, chrNum, name);
             AIV.chromosomesAdded[chrNum] = [];
-            AIV.chromosomesAdded[chrNum].push(DNAObjectData);
+            AIV.chromosomesAdded[chrNum].push(DNAObjectData); /*NB: The DNA data edge is stored here in the AIV object property (for each chr) instead of storing it in the edges themselves*/
         }
     };
 
@@ -230,7 +242,7 @@
                 group: "nodes",
                 data:
                     {
-                        id: "Chr" + chrNumber,
+                        id: "DNA_Chr" + chrNumber,
                         name: "Chr-" + chrName
                     },
                 classes: 'DNA'
@@ -245,8 +257,8 @@
 		let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
-		if (reference !== "None"){
-			console.log(reference, " ", width);
+		if (reference !== "None"){ //TODO: remove this later
+			// console.log(reference, " ", width);
 		}
 		this.cy.add([
 			{
@@ -262,10 +274,83 @@
 					published: published,
 					reference: published ? reference : false,
 					curveStyle: typeTarget === "DNA" ? "unbundled-bezier" : "haystack",
-				},
+					arrowEdges: typeTarget === "DNA" ? "triangle" : "none",
+ 				},
 			}
 		]);
 	};
+
+	AIV.addNumberOfPDIsToNodeLabel = function () {
+        for (let chr of Object.keys(this.chromosomesAdded)) {
+        	let prevName = this.cy.getElementById(`DNA_Chr${chr}`).data('name');
+			this.cy.getElementById(`DNA_Chr${chr}`)
+				.data('name', `${prevName + "\n" + this.chromosomesAdded[chr].length} PDIs`);
+        }
+	};
+
+	AIV.setDNANodesPosition = function () {
+        var xCoord = 50;
+        var viewportWidth = this.cy.width();
+        var numOfChromosomes = Object.keys(this.chromosomesAdded).length; //for A. th. the max would be 7
+        for (let chr of Object.keys(this.chromosomesAdded)) {
+            this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: 0});
+            this.cy.getElementById(`DNA_Chr${chr}`).lock(); //hardset the position of the chr nodes
+            xCoord += viewportWidth/numOfChromosomes;
+        }
+    };
+
+	AIV.createPDItable = function (arrayPDIdata) {
+		var htmlTABLE = "<table><tbody><tr>";
+		var PDIsInChr = {};
+		var targets = [];
+		arrayPDIdata.forEach(function(PDI){ //populate local data to be used in another loop
+			console.log("start", PDI);
+			if (!PDIsInChr.hasOwnProperty(PDI.source)) {
+                PDIsInChr[PDI.source] = [];
+			}
+			PDIsInChr[PDI.source].push(PDI.target);
+			targets.push(PDI.target);
+		});
+		for (let protein of Object.keys(PDIsInChr)) { //add query proteins to the header of table
+			htmlTABLE += `<th>${protein}</th>`;
+		}
+        htmlTABLE += "<tr>";
+		targets.forEach(function(targetDNAGene){
+			htmlTABLE += "<tr>";
+			
+			htmlTABLE += "</tr>";
+		});
+		console.log("fin", PDIsInChr);
+        return htmlTABLE;
+    };
+
+	AIV.addChrNodeQtips = function () {
+        var that = this;
+        for (let chr of Object.keys(this.chromosomesAdded)){
+            console.log(this.chromosomesAdded[chr], `chr${chr}`);
+            this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function(event){
+                var chrNode = event.target;
+                console.log(`HI! You're hovering over chr ${chr}`);
+                chrNode.qtip(
+                    {
+                        content:
+                            {
+                                title : `Chromosome ${chr}`,
+                                text: that.createPDItable(that.chromosomesAdded[chr])
+                            },
+                        style    : { classes : 'qtip-cluetip'},
+                        show:
+                            {
+                                solo : true,
+                                event: `${event.type}`, // Same show event as triggered event handler
+                                ready: true, // Show the tooltip immediately upon creation
+                            },
+                        hide : { event : 'mousedown mouseout'}
+                    }
+                );
+            });
+        }
+    };
 
     AIV.addProteinNodeQtips = function() {
         this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
@@ -281,7 +366,7 @@
                             event: `${event.type}`, // Use the same show event as triggered event handler
                             ready: true, // Show the tooltip immediately upon creation
                         },
-                    hide : { event : 'mouseout'}
+                    hide : { event : 'mousedown mouseout'}
                 }
             );
         });
@@ -301,7 +386,7 @@
                             event: `${event.type}`, // Use the same show event as triggered event handler
                             ready: true, // Show the tooltip immediately upon creation
                         },
-                    hide : { event : 'mouseout'}
+                    hide : { event : 'mousedown mouseout'}
                 }
             );
         });
@@ -351,7 +436,7 @@
 	 */
 	AIV.parseInteractionsData = function(data) {
 		for (var i = 0; i < this.genesList.length; i++) {
-			// Add Query node
+			// Add Query node (user inputed in HTML form)
 			this.addNode(this.genesList[i], 'Protein');
 
 			let dataSubset = data[this.genesList[i]]; //'[]' expression to access an object property
@@ -365,17 +450,18 @@
 				let edgeColour = '#000000';	 // Default color of Black
 				let style = 'solid';
 				let width = '5';
-				
-				// Source
-				if (dataSubset[j].source.match(/^At/i)) {
+				let EdgeJSON = dataSubset[j];
+
+				// Source, note that source is NEVER DNA
+				if (EdgeJSON.source.match(/^At/i)) {
 					typeSource = 'Protein';
 				} else {
 					typeSource = 'Effector';
 				}
 
 				// Target
-				if (dataSubset[j].target.match(/^At/i)) {
-					if (dataSubset[j].index == '2') {
+				if (EdgeJSON.target.match(/^At/i)) {
+					if (EdgeJSON.index === '2') {
 						typeTarget = 'DNA';
 					} else {
 						typeTarget = 'Protein';
@@ -385,41 +471,51 @@
 				}
 
 				// Get color
-				edgeColour = this.getEdgeColor(dataSubset[j].correlation_coefficient, dataSubset[j].published, dataSubset[j].index, dataSubset[j].interolog_confidence);
+				edgeColour = this.getEdgeColor(EdgeJSON.correlation_coefficient, EdgeJSON.published, EdgeJSON.index, EdgeJSON.interolog_confidence);
 
 				// Get Line Style
-				style = ((dataSubset[j].interolog_confidence <= 2 && dataSubset[j].interolog_confidence > 0) ? "dashed" : "solid");
+				style = ((EdgeJSON.interolog_confidence <= 2 && EdgeJSON.interolog_confidence > 0) ? "dashed" : "solid");
 
 				// Get Line Width
-				width = this.getWidth(dataSubset[j].interolog_confidence);
+				width = this.getWidth(EdgeJSON.interolog_confidence);
 
-				if (this.filter) {
-					// It should automatically filter all
-				} else if (typeTarget === "Protein" || typeTarget === "Effector") {
-					this.addNode(dataSubset[j].source, typeSource);
-					this.addNode(dataSubset[j].target, typeTarget);
-				} else { //i.e. typeTarget === "DNA"
-				    this.addDNANodesToAIVObj(dataSubset[j]); //pass the DNA in the JSON format we GET on
-                }
-				
-				if (this.filter) {
-					// If both source and target are in gene list, add
-					if ($.inArray(dataSubset[j].source, AIV.genesList) >= 0 && $.inArray(dataSubset[j].target, AIV.genesList >= 0)) {
-						this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width, dataSubset[j].reference, dataSubset[j].published);
+				if (this.filter) { //Only take in the genes that user inputed in HTML form
+					if (EdgeJSON.index === '2' && $.inArray(EdgeJSON.source, AIV.genesList)) {
+						this.addDNANodesToAIVObj(EdgeJSON); //Only add PDI if it exists in the HTML form
 					}
-				} else {
-					this.addEdges(dataSubset[j].source, typeSource, dataSubset[j].target, typeTarget, edgeColour, style, width, dataSubset[j].reference, dataSubset[j].published);
+				} else if (typeTarget === "Protein" || typeTarget === "Effector") {
+					this.addNode(EdgeJSON.source, typeSource);
+					this.addNode(EdgeJSON.target, typeTarget);
+				} else { //i.e. typeTarget === "DNA"
+				    this.addDNANodesToAIVObj(EdgeJSON); //pass the DNA in the JSON format we GET on
+                }
+
+				if (this.filter) { //Add if both source and target are in gene form list
+                    if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index !== '2') { //PPIs
+						this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+					}
+                    else if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0)) { //PDIs
+                        this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+                    }
+				}
+				else if (EdgeJSON.index !== '2') { //i.e. PDI edge
+					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+				}
+				else if ( EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
+                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
 				}
 			}
-		}
+		} //end of adding nodes and edges
 
-		
 		// Need to update style after adding
+        this.addChrNodeQtips();
+		this.addNumberOfPDIsToNodeLabel();
         this.addProteinNodeQtips();
 		this.addPPIEdgeQtips();
 		this.addEffectorNodeQtips();
 		this.cy.style(this.getCyStyle()).update();
-		this.cy.layout(this.getCyLayout()).run();
+        this.setDNANodesPosition();
+        this.cy.layout(this.getCyLayout()).run();
 	};
 
 	/** 
