@@ -31,3 +31,9 @@
 .qtip-bootstrap.q-tip-protein-node {
   background-color: lemonchiffon;
 }
+
+.pdi-table-scroll-pane {
+	width: 100%;
+	height: 80px; /* overflow property only works for block elements with a specified height. */
+	overflow: auto;
+}
