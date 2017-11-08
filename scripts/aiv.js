@@ -300,29 +300,43 @@
     };
 
 	AIV.createPDItable = function (arrayPDIdata) {
-		var htmlTABLE = "<table><tbody><tr>";
 		var PDIsInChr = {};
 		var targets = [];
-		arrayPDIdata.forEach(function(PDI){ //populate local data to be used in another loop
-			console.log("start", PDI);
+		var pubmedRefHashTable = {};
+        var htmlTABLE = "<div class='pdi-table-scroll-pane'><table><tbody><tr><th></th>";
+        arrayPDIdata.forEach(function(PDI){ //populate local data to be used in another loop
+			// console.log("looping through each element of PDI array", PDI);
 			if (!PDIsInChr.hasOwnProperty(PDI.source)) {
-                PDIsInChr[PDI.source] = [];
+                PDIsInChr[PDI.source] = []; //create property with name of query/source gene
 			}
 			PDIsInChr[PDI.source].push(PDI.target);
-			targets.push(PDI.target);
+			if (targets.indexOf(PDI.target) === -1) {//To not repeat PDI for two queries with same PDI
+                targets.push(PDI.target);
+            }
+            pubmedRefHashTable[`${PDI.source}_${PDI.target}`] = PDI.reference;
 		});
-		for (let protein of Object.keys(PDIsInChr)) { //add query proteins to the header of table
-			htmlTABLE += `<th>${protein}</th>`;
+        // console.log(pubmedRefHashTable, "pubmed ref hashtable");
+        for (let protein of Object.keys(PDIsInChr)) { //add query proteins to the header of table
+			htmlTABLE += `<th>${protein}( ${PDIsInChr[protein].length} PDIs)</th>`;
 		}
-        htmlTABLE += "<tr>";
-		targets.forEach(function(targetDNAGene){
-			htmlTABLE += "<tr>";
-			
+        htmlTABLE += "</tr>";
+		targets.forEach(function(targetDNAGene){ //process remaining rows for each target DNA gene
+			htmlTABLE += `<tr><td>${targetDNAGene}</td>`;
+            for (let protein of Object.keys(PDIsInChr)) {
+                if (PDIsInChr[protein].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
+					htmlTABLE += `<td>${ pubmedRefHashTable[protein + '_' + targetDNAGene] }</td>`;
+				}
+				else {
+                	htmlTABLE += "<td>No PDI</td>";
+				}
+            }
 			htmlTABLE += "</tr>";
 		});
-		console.log("fin", PDIsInChr);
+		htmlTABLE += "</tbody></table></div>";
+		// console.log("finished createPDITable function execution", PDIsInChr);
         return htmlTABLE;
     };
+
 
 	AIV.addChrNodeQtips = function () {
         var that = this;
@@ -330,7 +344,7 @@
             console.log(this.chromosomesAdded[chr], `chr${chr}`);
             this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function(event){
                 var chrNode = event.target;
-                console.log(`HI! You're hovering over chr ${chr}`);
+                // console.log(`You're hovering over chr ${chr}`);
                 chrNode.qtip(
                     {
                         content:
