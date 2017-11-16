@@ -37,6 +37,10 @@
         <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-qtip/02ebf16c/cytoscape-qtip.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css"/>
 
+        <!-- Highlight Js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css" integrity="sha256-akwTLZec/XAFvgYgVH1T5/369lhA2Efr22xzCNl1nHs=" crossorigin="anonymous"/>
+
         <!-- To simplify coding TODO: Remove this during launch -->
         <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
         <script src="./scripts/automateInput.js"></script>
@@ -102,7 +106,6 @@
 
                         <hr>
                         <div class="row">
-
                             <div class="col-md-4">
                                 <input type="submit" id="submit" class="btn btn-success center-block" value="Submit">
                             </div>
@@ -113,6 +116,15 @@
 
                             <div class="col-md-4">
                                 <button type="button" class="btn btn-success center-block" id="example">Example</button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-success center-block" id="showPNGModal">PNG</button>
+                            </div>
+
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-success center-block" id="showJSONModal">JSON</button>
                             </div>
                         </div>
                     </div>
@@ -169,6 +181,45 @@
                 </div>
             </div>
         </div> <!-- Legend -->
+
+        <!-- PNG Export -->
+        <div id="PNGModal" class="modal fade centered-modal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4>PNG Export</h4>
+                    </div>
+                    <div class="modal-body">
+                        <img id="png-export" src="" alt="PNG export">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON Export -->
+        <div id="JSONModal" class="modal fade centered-modal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4>JSON Export</h4>
+                    </div>
+                    <div class="modal-body ">
+                        <pre>
+                            <code id="json-export" class="json">
+                                Cytoscape app not yet loaded
+                            </code>
+                        </pre>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="copy-to-clipboard" class="btn btn-default">Copy to Clipboard</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </body>
     <!-- AIV 2.0 JS -->

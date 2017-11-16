@@ -317,7 +317,7 @@
 		});
         // console.log(pubmedRefHashTable, "pubmed ref hashtable");
         for (let protein of Object.keys(PDIsInChr)) { //add query proteins to the header of table
-			htmlTABLE += `<th>${protein}( ${PDIsInChr[protein].length} PDIs)</th>`;
+			htmlTABLE += `<th>${protein}(${PDIsInChr[protein].length} PDIs)</th>`;
 		}
         htmlTABLE += "</tr>";
 		targets.forEach(function(targetDNAGene){ //process remaining rows for each target DNA gene
@@ -569,7 +569,7 @@
 		} else {
 			req += "&querydna=false";
 		}
-		
+
 		// Filter
 		if ($('#filter').is(':checked')) {
 			AIV.filter = true;
@@ -589,9 +589,33 @@
 			AIV.parseInteractionsData(data);
 		}).fail(function() {
 		});
-		
+
 		return success;
 	}
+
+	//PNG Export
+    document.getElementById('showPNGModal').addEventListener('click', function(event){
+        $('#PNGModal').modal('show');
+        document.getElementById('png-export').setAttribute('src', AIV.cy.png());
+    });
+
+	//JSON Export
+    document.getElementById('showJSONModal').addEventListener('click', function(event){
+        $('#JSONModal').modal('show');
+        var JSONStringified = JSON.stringify( AIV.cy.json(), null, '    ' );
+        document.getElementById('json-export').innerText = JSONStringified;
+        hljs.highlightBlock(document.getElementById('json-export'));
+        //JSON Copy to Clipboard
+        document.getElementById('copy-to-clipboard').addEventListener('click', function(event){
+   			//make a hidden input to select text from for copying
+			var tempInput = document.createElement('textarea');
+			tempInput.value = JSONStringified;
+			document.body.appendChild(tempInput);
+			tempInput.select();
+            document.execCommand("Copy");
+            tempInput.style.display = 'none';
+        });
+    });
 
 	// Ready to run
 	$(function() {

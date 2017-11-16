@@ -37,3 +37,29 @@
 	height: 80px; /* overflow property only works for block elements with a specified height. */
 	overflow: auto;
 }
+
+/* These two CSS selectors are for centering larger modals such as the JSON and PNG export*/
+.centered-modal.in {
+	display: flex
+}
+
+.centered-modal .modal-dialog {
+	margin: auto;
+}
+
+#PNGModal > .modal-dialog { /*To make it so the modal fills whole page*/
+	width: 80vw;
+}
+
+#JSONModal > .modal-dialog {
+	width: 75vw;
+}
+
+#JSONModal .modal-content {
+	max-height: 100vh;
+}
+
+#JSONModal .modal-body {
+	height: 80vh;
+	overflow: auto;
+}
