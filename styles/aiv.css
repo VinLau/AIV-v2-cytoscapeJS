@@ -1,7 +1,7 @@
 /*
  * Bootstrap overrides 
- * Author: Asher
- * Date: July 2017
+ * Author: Asher and Vincent (from line ~ 18 onwards);
+ * Date: Winter 2017
  */
 
 .navbar-nav > li > a {
@@ -9,7 +9,7 @@
 }
 
 #cy {
-	height: 800px;
+	height: calc(100vh - 125px);
 	width: 100%;
 	position: relative;
 	z-index: 999;
@@ -62,4 +62,19 @@
 #JSONModal .modal-body {
 	height: 80vh;
 	overflow: auto;
+}
+
+/* loading spinner before app is loaded*/
+#loading {
+	position: absolute;
+	display: block;
+	top: calc(50% - 50px);
+	width: 100%;
+	text-align: center;
+	font-size: 100px;
+	color: #99cc00;
+}
+
+#loading.loaded { /*Hide the spinner now*/
+	display: none;
 }

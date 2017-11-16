@@ -48,8 +48,9 @@
 		$('#submit').click(function(e) {
 			// Stop system submit, unless needed later on
 			e.preventDefault();
-			
-			// Get the list of genes
+            document.getElementById('loading').classList.remove('loaded'); //add loading spinner
+
+            // Get the list of genes
 			let genes = $.trim($('#genes').val());
 			if (genes !== '') {
 				genes = genes.replace(/T/g,'t');
@@ -84,9 +85,9 @@
 	AIV.getCyLayout = function() {
 		let layout = {};
 		layout.name = 'spread';
-		layout.minDist = 20;
-		layout.padding = 1;
-        layout.boundingBox = {x1:0 , y1:55, w:this.cy.width(), h:this.cy.height()}; //set boundaries to allow for clearer PDIs (DNA nodes are ~55px and are locked to start at x:50,y:0)
+		layout.minDist = 25;
+		// layout.padding = 1;
+        layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - 55) }; //set boundaries to allow for clearer PDIs (DNA nodes are ~55px and are locked to start at x:50,y:0)
 		// layout.stop = function() {}; //For manually adjusting position of nodes after layout is done
 		return layout;
 	};
@@ -293,8 +294,8 @@
         var viewportWidth = this.cy.width();
         var numOfChromosomes = Object.keys(this.chromosomesAdded).length; //for A. th. the max would be 7
         for (let chr of Object.keys(this.chromosomesAdded)) {
-            this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: 0});
-            this.cy.getElementById(`DNA_Chr${chr}`).lock(); //hardset the position of the chr nodes
+            this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: this.cy.height() });
+            this.cy.getElementById(`DNA_Chr${chr}`).lock(); //hardset the position of chr nodes to bottom
             xCoord += viewportWidth/numOfChromosomes;
         }
     };
@@ -349,17 +350,21 @@
                     {
                         content:
                             {
-                                title : `Chromosome ${chr}`,
+                                title :
+									{
+                                		text :`Chromosome ${chr}`,
+										button: 'Close' //close button
+									},
                                 text: that.createPDItable(that.chromosomesAdded[chr])
                             },
                         style    : { classes : 'qtip-cluetip'},
                         show:
                             {
-                                solo : true,
+                                solo : true, //only one qTip at a time
                                 event: `${event.type}`, // Same show event as triggered event handler
                                 ready: true, // Show the tooltip immediately upon creation
                             },
-                        hide : { event : 'mousedown mouseout'}
+                        hide : false // Don't hide on any event except close button
                     }
                 );
             });
@@ -372,7 +377,14 @@
             protein.qtip(
                 {
                     overwrite: false, //make sure tooltip won't be overriden once created
-                    content  : { text : "Protein " + protein.data("name") } ,
+                    content  : {
+                    				title :
+										{
+                    						text : "Protein " + protein.data("name"),
+											button: 'Close'
+                                    	},
+									text: " "
+								},
                     style    : { classes : 'qtip-bootstrap q-tip-protein-node'},
                     show:
                         {
@@ -380,7 +392,7 @@
                             event: `${event.type}`, // Use the same show event as triggered event handler
                             ready: true, // Show the tooltip immediately upon creation
                         },
-                    hide : { event : 'mousedown mouseout'}
+                    hide : false
                 }
             );
         });
@@ -392,7 +404,14 @@
             effector.qtip(
                 {
                     overwrite: false, //make sure tooltip won't be overriden once created
-                    content  : { text : "Effector " + effector.data("name") } ,
+                    content  : {
+                        title :
+                            {
+                                text : "Effector " + effector.data("name"),
+                                button: 'Close'
+                            },
+                        text: " "
+                    },
                     style    : { classes : 'qtip-bootstrap q-tip-effector-node'},
                     show:
                         {
@@ -400,7 +419,7 @@
                             event: `${event.type}`, // Use the same show event as triggered event handler
                             ready: true, // Show the tooltip immediately upon creation
                         },
-                    hide : { event : 'mousedown mouseout'}
+                    hide : false
                 }
             );
         });
@@ -430,7 +449,11 @@
 				{
                     content:
                         {
-                            title: "Edge " + ppiEdge.data("source") + " to " + ppiEdge.data("target"),
+                            title:
+								{
+                            		text: "Edge " + ppiEdge.data("source") + " to " + ppiEdge.data("target"),
+									button: "Close"
+                            	},
                             text : that.showDockerLink( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('published') ),
                         },
                     style  : { classes : 'qtip-bootstrap' },
@@ -439,7 +462,7 @@
                             solo : true,
                             event: `${event.type}`, // Use the same show event as triggered event handler
                         },
-                    hide : { event : 'mouseout'}
+                    hide : false
 				}
 			);
 		});
@@ -587,6 +610,7 @@
 			console.log(data);
 			// Parse data and make cy elements object
 			AIV.parseInteractionsData(data);
+			document.getElementById('loading').classList.add('loaded'); //remove loading spinner
 		}).fail(function() {
 		});
 
