@@ -29,8 +29,12 @@
 		// Settings button 
 		$('#settings').click(function(e) {
 			e.preventDefault();
-			$('#wrapper').toggleClass('toggled');
-		});
+			$('#wrapper').toggleClass('toggled').delay(500).promise().done(function(){
+                AIV.cy.resize(); //delay 500ms to allwo for resizing
+                AIV.setDNANodesPosition();
+                AIV.cy.layout(AIV.getCyLayout()).run();
+            });
+        });
 
 		// About button 
 		$('#showAboutModal').click(function(e) {
@@ -292,6 +296,7 @@
 	AIV.setDNANodesPosition = function () {
         var xCoord = 50;
         var viewportWidth = this.cy.width();
+        this.cy.$("node[id ^='DNA_Chr']:locked").unlock(); //if locked (for example during hide settings, unlock)
         var numOfChromosomes = Object.keys(this.chromosomesAdded).length; //for A. th. the max would be 7
         for (let chr of Object.keys(this.chromosomesAdded)) {
             this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: this.cy.height() });
@@ -325,7 +330,12 @@
 			htmlTABLE += `<tr><td>${targetDNAGene}</td>`;
             for (let protein of Object.keys(PDIsInChr)) {
                 if (PDIsInChr[protein].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
-					htmlTABLE += `<td>${ pubmedRefHashTable[protein + '_' + targetDNAGene] }</td>`;
+					htmlTABLE += "<td>";
+					AIV.sanitizeReferenceIDs(pubmedRefHashTable[protein + '_' + targetDNAGene]).forEach(function(ref){
+						console.log("refs", ref);
+						htmlTABLE += AIV.returnReferenceLink(ref);
+					});
+					htmlTABLE += "</td>";
 				}
 				else {
                 	htmlTABLE += "<td>No PDI</td>";
@@ -467,6 +477,43 @@
 			);
 		});
     };
+
+    /*
+    * Process the pubmed IDs and DOIs that come in from the GET request
+    * */
+    AIV.sanitizeReferenceIDs = function(JSONReferenceString) {
+        var returnArray = JSONReferenceString.split("\n");
+        returnArray = returnArray.filter(item => item !== '');
+        // console.log("sanitized ,", returnArray);
+        return returnArray;
+    };
+
+    /*
+    * This function expects to receive a string which either 'references' a
+    * 1) PubMedID (PubMed)
+    * 2) MINDID (Membrane based Interacome Network) ** We use ABIIdentifier for this as MIND search query does not go by Id.. **
+    * 3) AI-1 ID (Arabidopsis interactome project)
+    * 4) DOI reference hotlink
+    * 5) BINDID (Biomolecular Interaction Network Database, NOTE: Not live as of Nov 2017)
+    * */
+    AIV.returnReferenceLink = function(referenceStr, ABIIdentifier) {
+    	var regexGroup; //this variable necessary to extract parts from the reference string param
+    	if ( (regexGroup = referenceStr.match(/^PubMed(\d+)$/i)) ) { //assign and evaluate if true immediately
+            return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PubMed ID ${regexGroup[1]}</a>`;
+        }
+		else if ( (regexGroup = referenceStr.match(/^Mind(\d+)$/i)) ){
+            return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${ABIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}}</a>`;
+		}
+		else if ( (regexGroup = referenceStr.match(/^AI-1.*$/i)) ){
+			return `<a href="http://interactome.dfci.harvard.edu/A_thaliana/index.php" target="_blank">  (Arabidopsis Interactome) ${referenceStr} </a>`;
+		}
+		else if ( (regexGroup = referenceStr.match(/doi:(.*)/i)) ){
+			return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> DOI ${regexGroup[1]} </a>`;
+		}
+		else if ( (regexGroup = referenceStr.match(/(\d+)/)) ) { //for BIND database (now closed)
+			return `BIND ID ${referenceStr}`;
+		}
+	};
 
 	/**
 	 * This function parses interactions data
