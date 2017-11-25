@@ -7,7 +7,8 @@
 
 	// The AIV namespace 
 	var AIV = {};
-    AIV.chromosomesAdded = {}; //Object property for'state' of how many PDI chromosomes exist
+    AIV.chromosomesAdded = {}; //Object property for 'state' of how many PDI chromosomes exist
+    AIV.genesFetched = {}; //Object property for 'state' of which gene data have been fetched (so we don't refetch)
 
     /**
 	 * Initialize
@@ -332,8 +333,7 @@
                 if (PDIsInChr[protein].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
 					htmlTABLE += "<td>";
 					AIV.sanitizeReferenceIDs(pubmedRefHashTable[protein + '_' + targetDNAGene]).forEach(function(ref){
-						console.log("refs", ref);
-						htmlTABLE += AIV.returnReferenceLink(ref);
+						htmlTABLE += AIV.returnReferenceLink(ref, targetDNAGene);
 					});
 					htmlTABLE += "</td>";
 				}
@@ -393,7 +393,38 @@
                     						text : "Protein " + protein.data("name"),
 											button: 'Close'
                                     	},
-									text: " "
+									text :
+                                    /*
+                                    * Use jquery AJAX method which uses promises/deferred objects in conjunction with qTip built-in api.set() method which allows one to set the options of this qTip. Default value while loading is plain text to notify user.
+                                    * */
+                                        function(event, api) {
+                                            console.log("AJAX protein data call");
+                                            if (AIV.genesFetched[protein.data("name")] !== undefined){ //Check with state variable to reload our fetched data stored in global state
+                                                return AIV.genesFetched[protein.data("name")]; //return the stored value as the text value to the text property
+                                            }
+                                            $.ajax({
+                                                url: `https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL
+                                            })
+                                            .then(function(content) {
+                                                // Set the tooltip content upon successful retrieval, use deep destructuring with spread syntax
+                                                var { result: [ { locus : locus, synonyms : synonyms, brief_description : desc } ] } = content;
+                                                var returnHTML = "";
+                                                returnHTML +=
+                                                    `<p>Locus: ${locus}</p>` +
+                                                    `<p>Alias: ${synonyms.length > 0 ? synonyms.join(', ') : "N/A" }</p>` +
+                                                    `<p>Annotation: ${desc}</p>`
+                                                api.set('content.text', returnHTML);
+                                                AIV.genesFetched[protein.data("name")] = returnHTML; //add to global state such that we do not need to refetch
+                                            })
+                                            .fail(function(xhr, status, error) {
+                                                // Upon failure... set the tooltip content to the status and error value
+                                                api.set('content.text', " Problem loading data... Status code:" + status + ': ' + error );
+                                            });
+
+                                            return 'Fetching Protein Data...'; // Set some initial text
+
+                                        }
+
 								},
                     style    : { classes : 'qtip-bootstrap q-tip-protein-node'},
                     show:
@@ -401,6 +432,7 @@
                             solo : true,
                             event: `${event.type}`, // Use the same show event as triggered event handler
                             ready: true, // Show the tooltip immediately upon creation
+                            delay: 400 //So we don't hammer servers with AJAX calls as user scrolls over the PPIs
                         },
                     hide : false
                 }
@@ -442,12 +474,14 @@
             return "";
         }
         else {
+            var refLinks = "";
+            AIV.sanitizeReferenceIDs( DOIorPMID ).forEach(function(ref){
+                refLinks += AIV.returnReferenceLink(ref, source);
+            });
             return "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + AIV.modifyProString(source) + "&id2=" + AIV.modifyProString(target) + "' target='_blank'> " +
 					"Predicted Structural Interaction " +
 				"</a>" +
-				"<span>" +
-                	DOIorPMID +
-				"</span>";
+				"<span>" + refLinks + "</span>";
         }
     };
 
@@ -511,7 +545,7 @@
 			return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> DOI ${regexGroup[1]} </a>`;
 		}
 		else if ( (regexGroup = referenceStr.match(/(\d+)/)) ) { //for BIND database (now closed)
-			return `BIND ID ${referenceStr}`;
+			return `<a href="https://academic.oup.com/nar/article/29/1/242/1116175" target="_blank">BIND ID ${referenceStr}</a>`;
 		}
 	};
 
