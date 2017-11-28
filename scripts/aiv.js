@@ -9,6 +9,7 @@
 	var AIV = {};
     AIV.chromosomesAdded = {}; //Object property for 'state' of how many PDI chromosomes exist
     AIV.genesFetched = {}; //Object property for 'state' of which gene data have been fetched (so we don't refetch)
+	AIV.genesFetching = {}; //Object property for 'state' of loading API gene information calls
 
     /**
 	 * Initialize
@@ -398,28 +399,44 @@
                                     * Use jquery AJAX method which uses promises/deferred objects in conjunction with qTip built-in api.set() method which allows one to set the options of this qTip. Default value while loading is plain text to notify user.
                                     * */
                                         function(event, api) {
-                                            console.log("AJAX protein data call");
+                                            console.log(`AJAX protein data call for ${protein.data("name")}`);
                                             if (AIV.genesFetched[protein.data("name")] !== undefined){ //Check with state variable to reload our fetched data stored in global state
                                                 return AIV.genesFetched[protein.data("name")]; //return the stored value as the text value to the text property
                                             }
-                                            $.ajax({
-                                                url: `https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL
-                                            })
-                                            .then(function(content) {
-                                                // Set the tooltip content upon successful retrieval, use deep destructuring with spread syntax
-                                                var { result: [ { locus : locus, synonyms : synonyms, brief_description : desc } ] } = content;
-                                                var returnHTML = "";
-                                                returnHTML +=
-                                                    `<p>Locus: ${locus}</p>` +
-                                                    `<p>Alias: ${synonyms.length > 0 ? synonyms.join(', ') : "N/A" }</p>` +
-                                                    `<p>Annotation: ${desc}</p>`
-                                                api.set('content.text', returnHTML);
-                                                AIV.genesFetched[protein.data("name")] = returnHTML; //add to global state such that we do not need to refetch
-                                            })
-                                            .fail(function(xhr, status, error) {
-                                                // Upon failure... set the tooltip content to the status and error value
-                                                api.set('content.text', " Problem loading data... Status code:" + status + ': ' + error );
-                                            });
+
+                                            if (AIV.genesFetching[protein.data("name")] === true){ //Check with state variable to see if current gene data is already fetching
+                                                return 'Fetching Protein Data...';
+                                            }
+                                            else {
+                                                AIV.genesFetching[protein.data("name")] = true;
+
+                                                $.ajax({
+                                                    url: `https://cors.now.sh/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL
+                                                })
+                                                    .then(function (content) {
+                                                        var returnHTML = "";
+                                                        // Set the tooltip content upon successful retrieval, use deep destructuring with spread syntax
+                                                        var {result: [{locus: locus, synonyms: synonyms, brief_description: desc}]} = content;
+                                                        returnHTML +=
+                                                            `<p>Locus: ${locus}</p>` +
+                                                            `<p>Alias: ${synonyms.length > 0 ? synonyms.join(', ') : "N/A" }</p>` +
+                                                            `<p>Annotation: ${desc}</p>`;
+                                                        api.set('content.text', returnHTML);
+                                                        AIV.genesFetching[protein.data("name")] = false; //reset loading state
+                                                        AIV.genesFetched[protein.data("name")] = returnHTML; //add to global state such that we do not need to refetch, i.e. only if successful
+                                                    })
+                                                    .fail(function (xhr, status, error) {
+                                                        // Upon failure, set the tooltip content to status and error value
+                                                        console.error(xhr, status, error);
+                                                        if (xhr.toString().match(/^.*TypeError.*$/)) { //For when we get a response from the API call but it does not have a the expected JSON structure
+                                                            api.set('content.text', "<p> Problem loading data... Gene querying web service likely down.</p>");
+                                                        }
+                                                        else {
+                                                            api.set('content.text', "<p> Problem loading data... Status code: " + status + ' : ' + error + "</p>");
+                                                        }
+                                                        AIV.genesFetching[protein.data("name")] = false; //reset loading state
+                                                    });
+                                            }
 
                                             return 'Fetching Protein Data...'; // Set some initial text
 
