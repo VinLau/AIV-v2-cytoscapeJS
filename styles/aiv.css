@@ -73,6 +73,7 @@
 	text-align: center;
 	font-size: 100px;
 	color: #99cc00;
+	z-index: 1000;
 }
 
 #loading.loaded { /*Hide the spinner now*/

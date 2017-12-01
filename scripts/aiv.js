@@ -495,10 +495,8 @@
             AIV.sanitizeReferenceIDs( DOIorPMID ).forEach(function(ref){
                 refLinks += AIV.returnReferenceLink(ref, source);
             });
-            return "<a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + AIV.modifyProString(source) + "&id2=" + AIV.modifyProString(target) + "' target='_blank'> " +
-					"Predicted Structural Interaction " +
-				"</a>" +
-				"<span>" + refLinks + "</span>";
+            return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + AIV.modifyProString(source) + "&id2=" + AIV.modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" +
+				"<p><span>" + refLinks + "</span></p>";
         }
     };
 
@@ -522,6 +520,7 @@
                         {
                             solo : true,
                             event: `${event.type}`, // Use the same show event as triggered event handler
+                            delay: 200
                         },
                     hide : false
 				}
@@ -653,6 +652,111 @@
         this.cy.layout(this.getCyLayout()).run();
 	};
 
+	/*
+	Create SUBA URL string for AJAX call
+	 */
+	AIV.returnLocalizationURL = function(){
+	    var URLString = 'https://cors.now.sh/http://bar.utoronto.ca/eplant/cgi-bin/groupsuba3.cgi?ids=[';
+	    this.cy.$('node').forEach(function(node){
+	        var nodeID = node.data('name');
+            // console.log(nodeID);
+            if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
+                URLString += `"${nodeID}",`;
+            }
+        });
+	    URLString = URLString.slice(0, -1); //chop off last ','
+	    URLString += ']&include_predicted=yes';
+	    return URLString;
+    };
+
+	/*
+	Run a forEach loop for every node with a valid ABI ID to attach SUBA data to the node to be later shown via pie-chart background (built-in in cytoscapejs). We chose to hard-code the cellular localizations versus checking them in the JSON structure as the JSON structure does not return all cellular localizations when it does not have a score. Also note that some of the property names had spaces in them...
+	 */
+	AIV.addLocalizationDataToNodes = function(SUBADATA) {
+		AIV.cy.startBatch();
+
+		SUBADATA.forEach(function(geneSUBAData){
+			var denominatorScore = 0;
+			for (let cellularLocation of Object.keys(geneSUBAData.data)) {
+                console.log(geneSUBAData.id, cellularLocation, geneSUBAData.data[cellularLocation]);
+                if (! isNaN(geneSUBAData.data[cellularLocation])){
+					denominatorScore += geneSUBAData.data[cellularLocation];
+					console.log("TRUE!");
+				}
+            }
+            console.log(geneSUBAData.id, "total :", denominatorScore);
+			var nodeID = geneSUBAData.id;
+			AIV.cy.$('node[name = "' + nodeID + '"]')
+				.data('predictedSUBA',  ( geneSUBAData["includes_predicted"] === "yes" ? true : false) )
+				.data('experimentalSUBA',  ( geneSUBAData["includes_experimental"] === "yes" ? true : false) )
+                .data('cytoskeletonPCT', processLocalizationScore ( geneSUBAData.data.cytoskeleton, denominatorScore ) )
+				.data('cytosolPCT', processLocalizationScore ( geneSUBAData.data.cytosol, denominatorScore ) )
+                .data('endoplasmicReticulumPCT', processLocalizationScore ( geneSUBAData.data['endoplasmic reticulum'], denominatorScore ) )
+                .data('extracellularPCT', processLocalizationScore ( geneSUBAData.data.extracellular, denominatorScore ) )
+                .data('golgiPCT', processLocalizationScore ( geneSUBAData.data.golgi, denominatorScore ) )
+                .data('mitochondrionPCT', processLocalizationScore ( geneSUBAData.data.mitochondrion, denominatorScore ) )
+                .data('nucleusPCT', processLocalizationScore ( geneSUBAData.data.nucleus, denominatorScore ) )
+                .data('peroxisomePCT', processLocalizationScore ( geneSUBAData.data.peroxisome, denominatorScore ) )
+                .data('plasmaMembranePCT', processLocalizationScore ( geneSUBAData.data['plasma membrane'], denominatorScore ) )
+                .data('plastidPCT', processLocalizationScore ( geneSUBAData.data.plastid, denominatorScore ) )
+                .data('vacuolePCT', processLocalizationScore ( geneSUBAData.data.vacuole, denominatorScore ) );
+
+		});
+
+		AIV.cy.endBatch();
+
+		function processLocalizationScore (localizationScore, deno){
+			if (localizationScore === undefined){
+				return 0;
+			}
+			else {
+				return (localizationScore/deno);
+			}
+		}
+    };
+
+    /*
+	Add pie chart backgrounds to all the protein nodes in the cy core using native cytoscapejs built-in pie-chart background CSS and mapper function, the names (1st param) in mapData() MUST be hardcoded as the colour needs to correspond to our legend
+ 	*/
+    AIV.returnPieChartBGCSS = function () {
+    	return (
+    		AIV.cy.style() //specifying style instead of stylesheet updates instead of replaces the cy CSS
+				.selector('node[id ^= "Protein_At"]')
+					.style({
+                        'pie-size': '90%',
+                        'pie-1-background-color': '#575454',
+                        'pie-1-background-size': 'mapData(cytoskeletonPCT, 0, 1, 0, 100)',
+                        'pie-2-background-color': '#e0498a',
+                        'pie-2-background-size': 'mapData(cytosolPCT, 0, 1, 0, 100)',
+                        'pie-3-background-color': '#d1111b',
+                        'pie-3-background-size': 'mapData(endoplasmicReticulumPCT, 0, 1, 0, 100)',
+                        'pie-4-background-color': '#ffd672',
+                        'pie-4-background-size': 'mapData(extracellularPCT, 0, 1, 0, 100)',
+                        'pie-5-background-color': '#a5a417',
+                        'pie-5-background-size': 'mapData(golgiPCT, 0, 1, 0, 100)',
+                        'pie-6-background-color': '#41abf9',
+                        'pie-6-background-size': 'mapData(mitochondrionPCT, 0, 1, 0, 100)',
+                        'pie-7-background-color': '#0032ff',
+                        'pie-7-background-size': 'mapData(nucleusPCT, 0, 1, 0, 100)',
+                        'pie-8-background-color': '#650065',
+                        'pie-8-background-size': 'mapData(peroxisomePCT, 0, 1, 0, 100)',
+                        'pie-9-background-color': '#edaa27',
+                        'pie-9-background-size': 'mapData(plasmaMembranePCT, 0, 1, 0, 100)',
+                        'pie-10-background-color': '#13971e',
+                        'pie-10-background-size': 'mapData(plastidPCT, 0, 1, 0, 100)',
+                        'pie-11-background-color': '#ecea3a',
+                        'pie-11-background-size': 'mapData(vacuolePCT, 0, 1, 0, 100)',
+
+					})
+				.selector('node[?experimentalSUBA]') //select nodes such that experimentalSUBA is truthy
+					.style({
+						'border-style' : 'solid',
+						'border-width' : '3px',
+						'border-color' : '#99cc00',
+					})
+		);
+	};
+
 	/** 
 	 * Load data main function
 	 * @returns {boolean} True if the data is laoded
@@ -704,13 +808,32 @@
 			url: serviceURL,
 			type: 'GET',
 			dataType: 'json'
-		}).done(function(data) {
-			console.log(data);
-			// Parse data and make cy elements object
-			AIV.parseInteractionsData(data);
-			document.getElementById('loading').classList.add('loaded'); //remove loading spinner
-		}).fail(function() {
-		});
+		}).
+            then(function(PPIandPDIJSON) {
+                console.log(PPIandPDIJSON);
+                // Parse data and make cy elements object
+                AIV.parseInteractionsData(PPIandPDIJSON);
+                document.getElementById('loading').classList.add('loaded'); //remove loading spinner
+            })
+            .catch(function(err){
+
+            })
+            .then(function(){
+                var AJAXLocalizationURL = AIV.returnLocalizationURL();
+                return $.ajax({
+                    url: AJAXLocalizationURL,
+                    type: 'GET',
+                    dataType: 'json'
+                });
+            })
+            .then(function(SUBAJSON){
+                console.log(SUBAJSON);
+                AIV.addLocalizationDataToNodes(SUBAJSON);
+                AIV.returnPieChartBGCSS().update();
+            })
+            .catch(function(err){
+
+            });
 
 		return success;
 	}
