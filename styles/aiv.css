@@ -8,6 +8,10 @@
 	padding-top: 22px;
 }
 
+.gene-form {
+	max-height: 40vh;
+}
+
 #cy {
 	height: calc(100vh - 125px);
 	width: 100%;

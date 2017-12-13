@@ -411,7 +411,7 @@
                                                 AIV.genesFetching[protein.data("name")] = true;
 
                                                 $.ajax({
-                                                    url: `https://cors.now.sh/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL
+                                                    url: `https://cors.now.sh/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL TODO: remove cors now when uploaded to server
                                                 })
                                                     .then(function (content) {
                                                         var returnHTML = "";
@@ -655,18 +655,33 @@
 	/*
 	Create SUBA URL string for AJAX call
 	 */
-	AIV.returnLocalizationURL = function(){
-	    var URLString = 'https://cors.now.sh/http://bar.utoronto.ca/eplant/cgi-bin/groupsuba3.cgi?ids=[';
-	    this.cy.$('node').forEach(function(node){
-	        var nodeID = node.data('name');
-            // console.log(nodeID);
+	AIV.returnLocalizationPOSTJSON = function(){
+	    // var URLString = 'https://cors.now.sh/http://bar.utoronto.ca/eplant/cgi-bin/groupsuba3.cgi?ids=[';
+	    // this.cy.$('node').forEach(function(node){
+	    //     var nodeID = node.data('name');
+         //    // console.log(nodeID);
+         //    if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
+         //        URLString += `"${nodeID}",`;
+         //    }
+        // });
+	    // URLString = URLString.slice(0, -1); //chop off last ','
+	    // URLString += ']&include_predicted=yes';
+	    // return URLString;
+
+	    var reqJSON =
+			{
+				AGI_IDs : [],
+			};
+        this.cy.$('node').forEach(function(node){
+            var nodeID = node.data('name');
             if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
-                URLString += `"${nodeID}",`;
+                reqJSON.AGI_IDs.push( nodeID );
             }
         });
-	    URLString = URLString.slice(0, -1); //chop off last ','
-	    URLString += ']&include_predicted=yes';
-	    return URLString;
+
+        reqJSON.include_predicted = ($('#predSUBA').is(':checked')); //true or false
+
+        return reqJSON;
     };
 
 	/*
@@ -685,7 +700,7 @@
 				}
             }
             console.log(geneSUBAData.id, "total :", denominatorScore);
-			var nodeID = geneSUBAData.id;
+			var nodeID = "A" + geneSUBAData.id.substring(1).toLowerCase(); //Modify to fit node Id
 			AIV.cy.$('node[name = "' + nodeID + '"]')
 				.data('predictedSUBA',  ( geneSUBAData["includes_predicted"] === "yes" ? true : false) )
 				.data('experimentalSUBA',  ( geneSUBAData["includes_experimental"] === "yes" ? true : false) )
@@ -757,6 +772,33 @@
 		);
 	};
 
+    /*
+    Create URL for get request for mapman information, namely for the codes (MapMan IDs).
+    Example usage: http://www.gabipd.org/services/rest/mapman/bin?request=[{"agi":"At4g36250"},{"agi":"At4g02070"}]
+    Data returned is an array of objects, MapMan code is nested inside "result[0].parent.code" for each AGI
+     */
+    AIV.createGETMapManURL = function () {
+		var mapmanURL = "https://bar.utoronto.ca/~asher/bar_mapman.php?request=["; //TODO: change to our mapman proxy instead
+        this.cy.$('node').forEach(function(node){
+            var nodeID = node.data('name');
+            if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
+                mapmanURL += `"${nodeID}",`;
+            }
+        });
+        mapmanURL = mapmanURL.slice(0,-1); //remove last ','
+        mapmanURL += "]";
+		return mapmanURL;
+	};
+
+    /*
+    Take in the MapMan data from response JSON to be processed in these ways:
+    1) Add specific annotation to protein node qTips
+    2) Add the numbers to the centre donut of the protein node to be easily identified
+     */
+    AIV.processMapMan = function (MapManJSON) {
+		console.log(MapManJSON);
+	};
+
 	/** 
 	 * Load data main function
 	 * @returns {boolean} True if the data is laoded
@@ -819,10 +861,12 @@
 
             })
             .then(function(){
-                var AJAXLocalizationURL = AIV.returnLocalizationURL();
+                var AJAXLocalizationURL = "https://bar.utoronto.ca/~vlau/testing_suba4.php";
                 return $.ajax({
-                    url: AJAXLocalizationURL,
-                    type: 'GET',
+                    url: AJAXLocalizationURL, // TODO: Change this URL to webservices one once uploaded
+                    type: "POST",
+					data: JSON.stringify( AIV.returnLocalizationPOSTJSON() ),
+                    contentType : 'application/json',
                     dataType: 'json'
                 });
             })
@@ -833,7 +877,20 @@
             })
             .catch(function(err){
 
-            });
+            })
+			.then(function(){
+				return $.ajax({
+					url: AIV.createGETMapManURL(),
+					type: 'GET',
+					dataType: 'json'
+				});
+			})
+			.then(function(resMapManJSON){
+				AIV.processMapMan(resMapManJSON);
+			})
+			.catch(function(err){
+
+			});
 
 		return success;
 	}

@@ -69,7 +69,7 @@
                 <form id="input_form">
                     <div class="form-group">
                         <label for="genes">Please enter a list of genes:</label>
-                        <textarea class="form-control" row="20" id="genes"></textarea>
+                        <textarea class="form-control gene-form" row="20" id="genes"></textarea>
                         <br>
                         <p>Select options:</p>
 
@@ -87,6 +87,10 @@
 
                         <div class="checkbox">
                             <label><input id="recursive" type="checkbox" value="">Search for interactions between interactors</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label><input id="predSUBA" type="checkbox" value="" checked>Include predicted data for localization scores</label>
                         </div>
 
                         <p>Select databases to query:</p>
