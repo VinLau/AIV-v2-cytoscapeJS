@@ -1,15 +1,22 @@
 /*
  * AIV 2.0
- * By Asher Pasha and Vincent Lau, 2017
+ * Winter 2017
+ * By Vincent Lau (major additions, AJAX, polishing) and Asher Pasha (base app, creating nodes & edges)
  */
 (function(window, $, cytoscape, undefined) {
 	'use strict';
 
 	// The AIV namespace 
 	var AIV = {};
+
+	//Important hash tables to store state data
     AIV.chromosomesAdded = {}; //Object property for 'state' of how many PDI chromosomes exist
     AIV.genesFetched = {}; //Object property for 'state' of which gene data have been fetched (so we don't refetch)
 	AIV.genesFetching = {}; //Object property for 'state' of loading API gene information calls
+
+	//"Global" default data such as default node size
+    AIV.nodeSize = 35; //Important for adjusting the donut sizes, TODO: make nodesize options dropdown
+	AIV.DNANodeSize = 55;
 
     /**
 	 * Initialize
@@ -108,8 +115,10 @@
   				.style({
 					'label': 'data(name)', //'label' is alias for 'content'
 				  	'font-size': 8,
-				  	'background-color': '#ea8a31',
-                    "text-wrap": "wrap" //mulitline support
+				  	'background-color': '#cdcdcd',
+                    "text-wrap": "wrap", //mulitline support
+                    'height': this.nodeSize,
+                    'width': this.nodeSize,
                 })
   			.selector('edge')
   				.style({
@@ -134,8 +143,8 @@
 					"border-color": "#fff72d",
 					"border-width": "2px",
 					'shape': 'square',
-					'height': '55px',
-					'width': '55px',
+					'height': this.DNANodeSize,
+					'width': this.DNANodeSize,
 				})
 			.selector('.Effector')
 				.style({
@@ -691,35 +700,39 @@
 		AIV.cy.startBatch();
 
 		SUBADATA.forEach(function(geneSUBAData){
-			var denominatorScore = 0;
+			var denoTotal = 0;
+
+			// Below for loop creates a denominator score for each gene, so we can count pie chart data
 			for (let cellularLocation of Object.keys(geneSUBAData.data)) {
-                console.log(geneSUBAData.id, cellularLocation, geneSUBAData.data[cellularLocation]);
-                if (! isNaN(geneSUBAData.data[cellularLocation])){
-					denominatorScore += geneSUBAData.data[cellularLocation];
-					console.log("TRUE!");
+                // console.log(geneSUBAData.id, cellularLocation, geneSUBAData.data[cellularLocation]);
+                if (! isNaN(geneSUBAData.data[cellularLocation])){ //if property value is a number...
+					denoTotal += geneSUBAData.data[cellularLocation]; //add to denominator
+					// console.log("TRUE!");
 				}
             }
-            console.log(geneSUBAData.id, "total :", denominatorScore);
-			var nodeID = "A" + geneSUBAData.id.substring(1).toLowerCase(); //Modify to fit node Id
+            // console.log(geneSUBAData.id, "total :", denoTotal);
+
+			var nodeID = "A" + geneSUBAData.id.substring(1).toLowerCase(); //AT1G04170 to At1g04170
 			AIV.cy.$('node[name = "' + nodeID + '"]')
-				.data('predictedSUBA',  ( geneSUBAData["includes_predicted"] === "yes" ? true : false) )
-				.data('experimentalSUBA',  ( geneSUBAData["includes_experimental"] === "yes" ? true : false) )
-                .data('cytoskeletonPCT', processLocalizationScore ( geneSUBAData.data.cytoskeleton, denominatorScore ) )
-				.data('cytosolPCT', processLocalizationScore ( geneSUBAData.data.cytosol, denominatorScore ) )
-                .data('endoplasmicReticulumPCT', processLocalizationScore ( geneSUBAData.data['endoplasmic reticulum'], denominatorScore ) )
-                .data('extracellularPCT', processLocalizationScore ( geneSUBAData.data.extracellular, denominatorScore ) )
-                .data('golgiPCT', processLocalizationScore ( geneSUBAData.data.golgi, denominatorScore ) )
-                .data('mitochondrionPCT', processLocalizationScore ( geneSUBAData.data.mitochondrion, denominatorScore ) )
-                .data('nucleusPCT', processLocalizationScore ( geneSUBAData.data.nucleus, denominatorScore ) )
-                .data('peroxisomePCT', processLocalizationScore ( geneSUBAData.data.peroxisome, denominatorScore ) )
-                .data('plasmaMembranePCT', processLocalizationScore ( geneSUBAData.data['plasma membrane'], denominatorScore ) )
-                .data('plastidPCT', processLocalizationScore ( geneSUBAData.data.plastid, denominatorScore ) )
-                .data('vacuolePCT', processLocalizationScore ( geneSUBAData.data.vacuole, denominatorScore ) );
+				.data('predictedSUBA',  ( geneSUBAData["includes_predicted"] === "yes" ) )
+				.data('experimentalSUBA',  ( geneSUBAData["includes_experimental"] === "yes" ) )
+                .data('cytoskeletonPCT', processLocalizationScore ( geneSUBAData.data.cytoskeleton, denoTotal ) )
+				.data('cytosolPCT', processLocalizationScore ( geneSUBAData.data.cytosol, denoTotal ) )
+                .data('endoplasmicReticulumPCT', processLocalizationScore ( geneSUBAData.data['endoplasmic reticulum'], denoTotal ) )
+                .data('extracellularPCT', processLocalizationScore ( geneSUBAData.data.extracellular, denoTotal ) )
+                .data('golgiPCT', processLocalizationScore ( geneSUBAData.data.golgi, denoTotal ) )
+                .data('mitochondrionPCT', processLocalizationScore ( geneSUBAData.data.mitochondrion, denoTotal ) )
+                .data('nucleusPCT', processLocalizationScore ( geneSUBAData.data.nucleus, denoTotal ) )
+                .data('peroxisomePCT', processLocalizationScore ( geneSUBAData.data.peroxisome, denoTotal ) )
+                .data('plasmaMembranePCT', processLocalizationScore ( geneSUBAData.data['plasma membrane'], denoTotal ) )
+                .data('plastidPCT', processLocalizationScore ( geneSUBAData.data.plastid, denoTotal ) )
+                .data('vacuolePCT', processLocalizationScore ( geneSUBAData.data.vacuole, denoTotal ) );
 
 		});
 
 		AIV.cy.endBatch();
 
+		//Helper function to return percentages (note that it will be .98 rather than 98) and typecheck
 		function processLocalizationScore (localizationScore, deno){
 			if (localizationScore === undefined){
 				return 0;
@@ -730,41 +743,101 @@
 		}
     };
 
+	/*
+	This function will take in all the 'PCT' data properties that a node has (for example, nucleusPCT)
+	to be used to create a SVG donut string which will be set as the background image. I intentionally
+	made this function based on the AIV.nodeSize property such that it can be more scalable (literally
+	and figuratively).
+
+	@ABIgene takes in a reference to a node, particularly a ABI gene to parse through its 'PCT' properties.
+
+	Credits to: https://medium.com/@heyoka/scratch-made-svg-donut-pie-charts-in-html5-2c587e935d72
+	 */
+	AIV.createSVGPieDonutCartStr = function(ABIGene) {
+		var ABIGeneData = ABIGene.data() ;
+		console.log(ABIGene.data());
+		var SVGwidthheight = this.nodeSize + 10;
+		var donutCxCy = SVGwidthheight/2;
+        var radius, strokeWidth;
+		radius = strokeWidth = this.nodeSize/2;
+		var SVGstr = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg>';
+		SVGstr += `<svg width="${SVGwidthheight}" height="${SVGwidthheight}" class="donut" xmlns="http://www.w3.org/2000/svg">`;
+		SVGstr += `<circle class="donut-hole" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent"></circle>`;
+
+		//The below donut segment will appear for genes without SUBA data... it will be all grey
+		SVGstr += `<circle class="donut-unfilled-ring" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent" stroke="#d2d3d4" stroke-width="${strokeWidth}"></circle>`;
+
+		// Figure out which 'PCT' properties are greater than zero and then programatically add them
+		// as donut-segments. Note that some calculations are involved based
+		// on the set node size (the example given on the tutorial is based on a 100px C and 15.91 radius)
+        var scaling = radius/15.91549430918952;
+		var pctAndColorArray = [];
+
+        for ( let dataProp of Object.keys(ABIGeneData) ) {
+        	if (dataProp.match(/^.*PCT$/i) && ABIGeneData[dataProp] > 0 ){ //get PCT props and if > 0%
+        		// console.log("match!");
+        		// console.log(dataProp, ABIGeneData.name);
+        		pctAndColorArray.push({
+					pct : (ABIGeneData[dataProp] * 100), //convert to % for easier parsing later
+					color : returnLocColor(dataProp)
+        		});
+			}
+        }
+        // Custom sort based on the value of the 'pct' property defined above, order greatest to least
+		// Result => we are able to show pie chart values from greatest to least starting from 12 oclock
+        pctAndColorArray.sort((itemOne, itemTwo) => itemTwo.pct - itemOne.pct);
+
+        // console.log(pctAndColorArray);
+
+        var initialOffset = 25 * scaling; // Bypass default donut parts start at 3 o'clock instead of 12
+		var allSegsLength = 0;
+
+        // Based on the sorted array we created above, let's add some 'donut segments' to the SVG string
+        pctAndColorArray.forEach(function(pctAndColor){
+        	SVGstr += `<circle class="donut-segment" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}"  fill="transparent" stroke="${pctAndColor.color}" stroke-width="${strokeWidth}" stroke-dasharray="${pctAndColor.pct * scaling} ${(100 - pctAndColor.pct) * scaling}" stroke-dashoffset="${initialOffset}"></circle>`;
+
+            allSegsLength += pctAndColor.pct;
+
+            // (Circumference − All preceding segments’ total length + First segment’s offset = Current segment offset ) * scaling factor
+        	initialOffset = (100 - allSegsLength + 25) * scaling; // increase offset as we have just added a slice
+
+        });
+
+        SVGstr += '</svg>';
+		// console.log(SVGstr, ABIGeneData.name);
+        SVGstr = 'data:image/svg+xml;utf8,' + encodeURIComponent(SVGstr); // Modify for CSS via cytoscape
+        ABIGene.data('svgDonut', SVGstr); // Last, properly mutate the node with our made SVG string
+
+        // Helper function to determine/return which colour to return in the array of objects above
+        function returnLocColor (localizationString) {
+			if (localizationString === "cytoskeletonPCT"){ return '#575454';}
+			else if (localizationString === "cytosolPCT"){ return '#e0498a';}
+            else if (localizationString === "endoplasmicReticulumPCT"){ return '#d1111b';}
+            else if (localizationString === "extracellularPCT"){ return '#ffd672';}
+            else if (localizationString === "golgiPCT"){ return '#a5a417';}
+            else if (localizationString === "mitochondrionPCT"){ return '#41abf9';}
+            else if (localizationString === "nucleusPCT"){ return '#0032ff';}
+            else if (localizationString === "peroxisomePCT"){ return '#650065';}
+            else if (localizationString === "plasmaMembranePCT"){ return '#edaa27';}
+            else if (localizationString === "plastidPCT"){ return '#13971e';}
+            else if (localizationString === "vacuolePCT"){ return '#ecea3a';}
+        }
+
+	};
+
     /*
-	Add pie chart backgrounds to all the protein nodes in the cy core using native cytoscapejs built-in pie-chart background CSS and mapper function, the names (1st param) in mapData() MUST be hardcoded as the colour needs to correspond to our legend
+	Return svg backgrounds as background images to all the protein nodes in the cy core and add borders
+	for those nodes which have experimental SUBA values
  	*/
-    AIV.returnPieChartBGCSS = function () {
+    AIV.returnBGImageSVGasCSS = function () {
     	return (
     		AIV.cy.style() //specifying style instead of stylesheet updates instead of replaces the cy CSS
 				.selector('node[id ^= "Protein_At"]')
-					.style({
-                        'pie-size': '90%',
-                        'pie-1-background-color': '#575454',
-                        'pie-1-background-size': 'mapData(cytoskeletonPCT, 0, 1, 0, 100)',
-                        'pie-2-background-color': '#e0498a',
-                        'pie-2-background-size': 'mapData(cytosolPCT, 0, 1, 0, 100)',
-                        'pie-3-background-color': '#d1111b',
-                        'pie-3-background-size': 'mapData(endoplasmicReticulumPCT, 0, 1, 0, 100)',
-                        'pie-4-background-color': '#ffd672',
-                        'pie-4-background-size': 'mapData(extracellularPCT, 0, 1, 0, 100)',
-                        'pie-5-background-color': '#a5a417',
-                        'pie-5-background-size': 'mapData(golgiPCT, 0, 1, 0, 100)',
-                        'pie-6-background-color': '#41abf9',
-                        'pie-6-background-size': 'mapData(mitochondrionPCT, 0, 1, 0, 100)',
-                        'pie-7-background-color': '#0032ff',
-                        'pie-7-background-size': 'mapData(nucleusPCT, 0, 1, 0, 100)',
-                        'pie-8-background-color': '#650065',
-                        'pie-8-background-size': 'mapData(peroxisomePCT, 0, 1, 0, 100)',
-                        'pie-9-background-color': '#edaa27',
-                        'pie-9-background-size': 'mapData(plasmaMembranePCT, 0, 1, 0, 100)',
-                        'pie-10-background-color': '#13971e',
-                        'pie-10-background-size': 'mapData(plastidPCT, 0, 1, 0, 100)',
-                        'pie-11-background-color': '#ecea3a',
-                        'pie-11-background-size': 'mapData(vacuolePCT, 0, 1, 0, 100)',
-
-					})
+					.css({
+                        'background-image' : 'data(svgDonut)',
+                    })
 				.selector('node[?experimentalSUBA]') //select nodes such that experimentalSUBA is truthy
-					.style({
+					.css({
 						'border-style' : 'solid',
 						'border-width' : '3px',
 						'border-color' : '#99cc00',
@@ -778,7 +851,7 @@
     Data returned is an array of objects, MapMan code is nested inside "result[0].parent.code" for each AGI
      */
     AIV.createGETMapManURL = function () {
-		var mapmanURL = "https://bar.utoronto.ca/~asher/bar_mapman.php?request=["; //TODO: change to our mapman proxy instead
+		var mapmanURL = "https://bar.utoronto.ca/~asher/bar_mapman.php?request=[";
         this.cy.$('node').forEach(function(node){
             var nodeID = node.data('name');
             if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
@@ -791,12 +864,48 @@
 	};
 
     /*
-    Take in the MapMan data from response JSON to be processed in these ways:
-    1) Add specific annotation to protein node qTips
-    2) Add the numbers to the centre donut of the protein node to be easily identified
+    Take in the MapMan data from response JSON to be processed:
+    1) Add MapMan code(s) and name(s) to node data to be displayed via qTip and on their donut centre
+
+    @MapManJSON is the JSON response we receive from the API
      */
     AIV.processMapMan = function (MapManJSON) {
 		console.log(MapManJSON);
+        // Iterate through each result item and inside however many annotations it has...
+		MapManJSON.forEach(function(geneMapMan) {
+            geneMapMan.result.forEach(function (resultItem, index) {
+            	var particularGene = AIV.cy.$('node[name = "' + geneMapMan.request.agi + '"]');
+            	var MapManCodeN = 'MapManCode' +  (index + 1); //i.e. MapManCode1
+            	var MapManNameN = 'MapManName' +  (index + 1); //i.e. MapManName1
+                particularGene.data({
+                    [MapManCodeN] : resultItem.code,
+                	[MapManNameN] : resultItem.name
+                });
+
+                //Now call SVG modifying function
+                modifySVGString(particularGene);
+            });
+        });
+
+
+		/*
+		* Expect a node as an object reference and modify its svgDonut string by adding a text tag
+		* @geneNode as a node object reference
+		*/
+		function modifySVGString(geneNode) {
+            var newSVGString = decodeURIComponent(geneNode.data('svgDonut')).replace("</svg>", ""); //strip </svg> closing tag
+			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
+			console.log(newSVGString);
+			var MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
+
+            newSVGString += `<text x='35%' y='60%'>
+								${MapManCode} 
+							</text></svg>`;
+			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
+
+			geneNode.data('svgDonut', newSVGString);
+		}
+
 	};
 
 	/** 
@@ -873,7 +982,15 @@
             .then(function(SUBAJSON){
                 console.log(SUBAJSON);
                 AIV.addLocalizationDataToNodes(SUBAJSON);
-                AIV.returnPieChartBGCSS().update();
+
+                //Loop through ATG protein nodes and add a SVG string property for bg-image css
+                AIV.cy.$('node').forEach(function(node){
+                    var nodeID = node.data('name');
+                    if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
+                        AIV.createSVGPieDonutCartStr(node);
+                    }
+                });
+                AIV.returnBGImageSVGasCSS().update();
             })
             .catch(function(err){
 
