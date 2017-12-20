@@ -11,18 +11,23 @@
 	var AIV = {};
 
     /**
-	 * @namespace {object} AIV - Important hash tables to store state data
+	 * @namespace {object} AIV - Important hash tables to store state data and styling global data
      * @property {object} chromosomesAdded - Object property for 'state' of how many PDI chromosomes exist
 	 * @property {object} genesFetched - Object property for 'state' of which gene data have been fetched (so we don't refetch)
 	 * @property {object} genesFetching - Object property for 'state' of loading API gene information calls
 	 * @property {number} nodeSize - "Global" default data such as default node size
      * @property {number} DNANodeSize - Important for adjusting the donut sizes, TODO: make nodesize options dropdown
+	 * @property {number} searchNodeSize - Size for search genes
+	 * @property {string} nodeDefaultColor - hexcode for regular nodes by default (no expression data)
      */
     AIV.chromosomesAdded = {};
     AIV.genesFetched = {};
 	AIV.genesFetching = {};
     AIV.nodeSize = 35;
 	AIV.DNANodeSize = 55;
+	AIV.searchNodeSize = 65;
+	AIV.nodeDefaultColor = '#cdcdcd';
+	AIV.searchNodeColor = '#ffffff';
 
     /**
 	 * @namespace {object} AIV
@@ -124,12 +129,19 @@
   			.selector('node')
   				.style({
 					'label': 'data(name)', //'label' is alias for 'content'
-				  	'font-size': 8,
-				  	'background-color': '#cdcdcd',
+				  	'font-size': 10,
+				  	'background-color': this.nodeDefaultColor,
                     "text-wrap": "wrap", //mulitline support
                     'height': this.nodeSize,
                     'width': this.nodeSize,
                 })
+			.selector('.searchGene') //If same properties as above, override them with these values
+				.style({
+                    'font-size': 14,
+                    'height' : this.searchNodeSize,
+					'width'  : this.searchNodeSize,
+					'background-color': this.searchNodeColor,
+				})
   			.selector('edge')
   				.style({
 					'curve-style': 'data(curveStyle)',
@@ -239,8 +251,9 @@
 	 * @function addNode - generic add nodes to cy core helper function
      * @param {string} node - as the name of the node, i.e. "At3g10000"
      * @param {string} type - as the type of node it is, i.e. "Protein"
+	 * @param {boolean} [searchGene] - optional parameter that signifies node is a search query gene
      */
-	AIV.addNode = function(node, type) {
+	AIV.addNode = function(node, type, searchGene) {
 		let node_id = type + '_' + node;
 		
 		// Add the node
@@ -249,6 +262,10 @@
 		]);
 		
 		this.cy.$('#' + node_id).addClass(type); // Add class such that .Protein, .DNA, .Effector
+
+		if (searchGene){ //For search genes, add a class for styling later
+            this.cy.$('#' + node_id).addClass('searchGene');
+		}
     };
 
     /**
@@ -268,7 +285,7 @@
 	        name = "Mitochondria";
         }
 
-        console.log("addDNANodes", DNAObjectData, "chrNum");
+        // console.log("addDNANodes", DNAObjectData, "chrNum");
 	    if (AIV.chromosomesAdded.hasOwnProperty(chrNum)){
             console.log("chromosome property already added");
             AIV.chromosomesAdded[chrNum].push(DNAObjectData);
@@ -315,7 +332,7 @@
 	 *            i.e. " "doi:10.1038/msb.2011.66"" or "None"
 	 * @published {boolean} - to whether this is published interaction data i.e. true
 	 */
-	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published) {
+	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence) {
 		let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
@@ -335,6 +352,7 @@
 					edgeWidth: width,
 					published: published,
 					reference: published ? reference : false,
+                    interologConfidence: interologConfidence,
 					curveStyle: typeTarget === "DNA" ? "unbundled-bezier" : "haystack",
 					arrowEdges: typeTarget === "DNA" ? "triangle" : "none",
  				},
@@ -574,24 +592,26 @@
 
     /**
 	 * @namespace {object} AIV
-	 * @function showDockerLink - decides whether to show the docker link or not based on the interolog confidence. If it does show it, then use the 3 params to create an external link elsewhere on the BAR
+	 * @function showDockerLink - decides whether to show the docker link or not based on the interolog confidence (based on whether it is IFF the interolog confidence is negative). Then use the 3 params to create an external link elsewhere on the BAR.
      *
-     * @source {string} as the source protein in ABI form i.e. "At3g10000"
-     * @target {string} as the target protein in ABI form i.e. "At4g40000"
-     * @DOIorPMID {string} as a string of DOI or PMIDs, delimited by \n, i.e. "doi:10.1126/science.1203659 \ndoi:10.1126/science.1203877"
-     * @
+     * @param {string} source - as the source protein in ABI form i.e. "At3g10000"
+     * @param {string} target - as the target protein in ABI form i.e. "At4g40000"
+     * @param {string} reference - string of DOI or PMIDs, delimited by \n, i.e. "doi:10.1126/science.1203659 \ndoi:10.1126/science.1203877".. whatever came through the GET request via 'reference' prop
+     * @param {number} interologConf - represents the interolog confidence value of the PPI
      */
-    AIV.showDockerLink = (source, target, DOIorPMID, published) => {
+    AIV.showDockerLink = (source, target, reference, interologConf) => {
         let modifyProString = string => string.replace(/PROTEIN_/gi, '').toUpperCase();
 
-        if (!published) {
+        if (interologConf > 0) {
             return "";
         }
         else {
             var refLinks = "";
-            AIV.sanitizeReferenceIDs( DOIorPMID ).forEach(function(ref){
-                refLinks += AIV.returnReferenceLink(ref, source);
-            });
+            if (reference) { //non-falsy value (we may have changed it to false in the addEdges() call)
+                AIV.sanitizeReferenceIDs( reference ).forEach(function(ref){
+                    refLinks += AIV.returnReferenceLink(ref, source);
+                });
+			}
             return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" +
 				"<p><span>" + refLinks + "</span></p>";
         }
@@ -615,7 +635,7 @@
                             		text: "Edge " + ppiEdge.data("source") + " to " + ppiEdge.data("target"),
 									button: "Close"
                             	},
-                            text : that.showDockerLink( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('published') ),
+                            text : that.showDockerLink( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('interologConfidence') ),
                         },
                     style  : { classes : 'qtip-bootstrap' },
                     show:
@@ -695,7 +715,7 @@
 	AIV.parseInteractionsData = function(data) {
 		for (var i = 0; i < this.genesList.length; i++) {
 			// Add Query node (user inputed in HTML form)
-			this.addNode(this.genesList[i], 'Protein');
+			this.addNode(this.genesList[i], 'Protein', true);
 
 			let dataSubset = data[this.genesList[i]]; //'[]' expression to access an object property
 
@@ -728,6 +748,8 @@
 					typeTarget = 'Effector';
 				}
 
+				EdgeJSON.interolog_confidence = Number(EdgeJSON.interolog_confidence); //Mutating string into number as the JSON gives "-1000" instead of -1000
+
 				// Get color
 				edgeColour = this.getEdgeColor(EdgeJSON.correlation_coefficient, EdgeJSON.published, EdgeJSON.index, EdgeJSON.interolog_confidence);
 
@@ -750,17 +772,17 @@
 
 				if (this.filter) { //Add if both source and target are in gene form list
                     if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index !== '2') { //PPIs
-						this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+						this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
 					}
                     else if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0)) { //PDIs
-                        this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+                        this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
                     }
 				}
 				else if (EdgeJSON.index !== '2') { //i.e. PDI edge
-					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
 				}
 				else if ( EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
-                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published);
+                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
 				}
 			}
 		} //end of adding nodes and edges
@@ -816,43 +838,47 @@
 		SUBADATA.forEach(function(geneSUBAData){
 			var denoTotal = 0;
 
-			// Below for loop creates a denominator score for each gene, so we can count pie chart data
-			for (let cellularLocation of Object.keys(geneSUBAData.data)) {
-                // console.log(geneSUBAData.id, cellularLocation, geneSUBAData.data[cellularLocation]);
-                if (! isNaN(geneSUBAData.data[cellularLocation])){ //if property value is a number...
-					denoTotal += geneSUBAData.data[cellularLocation]; //add to denominator
-					// console.log("TRUE!");
-				}
-            }
+			if (typeof geneSUBAData.data !== "undefined"){ //For nodes without any localization data
+                // for loop creates a denominator score for each gene, so we can count pie chart data
+                for (let cellularLocation of Object.keys(geneSUBAData.data)) {
+                    // console.log(geneSUBAData.id, cellularLocation, geneSUBAData.data[cellularLocation]);
+                    if (! isNaN(geneSUBAData.data[cellularLocation])){ //if property value is a number...
+                        denoTotal += geneSUBAData.data[cellularLocation]; //add to denominator
+                        // console.log("TRUE!");
+                    }
+                }
+			}
             // console.log(geneSUBAData.id, "total :", denoTotal);
 
 			var nodeID = "A" + geneSUBAData.id.substring(1).toLowerCase(); //AT1G04170 to At1g04170
-			AIV.cy.$('node[name = "' + nodeID + '"]')
-				.data('predictedSUBA',  ( geneSUBAData["includes_predicted"] === "yes" ) )
-				.data('experimentalSUBA',  ( geneSUBAData["includes_experimental"] === "yes" ) )
-                .data('cytoskeletonPCT', processLocalizationScore ( geneSUBAData.data.cytoskeleton, denoTotal ) )
-				.data('cytosolPCT', processLocalizationScore ( geneSUBAData.data.cytosol, denoTotal ) )
-                .data('endoplasmicReticulumPCT', processLocalizationScore ( geneSUBAData.data['endoplasmic reticulum'], denoTotal ) )
-                .data('extracellularPCT', processLocalizationScore ( geneSUBAData.data.extracellular, denoTotal ) )
-                .data('golgiPCT', processLocalizationScore ( geneSUBAData.data.golgi, denoTotal ) )
-                .data('mitochondrionPCT', processLocalizationScore ( geneSUBAData.data.mitochondrion, denoTotal ) )
-                .data('nucleusPCT', processLocalizationScore ( geneSUBAData.data.nucleus, denoTotal ) )
-                .data('peroxisomePCT', processLocalizationScore ( geneSUBAData.data.peroxisome, denoTotal ) )
-                .data('plasmaMembranePCT', processLocalizationScore ( geneSUBAData.data['plasma membrane'], denoTotal ) )
-                .data('plastidPCT', processLocalizationScore ( geneSUBAData.data.plastid, denoTotal ) )
-                .data('vacuolePCT', processLocalizationScore ( geneSUBAData.data.vacuole, denoTotal ) );
+            if (typeof geneSUBAData.data !== "undefined"){
+                AIV.cy.$('node[name = "' + nodeID + '"]')
+                    .data('predictedSUBA',  ( geneSUBAData.includes_predicted === "yes" ) )
+                    .data('experimentalSUBA',  ( geneSUBAData.includes_experimental === "yes" ) )
+                    .data('cytoskeletonPCT', countLocScore ( geneSUBAData.data.cytoskeleton, denoTotal ) )
+                    .data('cytosolPCT', countLocScore ( geneSUBAData.data.cytosol, denoTotal ) )
+                    .data('endoplasmicReticulumPCT', countLocScore ( geneSUBAData.data['endoplasmic reticulum'], denoTotal ) )
+                    .data('extracellularPCT', countLocScore ( geneSUBAData.data.extracellular, denoTotal ) )
+                    .data('golgiPCT', countLocScore ( geneSUBAData.data.golgi, denoTotal ) )
+                    .data('mitochondrionPCT', countLocScore ( geneSUBAData.data.mitochondrion, denoTotal ) )
+                    .data('nucleusPCT', countLocScore ( geneSUBAData.data.nucleus, denoTotal ) )
+                    .data('peroxisomePCT', countLocScore ( geneSUBAData.data.peroxisome, denoTotal ) )
+                    .data('plasmaMembranePCT', countLocScore ( geneSUBAData.data['plasma membrane'], denoTotal ) )
+                    .data('plastidPCT', countLocScore ( geneSUBAData.data.plastid, denoTotal ) )
+                    .data('vacuolePCT', countLocScore ( geneSUBAData.data.vacuole, denoTotal ) );
+            }
 
 		});
 
 		AIV.cy.endBatch();
 
         /**
-		* @function processLocalizationScore - helper function to return percentages (note that it will be .98 rather than 98) and typecheck
+		* @function countLocScore - helper function to return percentages (note that it will be .98 rather than 98) and typecheck
 		*
 		* @param {number} localizationScore - as the absolute score we receive from the response JSON
 		* @param {number} deno - as the calculated total denominator from all the various scores of different locations
 		*/
-		function processLocalizationScore (localizationScore, deno){
+		function countLocScore (localizationScore, deno){
 			if (localizationScore === undefined){
 				return 0;
 			}
@@ -876,17 +902,17 @@
 	 */
 	AIV.createSVGPieDonutCartStr = function(ABIGene) {
 		var ABIGeneData = ABIGene.data() ;
-		console.log(ABIGene.data());
-		var SVGwidthheight = this.nodeSize + 10;
+		var cyNodeSize = Number(ABIGene.style('height').slice(0, -2)); //Get the size of the node, change from '35px' {string} to 35 {number}
+		var SVGwidthheight = cyNodeSize + 10;
 		var donutCxCy = SVGwidthheight/2;
         var radius, strokeWidth;
-		radius = strokeWidth = this.nodeSize/2;
+		radius = strokeWidth = cyNodeSize/2;
 		var SVGstr = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg>';
 		SVGstr += `<svg width="${SVGwidthheight}" height="${SVGwidthheight}" class="donut" xmlns="http://www.w3.org/2000/svg">`;
 		SVGstr += `<circle class="donut-hole" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent"></circle>`;
 
 		//The below donut segment will appear for genes without SUBA data... it will be all grey
-		SVGstr += `<circle class="donut-unfilled-ring" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent" stroke="#d2d3d4" stroke-width="${strokeWidth}"></circle>`;
+		SVGstr += `<circle class="donut-unfilled-ring" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent" stroke="#56595b" stroke-width="${strokeWidth}"></circle>`;
 
 		// Figure out which 'PCT' properties are greater than zero and then programatically add them
 		// as donut-segments. Note that some calculations are involved based
@@ -1025,10 +1051,12 @@
 		function modifySVGString(geneNode) {
             var newSVGString = decodeURIComponent(geneNode.data('svgDonut')).replace("</svg>", ""); //strip </svg> closing tag
 			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
-			console.log(newSVGString);
+			// console.log(newSVGString);
 			var MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
+			var xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
+			var fontSize = geneNode.hasClass('searchGene') ? 30 : 15; //Determine whether gene is bigger or not (i.e. search gene or not)
 
-            newSVGString += `<text x='33%' y='60%'>
+            newSVGString += `<text x='${xPosition}' y='61%' font-size='${fontSize}'>
 								${MapManCode} 
 							</text></svg>`;
 			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
