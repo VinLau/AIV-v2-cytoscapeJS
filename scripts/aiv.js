@@ -486,6 +486,7 @@
     AIV.addProteinNodeQtips = function() {
         this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
             var protein = event.target;
+            console.log(protein.data());
             protein.qtip(
                 {
                     overwrite: false, //make sure tooltip won't be overriden once created
@@ -496,9 +497,7 @@
 											button: 'Close'
                                     	},
 									text :
-                                    /*
-                                    * Use jquery AJAX method which uses promises/deferred objects in conjunction with qTip built-in api.set() method which allows one to set the options of this qTip. Default value while loading is plain text to notify user.
-                                    * */
+                                    //Use jquery AJAX method which uses promises/deferred objects in conjunction with qTip built-in api.set() method which allows one to set the options of this qTip. Default value while loading is plain text to notify user.
                                         function(event, api) {
                                             console.log(`AJAX protein data call for ${protein.data("name")}`);
                                             if (AIV.genesFetched[protein.data("name")] !== undefined){ //Check with state variable to reload our fetched data stored in global state
@@ -540,7 +539,6 @@
                                             }
 
                                             return 'Fetching Protein Data...'; // Set some initial text
-
                                         }
 
 								},
@@ -1195,9 +1193,37 @@
         });
     });
 
-	// Ready to run
+    /** @function checkServerStatus - Check PSICQUIC INTACT status*/
+    function checkINTACTServerStatus(){
+        $.ajax({
+            url: "https://cors-anywhere.herokuapp.com/tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/arf7", //TODO: change to our proxy
+            type: "GET"
+        })
+            .then(()=>{
+                $("<img src='images/activeServer.png'/>").insertAfter("#IntActSpan");
+                document.getElementById("queryIntAct").disabled = false;
+            })
+            .catch(()=>{$("<img src='images/inactiveServer.png'/>").insertAfter("#IntActSpan");});
+    }
+
+    /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
+    function checkBIOGRIDServerStatus(){
+        $.ajax({
+            url: "https://cors-anywhere.herokuapp.com/www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/query/species:human?firstResult=0&maxResults=1", //TODO: change to our proxy
+            type: "GET"
+        })
+            .then(()=>{
+                $("<img src='images/activeServer.png'/>").insertAfter("#BioGridSpan");
+                document.getElementById("queryBioGrid").disabled = false;
+            })
+            .catch(()=>{$("<img src='images/inactiveServer.png'/>").insertAfter("#BioGridSpan");});
+    }
+
+    // Ready to run
 	$(function() {
 		// Initialize AIV
 		AIV.initialize();
-	});
+        checkINTACTServerStatus();
+        checkBIOGRIDServerStatus();
+    });
 })(window, jQuery, cytoscape);
