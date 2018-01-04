@@ -15,7 +15,9 @@
      * @property {object} chromosomesAdded - Object property for 'state' of how many PDI chromosomes exist
 	 * @property {object} genesFetched - Object property for 'state' of which gene data have been fetched (so we don't refetch)
 	 * @property {object} genesFetching - Object property for 'state' of loading API gene information calls
-	 * @property {number} nodeSize - "Global" default data such as default node size
+	 * @property {boolean} mapManLoadState - Boolean property representing if mapMan AJAX call was successful
+	 * @property {boolean} SUBA4LoadState - Boolean property representing if SUBA4 AJAX call was successful
+     * @property {number} nodeSize - "Global" default data such as default node size
      * @property {number} DNANodeSize - Important for adjusting the donut sizes, TODO: make nodesize options dropdown
 	 * @property {number} searchNodeSize - Size for search genes
 	 * @property {string} nodeDefaultColor - hexcode for regular nodes by default (no expression data)
@@ -23,6 +25,8 @@
     AIV.chromosomesAdded = {};
     AIV.genesFetched = {};
 	AIV.genesFetching = {};
+	AIV.mapManLoadState = false;
+	AIV.SUBA4LoadState = false;
     AIV.nodeSize = 35;
 	AIV.DNANodeSize = 55;
 	AIV.searchNodeSize = 65;
@@ -88,7 +92,10 @@
 				// Clear existing data
 				if (typeof AIV.cy !== 'undefined') {
 					AIV.cy.destroy();
-                    AIV.chromosomesAdded = {}; //clear existing built-in DNA data from previous query
+
+                    //reset existing built-in state data from previous query
+                    AIV.chromosomesAdded = {};
+                    AIV.mapManLoadState = false;
 				}
 				AIV.initializeCy();
 
@@ -420,11 +427,9 @@
 			htmlTABLE += `<tr><td>${targetDNAGene}</td>`;
             for (let protein of Object.keys(PDIsInChr)) {
                 if (PDIsInChr[protein].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
-					htmlTABLE += "<td>";
 					AIV.sanitizeReferenceIDs(pubmedRefHashTable[protein + '_' + targetDNAGene]).forEach(function(ref){
-						htmlTABLE += AIV.returnReferenceLink(ref, targetDNAGene);
+						htmlTABLE += "<td>" +  AIV.returnReferenceLink(ref, targetDNAGene) + "</td>";
 					});
-					htmlTABLE += "</td>";
 				}
 				else {
                 	htmlTABLE += "<td>No PDI</td>";
@@ -505,7 +510,7 @@
                                             }
 
                                             if (AIV.genesFetching[protein.data("name")] === true){ //Check with state variable to see if current gene data is already fetching
-                                                return 'Fetching Protein Data...';
+                                                return '<p>Fetching Protein Data...</p>' + AIV.showMapMan(protein) + AIV.showSUBA4(protein); // TODO: remove the AIV.showMapMan(protein) and AIV.showSUBA4(protein) once we upload a working API to the bar
                                             }
                                             else {
                                                 AIV.genesFetching[protein.data("name")] = true;
@@ -520,7 +525,9 @@
                                                         returnHTML +=
                                                             `<p>Locus: ${locus}</p>` +
                                                             `<p>Alias: ${synonyms.length > 0 ? synonyms.join(', ') : "N/A" }</p>` +
-                                                            `<p>Annotation: ${desc}</p>`;
+                                                            `<p>Annotation: ${desc}</p>` +
+															AIV.showMapMan(protein) +
+															AIV.showSUBA4(protein);
                                                         api.set('content.text', returnHTML);
                                                         AIV.genesFetching[protein.data("name")] = false; //reset loading state
                                                         AIV.genesFetched[protein.data("name")] = returnHTML; //add to global state such that we do not need to refetch, i.e. only if successful
@@ -529,16 +536,16 @@
                                                         // Upon failure, set the tooltip content to status and error value
                                                         console.error(xhr, status, error);
                                                         if (xhr.toString().match(/^.*TypeError.*$/)) { //For when we get a response from the API call but it does not have a the expected JSON structure
-                                                            api.set('content.text', "<p> Problem loading data... Gene querying web service likely down.</p>");
+                                                            api.set('content.text', "<p> Problem loading data... Gene querying web service likely down.</p>" + AIV.showMapMan(protein) + AIV.showSUBA4(protein) );
                                                         }
                                                         else {
-                                                            api.set('content.text', "<p> Problem loading data... Status code: " + status + ' : ' + error + "</p>");
+                                                            api.set('content.text', "<p> Problem loading data... Status code: " + status + ' : ' + error + "</p>" + AIV.showMapMan(protein) + AIV.showSUBA4(protein) );
                                                         }
                                                         AIV.genesFetching[protein.data("name")] = false; //reset loading state
                                                     });
                                             }
 
-                                            return 'Fetching Protein Data...'; // Set some initial text
+                                            return '<p>Fetching Protein Data...</p>' + AIV.showMapMan(protein) + AIV.showSUBA4(protein); // Set some initial text TODO: remove the AIV.showMapMan(protein) and AIV.showSUBA4(protein) once we upload a working API to the bar
                                         }
 
 								},
@@ -554,6 +561,43 @@
                 }
             );
         });
+    };
+
+    /**
+	 * @function showMapMan - helper function to decide whether or not to show MapMan on protein qTip
+	 * @param {object} protein - reference to the particular protein which we are adding a qTip
+     */
+    AIV.showMapMan = function(protein) {
+		if (this.mapManLoadState === false){ return ""; }
+		var baseString = "";
+        for (let i = 1; i < ( protein.data('numOfMapMans') + 1 ) ; i++) {
+            baseString += `<p> MapMan Code ${i} : ` + protein.data('MapManCode' + i) + '</p>' + `<p> MapMan Annotation ${i} : ` + protein.data('MapManName' + i) + '</p>';
+        }
+        console.log(baseString);
+        return baseString;
+	};
+
+    /**
+     * @function showSUBA4 - helper function to decide whether or not to show SUBA4 html table on protein qTip
+     * @param {object} protein - reference to the particular protein which we are adding a qTip
+     */
+    AIV.showSUBA4 = function(protein) {
+        if (this.SUBA4LoadState === false){ return ""; }
+        var baseString = "";
+        if (protein.data('cytoskeletonPCT')){ baseString += `<p> Cytoskeleton loc. : ${(protein.data('cytoskeletonPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('cytosolPCT')){ baseString += `<p> Cytosol loc. : ${(protein.data('cytosolPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('endoplasmicReticulumPCT')){ baseString += `<p> Endo. Reticulum loc. : ${(protein.data('endoplasmicReticulumPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('extracellularPCT')){ baseString += `<p> Extracellular Matrix loc. : ${(protein.data('extracellularPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('golgiPCT')){ baseString += `<p> Golgi loc. : ${(protein.data('golgiPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('mitochondrionPCT')){ baseString += `<p> Mitochondrion loc. : ${(protein.data('mitochondrionPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('nucleusPCT')){ baseString += `<p> Nucleus loc. : ${(protein.data('nucleusPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('plasmaMembranePCT')){ baseString += `<p> Plasma Membrane loc. : ${(protein.data('plasmaMembranePCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('peroxisomePCT')){ baseString += `<p> Peroxisome loc. : ${(protein.data('peroxisomePCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('plastidPCT')){ baseString += `<p> Plastid loc. : ${(protein.data('plastidPCT')*100).toFixed(2)}% </p>`;}
+        if (protein.data('vacuolePCT')){ baseString += `<p> Vacuole loc. : ${(protein.data('vacuolePCT')*100).toFixed(2)}% </p>`;}
+
+        console.log(baseString);
+        return baseString;
     };
 
     /**
@@ -600,18 +644,18 @@
     AIV.showDockerLink = (source, target, reference, interologConf) => {
         let modifyProString = string => string.replace(/PROTEIN_/gi, '').toUpperCase();
 
-        if (interologConf > 0) {
-            return "";
+        var refLinks = "";
+        if (reference) { //non-falsy value (we may have changed it to false in the addEdges() call)
+            AIV.sanitizeReferenceIDs( reference ).forEach(function(ref){
+                refLinks += '<p> Ref: ' + AIV.returnReferenceLink(ref, source) + '</p>';
+            });
         }
-        else {
-            var refLinks = "";
-            if (reference) { //non-falsy value (we may have changed it to false in the addEdges() call)
-                AIV.sanitizeReferenceIDs( reference ).forEach(function(ref){
-                    refLinks += AIV.returnReferenceLink(ref, source);
-                });
-			}
-            return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" +
-				"<p><span>" + refLinks + "</span></p>";
+
+        if (interologConf > 0) {
+            return refLinks; //can be "" or have a bunch of links..
+        }
+        else { //if interlog confidence is less than zero, show an external docker link
+            return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
         }
     };
 
@@ -678,13 +722,13 @@
     AIV.returnReferenceLink = function(referenceStr, ABIIdentifier) {
     	var regexGroup; //this variable necessary to extract parts from the reference string param
     	if ( (regexGroup = referenceStr.match(/^PubMed(\d+)$/i)) ) { //assign and evaluate if true immediately
-            return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PubMed ID ${regexGroup[1]}</a>`;
+            return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PMID ${regexGroup[1]}</a>`;
         }
 		else if ( (regexGroup = referenceStr.match(/^Mind(\d+)$/i)) ){
             return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${ABIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}}</a>`;
 		}
 		else if ( (regexGroup = referenceStr.match(/^AI-1.*$/i)) ){
-			return `<a href="http://interactome.dfci.harvard.edu/A_thaliana/index.php" target="_blank">  (Arabidopsis Interactome) ${referenceStr} </a>`;
+			return `<a href="http://interactome.dfci.harvard.edu/A_thaliana/index.php" target="_blank">  (A. th. Interactome) ${referenceStr} </a>`;
 		}
 		else if ( (regexGroup = referenceStr.match(/doi:(.*)/i)) ){
 			return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> DOI ${regexGroup[1]} </a>`;
@@ -1026,19 +1070,31 @@
 		console.log(MapManJSON);
         // Iterate through each result item and inside however many annotations it has...
 		MapManJSON.forEach(function(geneMapMan) {
+            var particularGene = AIV.cy.$('node[name = "' + geneMapMan.request.agi + '"]');
+            particularGene.data("numOfMapMans", geneMapMan.result.length); //for use in the qTip
             geneMapMan.result.forEach(function (resultItem, index) {
-            	var particularGene = AIV.cy.$('node[name = "' + geneMapMan.request.agi + '"]');
             	var MapManCodeN = 'MapManCode' +  (index + 1); //i.e. MapManCode1
             	var MapManNameN = 'MapManName' +  (index + 1); //i.e. MapManName1
-                particularGene.data({
-                    [MapManCodeN] : resultItem.code,
-                	[MapManNameN] : resultItem.name
+                particularGene.data({ //Add this data to object to be called via the qTip
+                    [MapManCodeN] : chopMapMan(resultItem.code),
+                	[MapManNameN] : chopMapMan(resultItem.name)
                 });
 
-                //Now call SVG modifying function
-                modifySVGString(particularGene);
+                //Now call SVG modifying function for the first iteration, Nick agreed to only show the first MapMan on the Donut
+                if (index === 0) { modifySVGString(particularGene); }
             });
         });
+
+        /**
+		 * @function chopMapman - decides whether or not to chop off MapMan Code/Name based on its detail/length (decided with discussion with Nick)
+		 * @param {string} nameOrCode - "27.2.1 or RNA.regulation.transcription" as an example
+         */
+        function chopMapMan(nameOrCode) {
+        	if ( (nameOrCode.match(/\./g)||[]).length > 3 ){ //If the MapMan is too detailed, remove the last occurence
+				return nameOrCode.substr(0, nameOrCode.lastIndexOf("."));
+			}
+			return nameOrCode; //By default return unmodified string if it is not too detailed
+		}
 
 
 		/**
@@ -1138,6 +1194,7 @@
             })
             .then(function(SUBAJSON){
                 console.log(SUBAJSON);
+                AIV.SUBA4LoadState = true;
                 AIV.addLocalizationDataToNodes(SUBAJSON);
 
                 //Loop through ATG protein nodes and add a SVG string property for bg-image css
@@ -1152,7 +1209,7 @@
             .catch(function(err){
 
             })
-			.then(function(){
+			.then(function(){ // chain this AJAX call to the above as the mapman relies on the drawing of the SVG pie donuts, i.e. wait for above sync code to finish
 				return $.ajax({
 					url: AIV.createGETMapManURL(),
 					type: 'GET',
@@ -1161,6 +1218,7 @@
 			})
 			.then(function(resMapManJSON){
 				AIV.processMapMan(resMapManJSON);
+				AIV.mapManLoadState = true;
 			})
 			.catch(function(err){
 
