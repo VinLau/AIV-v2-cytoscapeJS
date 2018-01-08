@@ -516,7 +516,7 @@
                                                 AIV.genesFetching[protein.data("name")] = true;
 
                                                 $.ajax({
-                                                    url: `https://cors.now.sh/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL TODO: remove cors now when uploaded to server
+                                                    url: `https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL TODO: remove cors now when uploaded to server
                                                 })
                                                     .then(function (content) {
                                                         var returnHTML = "";
@@ -1128,55 +1128,27 @@
 	AIV.loadData = function() {
 		let success = false;	// results
 
-		// AGI IDs
-		let req = '?request=[';
-		for (var i = 0; i < this.genesList.length; i++) {
-			req += '{"agi":"' + AIV.genesList[i] + '"}';
-			if (i < this.genesList.length - 1) {
-				req += ',';
-			}
-		}
-		req += "]";
+        // Dynamically build an array of promises for the Promise.all call later
+		var promisesArr = [];
 
-		//Recursive
-		if ($('#recursive').is(':checked')) {
-			req += "&recursive=true";
-		} else {
-			req += "&recursive=false";
-		}
+        if ($('#queryBAR').is(':checked')) {
+        	promisesArr.push(this.createBARAjaxPromise());
+        }
+        if ($('#queryIntAct').is(':checked')) {
+            promisesArr = promisesArr.concat(this.createINTACTAjaxPromise());
+        }
+        if ($('#queryBioGrid').is(':checked')) {
+            promisesArr = promisesArr.concat(this.createBioGridAjaxPromise());
+        }
+		console.log(promisesArr);
 
-		// Published
-		if ($('#published').is(':checked')) {
-			req += "&published=true";
-		} else {
-			req += "&published=false";
-		}
-
-		// DNA
-		if ($('#queryDna').is(':checked')) {
-			req += "&querydna=true";
-		} else {
-			req += "&querydna=false";
-		}
-
-		// Filter
-		if ($('#filter').is(':checked')) {
-			AIV.filter = true;
-		} else {
-			AIV.filter = false;
-		}
-
-		var serviceURL = 'http://bar.utoronto.ca/~vlau/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
-
-		$.ajax({
-			url: serviceURL,
-			type: 'GET',
-			dataType: 'json'
-		}).
-            then(function(PPIandPDIJSON) {
-                console.log(PPIandPDIJSON);
+		Promise.all(promisesArr)
+			.then(function(PPIandPDIJSON) {
+				console.log("Response:", PPIandPDIJSON);
+				var res = PPIandPDIJSON[0].res;
+                console.log(res);
                 // Parse data and make cy elements object
-                AIV.parseInteractionsData(PPIandPDIJSON);
+                AIV.parseInteractionsData(res);
                 document.getElementById('loading').classList.add('loaded'); //remove loading spinner
             })
             .catch(function(err){
@@ -1226,6 +1198,97 @@
 
 		return success;
 	};
+
+    /**
+	 * @function createBARAJaxPromise - programatically figures out how to build the BAR URL get request
+     * @returns {Promise.<{res: object, ajaxCallType: string}>|*}
+     */
+	AIV.createBARAjaxPromise = function() {
+        // AGI IDs
+        let req = '?request=[';
+        for (var i = 0; i < this.genesList.length; i++) {
+            req += '{"agi":"' + this.genesList[i] + '"}';
+            if (i < this.genesList.length - 1) {
+                req += ',';
+            }
+        }
+        req += "]";
+
+        //Recursive
+        if ($('#recursive').is(':checked')) {
+            req += "&recursive=true";
+        } else {
+            req += "&recursive=false";
+        }
+
+        // Published
+        if ($('#published').is(':checked')) {
+            req += "&published=true";
+        } else {
+            req += "&published=false";
+        }
+
+        // DNA
+        if ($('#queryDna').is(':checked')) {
+            req += "&querydna=true";
+        } else {
+            req += "&querydna=false";
+        }
+
+        // Filter
+        if ($('#filter').is(':checked')) {
+            AIV.filter = true;
+        } else {
+            AIV.filter = false;
+        }
+
+        var serviceURL = 'http://bar.utoronto.ca/~vlau/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
+
+		return $.ajax({
+            url: serviceURL,
+            type: 'GET',
+            dataType: 'json'
+        })
+			.then( res => ( {res: res, ajaxCallType: 'BAR'} )); //ajaxCallType for identifying when parsing Promise.all response array
+	};
+
+    /**
+	 * @function createINTACTAjaxPromise - Parse through the gene form and create a bunch of AJAX requests to the INTACT PSICQUIC webservice
+     * @returns {Array} - array of ajax promises that return objects when resolved
+     */
+	AIV.createINTACTAjaxPromise = function () {
+		var returnArr = []; //return an array of AJAX promises to be concatenated later
+        for (var i = 0; i < this.genesList.length; i++) {
+			returnArr.push(
+                $.ajax({
+                    url: `https://cors-anywhere.herokuapp.com/http://www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/interactor/${this.genesList[i]}`, //todo: take off cors anywhere
+                    type: 'GET',
+                    dataType: 'text'
+                })
+                    .then( res => ( {res: res, ajaxCallType: 'INTACT'} )) //ajaxCallType for identifying when parsing Promise.all response array
+			);
+        }
+        return returnArr;
+	};
+
+    /**
+	 * @function createINTACTAjaxPromise - Parse through the gene form and create a bunch of AJAX requests to the BioGrid PSICQUIC webservice
+     * @returns {Array} - array of ajax promises that return objects when resolved
+     */
+    AIV.createBioGridAjaxPromise = function () {
+        var returnArr = []; //return an array of AJAX promises to be concatenated later
+        for (var i = 0; i < this.genesList.length; i++) {
+            returnArr.push(
+                $.ajax({
+                    url: `https://cors-anywhere.herokuapp.com/http://tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/${this.genesList[i]}`, //todo: take off cors anywhere
+                    type: 'GET',
+                    dataType: 'text'
+                })
+                    .then( res => ( {res: res, ajaxCallType: 'BioGrid'} )) //ajaxCallType for identifying when parsing Promise.all response array
+            );
+        }
+        return returnArr;
+    };
 
 	//PNG Export
     document.getElementById('showPNGModal').addEventListener('click', function(event){
