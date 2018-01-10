@@ -82,10 +82,9 @@
 
             // Get the list of genes
 			let genes = $.trim($('#genes').val());
+
 			if (genes !== '') {
-				genes = genes.replace(/T/g,'t');
-				genes = genes.replace(/G/g, 'g');
-				genes = genes.replace(/a/g, 'A');
+				genes = AIV.formatABI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
 
 				AIV.genesList = genes.split("\n");
 				
@@ -111,6 +110,19 @@
 			$('#genes').css('height', genesHeight + 'px');
 		}
 	};
+
+    /**
+	 * @namespace {object} AIV
+     * @function formatABI - helper function that takes in a capitalized ABI into the one we use i.e. AT3G10000 to At3g10000
+     * @param {string} ABI
+     * @returns {string} - formmated ABI, i.e. At3g10000
+     */
+    AIV.formatABI = function (ABI){
+        ABI = ABI.replace(/T/g,'t');
+        ABI = ABI.replace(/G/g, 'g');
+        ABI = ABI.replace(/a/g, 'A');
+        return ABI;
+    };
 
 	/**
 	 * @namespace {object} AIV
@@ -340,10 +352,11 @@
 	 * @published {boolean} - to whether this is published interaction data i.e. true
 	 */
 	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence) {
-		let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
+		// let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
-		if (reference !== "None"){ //TODO: remove this later
+        let edge_id = source + '_' + target;
+        if (reference !== "None"){ //TODO: remove this later
 			// console.log(reference, " ", width);
 		}
 		this.cy.add([
@@ -639,7 +652,7 @@
      * @param {string} source - as the source protein in ABI form i.e. "At3g10000"
      * @param {string} target - as the target protein in ABI form i.e. "At4g40000"
      * @param {string} reference - string of DOI or PMIDs, delimited by \n, i.e. "doi:10.1126/science.1203659 \ndoi:10.1126/science.1203877".. whatever came through the GET request via 'reference' prop
-     * @param {number} interologConf - represents the interolog confidence value of the PPI
+     * @param {number|string} interologConf - represents the interolog confidence value of the PPI, can be "NA" if the edge is from INTACT/BioGrid
      */
     AIV.showDockerLink = (source, target, reference, interologConf) => {
         let modifyProString = string => string.replace(/PROTEIN_/gi, '').toUpperCase();
@@ -651,10 +664,10 @@
             });
         }
 
-        if (interologConf > 0) {
-            return refLinks; //can be "" or have a bunch of links..
+        if (interologConf > 0 || interologConf === "NA") {
+            return refLinks; //can be "" or have a bunch of links..., "NA" should return ""
         }
-        else { //if interlog confidence is less than zero, show an external docker link
+        else { //if interlog confidence is less than zero or not null, show external docker link
             return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
         }
     };
@@ -740,10 +753,10 @@
 
 	/**
 	 * @namespace {object} AIV
-	 * @function parseInteractionData -
-	 * This function parses interactions data, namely in these ways:
+	 * @function parseBARInteractionsData -
+	 * This function parses interactions for the BAR interactions API data, namely in these ways:
 	 * Create an outer for loop (run N times where N is the # of genes in the user form):
-	 * I  ) Add these nodes to the cy core.
+	 * I  ) Assign dataSubset variable to be all the genes connected to a single form gene
 	 * II ) Then create an inner for loop to add the interacting nodes:
 	 * i  ) Add interactive node to the cy core.
 	 * ii ) Add the edges for all interactions
@@ -754,10 +767,8 @@
 	 * iv ) After all this is finished, we run a bunch of functions that add qTips and Styling
 	 * @param {object} data - response JSON we get from the get_interactions_dapseq PHP webservice at the BAR
 	 */
-	AIV.parseInteractionsData = function(data) {
+	AIV.parseBARInteractionsData = function(data) {
 		for (var i = 0; i < this.genesList.length; i++) {
-			// Add Query node (user inputed in HTML form)
-			this.addNode(this.genesList[i], 'Protein', true);
 
 			let dataSubset = data[this.genesList[i]]; //'[]' expression to access an object property
 
@@ -770,7 +781,7 @@
 				let edgeColour = '#000000';	 // Default color of Black
 				let style = 'solid'; // Default solid line style
 				let width = '5'; // Default edge width
-				let EdgeJSON = dataSubset[j];
+				let EdgeJSON = dataSubset[j]; // Data from the PHP API comes in the form of an array of PPIs/PDIs hence this variable name
 
 				// Source, note that source is NEVER DNA
 				if (EdgeJSON.source.match(/^At/i)) {
@@ -820,7 +831,7 @@
                         this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
                     }
 				}
-				else if (EdgeJSON.index !== '2') { //i.e. PDI edge
+				else if (EdgeJSON.index !== '2') { //i.e. PPI edge
 					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
 				}
 				else if ( EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
@@ -829,16 +840,72 @@
 			}
 		} //end of adding nodes and edges
 
-		// Update styling and add qTips as nodes have now been added to the cy core
-        this.addChrNodeQtips();
-		this.addNumberOfPDIsToNodeLabel();
-        this.addProteinNodeQtips();
-		this.addPPIEdgeQtips();
-		this.addEffectorNodeQtips();
-		this.cy.style(this.getCyStyle()).update();
-        this.setDNANodesPosition();
-        this.cy.layout(this.getCyLayout()).run();
 	};
+
+    /**
+	 * @namespace {object} AIV
+	 * @function - parsePSICQUICInteractionsData - Take in the PSICQUICdata param which is the text response we get back from the AJAX call and parse it via regex (based on whether it is from INTACT or BioGrid). Then add unique edges and nodes.
+     * @param {string} PSICQUICdata - should be a bunch of PSICQUIC formatted text
+     * @param {string} queryGeneAsABI - should be something like "At3g10000"
+     * @param {string} INTACTorBioGrid - should either be "INTACT" or "BioGrid"
+     */
+    AIV.parsePSICQUICInteractionsData = function(PSICQUICdata, queryGeneAsABI, INTACTorBioGrid){
+        let edgeColour = '#302f31';	 // Dark grey to be represent INTACT or BioGrid PPIs
+        let style = 'solid'; // Default solid line style
+        let width = '5'; // Default edge width
+
+        console.log(PSICQUICdata);
+		console.log("queryGene:", queryGeneAsABI);
+
+		let regex;
+		if (INTACTorBioGrid === "INTACT") {
+			// example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus
+            regex = new RegExp("uniprotkb:(?!" + queryGeneAsABI +")(At\\d[gcm]\\d{5})\\(locus", "gi");
+		}
+		else if (INTACTorBioGrid === "BioGrid"){
+			// example \|entrez gene\/locuslink:(?!At3g18130)(At\d[gcm]\d{5})[\t|]
+			regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsABI + ")(At\\d[gcm]\\d{5})[\\t|]", "gi");
+		}
+
+		let match;
+		let arrPPIsProteinsRaw = []; // array will be populated with ABI identifiers of genes that interact with the queryGeneAsABI via regex...
+
+		/*
+		Do not place the regular expression literal (or RegExp constructor) within the while condition or it will create an infinite loop if there is a match due to the lastIndex
+		property being reset upon each iteration. Also be sure that the global flag is set or a loop will occur here also.
+
+		We are looping through the entire returned response text string (tab delimited PSICQUIC format) and looking for matches via the builtin regex.exec method. When we find a match, specifically
+		the second capturing group, we will push to a state array for further processing
+		 */
+        while ((match = regex.exec(PSICQUICdata)) !== null) {
+            // This is necessary to avoid infinite loops with zero-width matches
+            if (match.index === regex.lastIndex) {
+                regex.lastIndex++;
+            }
+            arrPPIsProteinsRaw.push( AIV.formatABI ( match[1] ) ); //look for second captured group, i.e. "At2g10000"
+        }
+
+        let arrPPIsProteinsUnique = arrPPIsProteinsRaw.filter(function(item, index, selfArr){ //delete duplicates
+            return index === selfArr.indexOf(item);
+        });
+
+        console.log(arrPPIsProteinsUnique);
+
+        arrPPIsProteinsUnique.forEach(function(proteinItem){
+            if ( AIV.cy.getElementById(`Protein_${proteinItem}`).empty() && ( !AIV.filter )) { //Check if node already on cy core and if filter is not checked (don't need to do an array check as form nodes added in the then() after the Promise.all)
+                AIV.addNode(proteinItem, "Protein");
+            }
+            if ( AIV.cy.getElementById(`Protein_${queryGeneAsABI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
+				if (AIV.filter && AIV.genesList.indexOf( proteinItem ) !== -1 ) { // Only check target protein as the source protein is the form gene
+                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, "None", false, "NA" ); // TODO: for now... (ask Nick) make references "None" and published false, no valid interlog confidence
+				}
+				else if (!AIV.filter) {
+                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, "None", false, "NA" ); // TODO: for now... (ask Nick) make references "None" and published false, no valid interlog confidence
+				}
+			}
+		});
+
+    };
 
 	/**
 	 * @namespace {object} AIV
@@ -1126,7 +1193,10 @@
 	 * @returns {boolean} - True if the data is laoded
 	 */
 	AIV.loadData = function() {
-		let success = false;	// results
+		let success = false; // results
+
+        // Reassign state variable everytime user hits submit button
+        AIV.filter = ($('#filter').is(':checked')) || false;
 
         // Dynamically build an array of promises for the Promise.all call later
 		var promisesArr = [];
@@ -1143,12 +1213,34 @@
 		console.log(promisesArr);
 
 		Promise.all(promisesArr)
-			.then(function(PPIandPDIJSON) {
-				console.log("Response:", PPIandPDIJSON);
-				var res = PPIandPDIJSON[0].res;
-                console.log(res);
+			.then(function(promiseRes) {
+				console.log("Response:", promiseRes);
+
+                // Add Query node (user inputed in HTML form)
+                for (var i = 0; i < AIV.genesList.length; i++) {
+                        AIV.addNode(AIV.genesList[i], 'Protein', true);
+                }
+
                 // Parse data and make cy elements object
-                AIV.parseInteractionsData(res);
+                for (let i = 0; i < promiseRes.length; i++) {
+                    if (promiseRes[i].ajaxCallType === "BAR"){
+                        AIV.parseBARInteractionsData(promiseRes[i].res);
+                    }
+                    else {
+                        AIV.parsePSICQUICInteractionsData(promiseRes[i].res, promiseRes[i].queryGene, promiseRes[i].ajaxCallType);
+                    }
+                }
+
+                // Update styling and add qTips as nodes have now been added to the cy core
+                AIV.addChrNodeQtips();
+                AIV.addNumberOfPDIsToNodeLabel();
+                AIV.addProteinNodeQtips();
+                AIV.addPPIEdgeQtips();
+                AIV.addEffectorNodeQtips();
+                AIV.cy.style(AIV.getCyStyle()).update();
+                AIV.setDNANodesPosition();
+                AIV.cy.layout(AIV.getCyLayout()).run();
+
                 document.getElementById('loading').classList.add('loaded'); //remove loading spinner
             })
             .catch(function(err){
@@ -1235,13 +1327,6 @@
             req += "&querydna=false";
         }
 
-        // Filter
-        if ($('#filter').is(':checked')) {
-            AIV.filter = true;
-        } else {
-            AIV.filter = false;
-        }
-
         var serviceURL = 'http://bar.utoronto.ca/~vlau/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
 
 		return $.ajax({
@@ -1258,14 +1343,14 @@
      */
 	AIV.createINTACTAjaxPromise = function () {
 		var returnArr = []; //return an array of AJAX promises to be concatenated later
-        for (var i = 0; i < this.genesList.length; i++) {
+        for (let i = 0; i < this.genesList.length; i++) {
 			returnArr.push(
                 $.ajax({
                     url: `https://cors-anywhere.herokuapp.com/http://www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/interactor/${this.genesList[i]}`, //todo: take off cors anywhere
                     type: 'GET',
                     dataType: 'text'
                 })
-                    .then( res => ( {res: res, ajaxCallType: 'INTACT'} )) //ajaxCallType for identifying when parsing Promise.all response array
+                    .then( res => ( {res: res, ajaxCallType: 'INTACT', queryGene: this.genesList[i]} )) //ajaxCallType for identifying when parsing Promise.all response array
 			);
         }
         return returnArr;
@@ -1277,14 +1362,14 @@
      */
     AIV.createBioGridAjaxPromise = function () {
         var returnArr = []; //return an array of AJAX promises to be concatenated later
-        for (var i = 0; i < this.genesList.length; i++) {
+        for (let i = 0; i < this.genesList.length; i++) {
             returnArr.push(
                 $.ajax({
                     url: `https://cors-anywhere.herokuapp.com/http://tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/${this.genesList[i]}`, //todo: take off cors anywhere
                     type: 'GET',
                     dataType: 'text'
                 })
-                    .then( res => ( {res: res, ajaxCallType: 'BioGrid'} )) //ajaxCallType for identifying when parsing Promise.all response array
+                    .then( res => ( {res: res, ajaxCallType: 'BioGrid', queryGene: this.genesList[i]} )) //ajaxCallType for identifying when parsing Promise.all response array
             );
         }
         return returnArr;
@@ -1321,10 +1406,14 @@
             type: "GET"
         })
             .then(()=>{
+                document.getElementById("spinnerIntAct").style.display = 'none';
                 $("<img src='images/activeServer.png'/>").insertAfter("#IntActSpan");
                 document.getElementById("queryIntAct").disabled = false;
             })
-            .catch(()=>{$("<img src='images/inactiveServer.png'/>").insertAfter("#IntActSpan");});
+            .catch(()=>{
+                document.getElementById("spinnerIntAct").style.display = 'none';
+                $("<img src='images/inactiveServer.png'/>").insertAfter("#IntActSpan");
+            });
     }
 
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
@@ -1334,10 +1423,14 @@
             type: "GET"
         })
             .then(()=>{
+                document.getElementById("spinnerBioGrid").style.display = 'none';
                 $("<img src='images/activeServer.png'/>").insertAfter("#BioGridSpan");
                 document.getElementById("queryBioGrid").disabled = false;
             })
-            .catch(()=>{$("<img src='images/inactiveServer.png'/>").insertAfter("#BioGridSpan");});
+            .catch(()=>{
+                document.getElementById("spinnerBioGrid").style.display = 'none';
+                $("<img src='images/inactiveServer.png'/>").insertAfter("#BioGridSpan");
+            });
     }
 
     // Ready to run
