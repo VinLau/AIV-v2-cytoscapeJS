@@ -4,7 +4,7 @@
  * @author Vincent Lau (major additions, AJAX, polishing, CSS, SVGs) <vincente.lau@mail.utoronto.ca>
  * @author Asher Pasha (base app, adding nodes & edges)
  */
-(function(window, $, cytoscape, undefined) {
+(function(window, $, cytoscape, undefined) {	
 	'use strict';
 
     /** @namespace {object} AIV */
@@ -157,6 +157,7 @@
 			.selector('.searchGene') //If same properties as above, override them with these values
 				.style({
                     'font-size': 14,
+					'z-index': 10000,
                     'height' : this.searchNodeSize,
 					'width'  : this.searchNodeSize,
 					'background-color': this.searchNodeColor,
@@ -340,18 +341,19 @@
 	/**
 	 * @namespace {object} AIV
 	 * @function addEdges - Add edges to the cy core, need many params here to determine the edgestyling via some of these params
-	 * @source {string} - as the source protein i.e. "At2g34970"
-	 * @typeSource {string} - as the type of protein it is, i.e. "effector" or "protein"
-	 * @target {string} - as the target protein i.e. "At3g05230"
-	 * @targetTarget {string} - as the type of protein it is, i.e. "effector" or "protein"
-	 * @colour {string} - as the edge colour as a hexcode i.e. "#557e00"
-	 * @style {string} - as whether dashed or solid i.e. "solid"
-	 * @width {string} - as width of the edge as a string of a number i.e. "5"
-	 * @reference {string} - as (if it exists) a published string of the DOI or Pubmed, etc.
-	 *            i.e. " "doi:10.1038/msb.2011.66"" or "None"
-	 * @published {boolean} - to whether this is published interaction data i.e. true
+	 * @param {string} source - as the source protein i.e. "At2g34970"
+	 * @param {string} typeSource - as the type of protein it is, i.e. "effector" or "protein"
+	 * @param {string} target - as the target protein i.e. "At3g05230"
+	 * @param {string} typeTarget - as the type of protein it is, i.e. "effector" or "protein"
+	 * @param {string} colour - as the edge colour as a hexcode i.e. "#557e00"
+	 * @param {string} style - as whether dashed or solid i.e. "solid"
+	 * @param {string} width - as width of the edge as a string of a number i.e. "5"
+	 * @param {string} reference - as (if it exists) a published string of the DOI or Pubmed, etc. i.e. " "doi:10.1038/msb.2011.66"" or "None"
+	 * @param {boolean} published - to whether this is published interaction data i.e. true
+	 * @param {number | string} interologConfidence  - interolog confidence number, can be negative to positive, or zero (means experimentally validated prediction) i.e. -2121
+	 * @param {string} databaseSource - where did this edge come from ? i.e. "BAR"
 	 */
-	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence) {
+	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence, databaseSource) {
 		// let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
@@ -375,6 +377,7 @@
                     interologConfidence: interologConfidence,
 					curveStyle: typeTarget === "DNA" ? "unbundled-bezier" : "haystack",
 					arrowEdges: typeTarget === "DNA" ? "triangle" : "none",
+					databaseOrigin: databaseSource
  				},
 			}
 		]);
@@ -647,27 +650,28 @@
 
     /**
 	 * @namespace {object} AIV
-	 * @function showDockerLink - decides whether to show the docker link or not based on the interolog confidence (based on whether it is IFF the interolog confidence is negative). Then use the 3 params to create an external link elsewhere on the BAR.
+	 * @function createPPIEdgeText - decides whether to show the docker link or not based on the interolog confidence (based on whether it is IFF the interolog confidence is negative). Then use the 3 params to create an external link elsewhere on the BAR.
      *
      * @param {string} source - as the source protein in ABI form i.e. "At3g10000"
      * @param {string} target - as the target protein in ABI form i.e. "At4g40000"
      * @param {string} reference - string of DOI or PMIDs, delimited by \n, i.e. "doi:10.1126/science.1203659 \ndoi:10.1126/science.1203877".. whatever came through the GET request via 'reference' prop
      * @param {number|string} interologConf - represents the interolog confidence value of the PPI, can be "NA" if the edge is from INTACT/BioGrid
+	 * @param {string} dbSource - where did the PPI come from i.e. "BAR"
      */
-    AIV.showDockerLink = (source, target, reference, interologConf) => {
+    AIV.createPPIEdgeText = (source, target, reference, interologConf, dbSource) => {
         let modifyProString = string => string.replace(/PROTEIN_/gi, '').toUpperCase();
 
-        var refLinks = "";
+        var refLinks = `<p>Database: ${dbSource}</p>`;
         if (reference) { //non-falsy value (we may have changed it to false in the addEdges() call)
             AIV.sanitizeReferenceIDs( reference ).forEach(function(ref){
                 refLinks += '<p> Ref: ' + AIV.returnReferenceLink(ref, source) + '</p>';
             });
         }
 
-        if (interologConf > 0 || interologConf === "NA") {
+        if (interologConf >= 0 ) {
             return refLinks; //can be "" or have a bunch of links..., "NA" should return ""
         }
-        else { //if interlog confidence is less than zero or not null, show external docker link
+        else { //if interlog confidence is less than zero, show external docker link
             return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
         }
     };
@@ -690,7 +694,7 @@
                             		text: "Edge " + ppiEdge.data("source") + " to " + ppiEdge.data("target"),
 									button: "Close"
                             	},
-                            text : that.showDockerLink( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('interologConfidence') ),
+                            text : that.createPPIEdgeText( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('interologConfidence'), ppiEdge.data('databaseOrigin') ),
                         },
                     style  : { classes : 'qtip-bootstrap' },
                     show:
@@ -734,7 +738,7 @@
      */
     AIV.returnReferenceLink = function(referenceStr, ABIIdentifier) {
     	var regexGroup; //this variable necessary to extract parts from the reference string param
-    	if ( (regexGroup = referenceStr.match(/^PubMed(\d+)$/i)) ) { //assign and evaluate if true immediately
+    	if ( (regexGroup = referenceStr.match(/^PubMed[:]?(\d+)$/i)) ) { //assign and evaluate if true immediately
             return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PMID ${regexGroup[1]}</a>`;
         }
 		else if ( (regexGroup = referenceStr.match(/^Mind(\d+)$/i)) ){
@@ -807,7 +811,7 @@
 				edgeColour = this.getEdgeColor(EdgeJSON.correlation_coefficient, EdgeJSON.published, EdgeJSON.index, EdgeJSON.interolog_confidence);
 
 				// Get Line Style
-				style = ((EdgeJSON.interolog_confidence <= 2 && EdgeJSON.interolog_confidence > 0) ? "dashed" : "solid");
+				style = ((EdgeJSON.published) ? "solid" : "dashed"); //TODO: talk with Nick/Asher to use interolog confidence or publsihed flag
 
 				// Get Line Width
 				width = this.getWidth(EdgeJSON.interolog_confidence);
@@ -825,17 +829,17 @@
 
 				if (this.filter) { //Add if both source and target are in gene form list
                     if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index !== '2') { //PPIs
-						this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
+						this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
 					}
                     else if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0)) { //PDIs
-                        this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
+                        this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
                     }
 				}
 				else if (EdgeJSON.index !== '2') { //i.e. PPI edge
-					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
+					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
 				}
 				else if ( EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
-                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence);
+                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
 				}
 			}
 		} //end of adding nodes and edges
@@ -850,25 +854,27 @@
      * @param {string} INTACTorBioGrid - should either be "INTACT" or "BioGrid"
      */
     AIV.parsePSICQUICInteractionsData = function(PSICQUICdata, queryGeneAsABI, INTACTorBioGrid){
-        let edgeColour = '#302f31';	 // Dark grey to be represent INTACT or BioGrid PPIs
-        let style = 'solid'; // Default solid line style
-        let width = '5'; // Default edge width
+        // INTACT and BioGrid PPIs are experimentally validated by default hence these 3 colors, style, width
+    	let edgeColour = '#99cc00';
+        let style = 'solid';
+        let width = '11';
 
         console.log(PSICQUICdata);
 		console.log("queryGene:", queryGeneAsABI);
 
 		let regex;
 		if (INTACTorBioGrid === "INTACT") {
-			// example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus
-            regex = new RegExp("uniprotkb:(?!" + queryGeneAsABI +")(At\\d[gcm]\\d{5})\\(locus", "gi");
+			// example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus.*(pubmed:\d+)
+            regex = new RegExp("uniprotkb:(?!" + queryGeneAsABI +")(At\\d[gcm]\\d{5})\\(locus.*(pubmed:\\d+)", "gi");
 		}
 		else if (INTACTorBioGrid === "BioGrid"){
-			// example \|entrez gene\/locuslink:(?!At3g18130)(At\d[gcm]\d{5})[\t|]
-			regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsABI + ")(At\\d[gcm]\\d{5})[\\t|]", "gi");
+			// example \|entrez gene\/locuslink:(?!At3g18130)(At\d[gcm]\d{5})[\t|].*(pubmed:\d+)
+			regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsABI + ")(At\\d[gcm]\\d{5})[\\t|].*(pubmed:\\d+)", "gi");
 		}
 
 		let match;
 		let arrPPIsProteinsRaw = []; // array will be populated with ABI identifiers of genes that interact with the queryGeneAsABI via regex...
+		let pubmedIdArr = []; // array to store string of pubmed IDs
 
 		/*
 		Do not place the regular expression literal (or RegExp constructor) within the while condition or it will create an infinite loop if there is a match due to the lastIndex
@@ -883,6 +889,7 @@
                 regex.lastIndex++;
             }
             arrPPIsProteinsRaw.push( AIV.formatABI ( match[1] ) ); //look for second captured group, i.e. "At2g10000"
+			pubmedIdArr.push(match[2]); //look for third captured group (i.e. "23667124")
         }
 
         let arrPPIsProteinsUnique = arrPPIsProteinsRaw.filter(function(item, index, selfArr){ //delete duplicates
@@ -891,16 +898,20 @@
 
         console.log(arrPPIsProteinsUnique);
 
-        arrPPIsProteinsUnique.forEach(function(proteinItem){
+        /*
+        Loop through each PPI interaction and add the corresponding edge
+        Need index to add PubMedID (as far as we know there is only one pubmed ID per interaction) so we can simply map out the index.
+         */
+        arrPPIsProteinsUnique.forEach(function(proteinItem, index){
             if ( AIV.cy.getElementById(`Protein_${proteinItem}`).empty() && ( !AIV.filter )) { //Check if node already on cy core and if filter is not checked (don't need to do an array check as form nodes added in the then() after the Promise.all)
                 AIV.addNode(proteinItem, "Protein");
             }
             if ( AIV.cy.getElementById(`Protein_${queryGeneAsABI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
 				if (AIV.filter && AIV.genesList.indexOf( proteinItem ) !== -1 ) { // Only check target protein as the source protein is the form gene
-                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, "None", false, "NA" ); // TODO: for now... (ask Nick) make references "None" and published false, no valid interlog confidence
+                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid );
 				}
 				else if (!AIV.filter) {
-                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, "None", false, "NA" ); // TODO: for now... (ask Nick) make references "None" and published false, no valid interlog confidence
+                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid ); // 0 represents experimentally validated in our case
 				}
 			}
 		});
@@ -1327,7 +1338,7 @@
             req += "&querydna=false";
         }
 
-        var serviceURL = 'http://bar.utoronto.ca/~vlau/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
+        var serviceURL = 'http://bar.utoronto.ca/~asher/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
 
 		return $.ajax({
             url: serviceURL,
