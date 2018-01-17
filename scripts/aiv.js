@@ -35,9 +35,12 @@
 
     /**
 	 * @namespace {object} AIV
-	 * @function initialize - Call bindUIEvents as the DOM has been prepared
+	 * @function initialize - Call bindUIEvents as the DOM has been prepared and add namespace variable
 	 */
 	AIV.initialize = function() {
+        // Set AIV namespace in window
+        window.aivNamespace = {};
+        window.aivNamespace.AIV = AIV;
 		// Bind User events
 		this.bindUIEvents();
 	};
@@ -161,6 +164,10 @@
                     'height' : this.searchNodeSize,
 					'width'  : this.searchNodeSize,
 					'background-color': this.searchNodeColor,
+				})
+			.selector('.filteredChildNodes') //add/(remove) this class to nodes to (un)filter display
+				.style({
+					'display' : 'none',
 				})
   			.selector('edge')
   				.style({
@@ -286,6 +293,9 @@
 		if (searchGene){ //For search genes, add a class for styling later
             this.cy.$('#' + node_id).addClass('searchGene');
 		}
+		else { // For non-search genes, add a class for disabling display later
+            this.cy.$('#' + node_id).addClass('childGene');
+        }
     };
 
     /**
@@ -816,26 +826,18 @@
 				// Get Line Width
 				width = this.getWidth(EdgeJSON.interolog_confidence);
 
-				if (this.filter) { //Only take in the genes that user inputed in HTML form
-					if (EdgeJSON.index === '2' && $.inArray(EdgeJSON.source, AIV.genesList)) {
-						this.addDNANodesToAIVObj(EdgeJSON); //Only add PDI if it exists in the HTML form
-					}
-				} else if (typeTarget === "Protein" || typeTarget === "Effector") {
-					this.addNode(EdgeJSON.source, typeSource);
-					this.addNode(EdgeJSON.target, typeTarget);
+				if (typeTarget === "Protein" || typeTarget === "Effector") {
+                    if ( AIV.cy.getElementById(`${typeSource}_${EdgeJSON.source}`).empty()) { //only add source node if not already on app, recall our ids follow the format Protein_At2g10000
+                        this.addNode(EdgeJSON.source, typeSource);
+                    }
+                    if ( AIV.cy.getElementById(`${typeTarget}_${EdgeJSON.target}`).empty()) {
+                        this.addNode(EdgeJSON.target, typeTarget);
+                    }
 				} else { //i.e. typeTarget === "DNA"
 				    this.addDNANodesToAIVObj(EdgeJSON); //pass the DNA in the JSON format we GET on
                 }
 
-				if (this.filter) { //Add if both source and target are in gene form list
-                    if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index !== '2') { //PPIs
-						this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
-					}
-                    else if ($.inArray(EdgeJSON.source, AIV.genesList) >= 0 && $.inArray(EdgeJSON.target, AIV.genesList >= 0) && EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0)) { //PDIs
-                        this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
-                    }
-				}
-				else if (EdgeJSON.index !== '2') { //i.e. PPI edge
+				if (EdgeJSON.index !== '2') { //i.e. PPI edge
 					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
 				}
 				else if ( EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
@@ -901,18 +903,14 @@
         /*
         Loop through each PPI interaction and add the corresponding edge
         Need index to add PubMedID (as far as we know there is only one pubmed ID per interaction) so we can simply map out the index.
+        Note we check if an edge already exists as there seems to be rarely a duplicate in the PSICQUIC response data
          */
         arrPPIsProteinsUnique.forEach(function(proteinItem, index){
-            if ( AIV.cy.getElementById(`Protein_${proteinItem}`).empty() && ( !AIV.filter )) { //Check if node already on cy core and if filter is not checked (don't need to do an array check as form nodes added in the then() after the Promise.all)
+            if ( AIV.cy.getElementById(`Protein_${proteinItem}`).empty()) { //Check if node already on cy core (don't need to do an array check as form nodes added in the then() after the Promise.all)
                 AIV.addNode(proteinItem, "Protein");
             }
             if ( AIV.cy.getElementById(`Protein_${queryGeneAsABI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
-				if (AIV.filter && AIV.genesList.indexOf( proteinItem ) !== -1 ) { // Only check target protein as the source protein is the form gene
-                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid );
-				}
-				else if (!AIV.filter) {
                     AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid ); // 0 represents experimentally validated in our case
-				}
 			}
 		});
 
@@ -1207,7 +1205,6 @@
 		let success = false; // results
 
         // Reassign state variable everytime user hits submit button
-        AIV.filter = ($('#filter').is(':checked')) || false;
 
         // Dynamically build an array of promises for the Promise.all call later
 		var promisesArr = [];
@@ -1386,69 +1383,10 @@
         return returnArr;
     };
 
-	//PNG Export
-    document.getElementById('showPNGModal').addEventListener('click', function(event){
-        $('#PNGModal').modal('show');
-        document.getElementById('png-export').setAttribute('src', AIV.cy.png());
-    });
-
-	//JSON Export
-    document.getElementById('showJSONModal').addEventListener('click', function(event){
-        $('#JSONModal').modal('show');
-        var JSONStringified = JSON.stringify( AIV.cy.json(), null, '    ' );
-        document.getElementById('json-export').innerText = JSONStringified;
-        hljs.highlightBlock(document.getElementById('json-export'));
-        //JSON Copy to Clipboard
-        document.getElementById('copy-to-clipboard').addEventListener('click', function(event){
-   			//make a hidden input to select text from for copying
-			var tempInput = document.createElement('textarea');
-			tempInput.value = JSONStringified;
-			document.body.appendChild(tempInput);
-			tempInput.select();
-            document.execCommand("Copy");
-            tempInput.style.display = 'none';
-        });
-    });
-
-    /** @function checkServerStatus - Check PSICQUIC INTACT status*/
-    function checkINTACTServerStatus(){
-        $.ajax({
-            url: "https://cors-anywhere.herokuapp.com/tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/arf7", //TODO: change to our proxy
-            type: "GET"
-        })
-            .then(()=>{
-                document.getElementById("spinnerIntAct").style.display = 'none';
-                $("<img src='images/activeServer.png'/>").insertAfter("#IntActSpan");
-                document.getElementById("queryIntAct").disabled = false;
-            })
-            .catch(()=>{
-                document.getElementById("spinnerIntAct").style.display = 'none';
-                $("<img src='images/inactiveServer.png'/>").insertAfter("#IntActSpan");
-            });
-    }
-
-    /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
-    function checkBIOGRIDServerStatus(){
-        $.ajax({
-            url: "https://cors-anywhere.herokuapp.com/www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/query/species:human?firstResult=0&maxResults=1", //TODO: change to our proxy
-            type: "GET"
-        })
-            .then(()=>{
-                document.getElementById("spinnerBioGrid").style.display = 'none';
-                $("<img src='images/activeServer.png'/>").insertAfter("#BioGridSpan");
-                document.getElementById("queryBioGrid").disabled = false;
-            })
-            .catch(()=>{
-                document.getElementById("spinnerBioGrid").style.display = 'none';
-                $("<img src='images/inactiveServer.png'/>").insertAfter("#BioGridSpan");
-            });
-    }
 
     // Ready to run
 	$(function() {
 		// Initialize AIV
 		AIV.initialize();
-        checkINTACTServerStatus();
-        checkBIOGRIDServerStatus();
     });
 })(window, jQuery, cytoscape);

@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, shrink-to-fit=no, initial-scale=1">
         <title>Arabidopsis Interactions Viewer (AIV) 2.0 </title>
 
-        <!-- Latest compiled and minified CSS -->
+        <!-- Latest compiled and minified Bootstrap CSS -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
               integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
@@ -35,6 +35,10 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.js" integrity="sha256-a+PRq3NbyK3G08Boio9X6+yFiHpTSIrbE7uzZvqmDac=" crossorigin="anonymous"></script>
         <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-qtip/02ebf16c/cytoscape-qtip.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css"/>
+
+        <!-- Cerebral Web Cytoscape Layout -->
+        <script src="https://github.com/silviafrias/cerebral-web/blob/master/cerebral.js"></script>
+        <script src="https://cdn.rawgit.com/silviafrias/cerebral-web/de7c48f1/layout.horizontal.js"></script>
 
         <!-- Highlight Js -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
@@ -73,15 +77,7 @@
                         <p>Select options:</p>
 
                         <div class="checkbox">
-                            <label><input type="checkbox" id="filter" value="">Filter output to include only AGI IDs in input set</label>
-                        </div>
-
-                        <div class="checkbox">
                             <label><input id="published" type="checkbox" value="">Show only interactions from published data sets</label>
-                        </div>
-
-                        <div class="checkbox">
-                            <label><input id="recursive" type="checkbox" value="">Search for interactions between interactors</label>
                         </div>
 
                         <div class="checkbox">
@@ -91,17 +87,21 @@
                         <p>Select databases to query:</p>
 
                         <div class="checkbox">
-                            <label><input id="queryBioGrid" type="checkbox" value="" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
+                            <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
                             <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                         </div>
 
                         <div class="checkbox">
-                            <label><input id="queryIntAct" type="checkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
+                            <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
                             <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                         </div>
 
                         <div class="checkbox">
                             <label><input id="queryBAR" type="checkbox" value="" checked>Query protein-protein interactions from BAR</label>
+                        </div>
+
+                        <div class="checkbox">
+                            <label class="can-be-disabled" ><input id="recursive" type="checkbox" value="" disabled>Search for interactions between interactors</label>
                         </div>
 
                         <div class="checkbox">
@@ -134,6 +134,16 @@
                     </div>
                 </form>
             </aside> <!-- sibebar wrapper -->
+
+            <label class="switch">
+                <input id="filterCheckbox" type="checkbox">
+                <span class="slider round"></span>
+            </label>
+
+            <label class="switch">
+                <input id="switchLayout" type="checkbox">
+                <span class="slider round"></span>
+            </label>
 
             <!-- Page content -->
             <div id="page-content-wrapper">
