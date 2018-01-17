@@ -32,6 +32,7 @@
         setPNGExport(AIVref);
         setJSONexport(AIVref);
         filterSwitchFunctionality(AIVref);
+        layoutSwitchFunctionality(AIVref);
     }
 
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
@@ -128,6 +129,13 @@
     function filterSwitchFunctionality(AIVObj) {
         document.getElementById('filterCheckbox').addEventListener('change', function(event){
             AIVObj.cy.$('.childGene').toggleClass('filteredChildNodes');
+        });
+    }
+
+    function layoutSwitchFunctionality(AIVObj) {
+        document.getElementById('switchLayout').addEventListener('click', function(event){
+            // console.log(options);
+            AIVObj.cy.layout(AIVObj.getCyCerebralLayout()).run();
         });
     }
 

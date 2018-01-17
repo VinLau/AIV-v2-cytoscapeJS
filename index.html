@@ -37,8 +37,8 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css"/>
 
         <!-- Cerebral Web Cytoscape Layout -->
-        <script src="https://github.com/silviafrias/cerebral-web/blob/master/cerebral.js"></script>
-        <script src="https://cdn.rawgit.com/silviafrias/cerebral-web/de7c48f1/layout.horizontal.js"></script>
+        <script src="scripts/cerebralJSModified.js"></script>
+        <script src="scripts/modifiedCerebralJSLayout.js"></script>
 
         <!-- Highlight Js -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
@@ -140,10 +140,7 @@
                 <span class="slider round"></span>
             </label>
 
-            <label class="switch">
-                <input id="switchLayout" type="checkbox">
-                <span class="slider round"></span>
-            </label>
+            <button class="button" id="switchLayout">Localization Layout</button>
 
             <!-- Page content -->
             <div id="page-content-wrapper">

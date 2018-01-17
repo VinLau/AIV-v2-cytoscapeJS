@@ -140,6 +140,10 @@
 		// layout.stop = function() {}; //For manually adjusting position of nodes after layout is done
 		return layout;
 	};
+
+	AIV.getCyCerebralLayout = function (){
+		return window.cerebralNamespace.options;
+	};
 	
 	/**
 	 * @namespace {object} AIV
@@ -1044,6 +1048,7 @@
         		// console.log(dataProp, ABIGeneData.name);
         		pctAndColorArray.push({
 					pct : (ABIGeneData[dataProp] * 100), //convert to % for easier parsing later
+					loc : dataProp,
 					color : returnLocColor(dataProp)
         		});
 			}
@@ -1053,6 +1058,15 @@
         pctAndColorArray.sort((itemOne, itemTwo) => itemTwo.pct - itemOne.pct);
 
         // console.log(pctAndColorArray);
+
+
+        // Set a localization data property in the node (highest percent is assumed to be the localization)
+		if (pctAndColorArray.length === 0){
+            ABIGene.data('localization', "Unknown");
+        }
+        else { //remove 'PCT'
+            ABIGene.data('localization', beautifiedLocalization(pctAndColorArray[0].loc));
+        }
 
         var initialOffset = 25 * scaling; // Bypass default donut parts start at 3 o'clock instead of 12
 		var allSegsLength = 0;
@@ -1087,6 +1101,14 @@
             else if (localizationString === "plastidPCT"){ return '#13971e';}
             else if (localizationString === "vacuolePCT"){ return '#ecea3a';}
         }
+
+        // Helper function to return better localization string
+		function beautifiedLocalization (dirtyString) {
+        	var beauty = dirtyString.substring(0, dirtyString.length-3); // remove PCT
+        	beauty = beauty.replace(/([A-Z])/g, ' $1').trim(); // add spaces after capitals
+			beauty = beauty.charAt(0).toUpperCase() + beauty.slice(1); //capitalize first letter
+            return beauty;
+		}
 
 	};
 
