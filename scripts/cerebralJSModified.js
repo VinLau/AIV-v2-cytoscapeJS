@@ -37,13 +37,13 @@ var highLighColor = "red";
 var backgroundColor = "#FFFFFF";
 
 // Widht of the line between layers
-var gridLineWidth = 0.2;
+var gridLineWidth = 0.5;
 
 // Color of the line between layers
-var gridColor = '#323232';
+var gridColor = 'black';
 
 // Font of the labels of each layer
-var font = "12pt Arial";
+var font = "14pt Times New Roman";
 
 //Edges color, width and label color
 var edgeColor = '5f5f5f';

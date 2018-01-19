@@ -61,7 +61,7 @@
 			$('#wrapper').toggleClass('toggled').delay(500).promise().done(function(){
                 AIV.cy.resize(); //delay 500ms to allwo for resizing
                 AIV.setDNANodesPosition();
-                AIV.cy.layout(AIV.getCyLayout()).run();
+                AIV.cy.layout(AIV.getCySpreadLayout()).run();
             });
         });
 
@@ -129,9 +129,9 @@
 
 	/**
 	 * @namespace {object} AIV
-	 * @function getCyLayout - Returns layout for Cytoscape
+	 * @function getCySpreadLayout - Returns layout for Cytoscape
 	 */
-	AIV.getCyLayout = function() {
+	AIV.getCySpreadLayout = function() {
 		let layout = {};
 		layout.name = 'spread';
 		layout.minDist = 25;
@@ -1269,7 +1269,7 @@
                 AIV.addEffectorNodeQtips();
                 AIV.cy.style(AIV.getCyStyle()).update();
                 AIV.setDNANodesPosition();
-                AIV.cy.layout(AIV.getCyLayout()).run();
+                AIV.cy.layout(AIV.getCySpreadLayout()).run();
 
                 document.getElementById('loading').classList.add('loaded'); //remove loading spinner
             })

@@ -32,7 +32,8 @@
         setPNGExport(AIVref);
         setJSONexport(AIVref);
         filterSwitchFunctionality(AIVref);
-        layoutSwitchFunctionality(AIVref);
+        localizationLayoutEventListener(AIVref);
+        spreadLayoutEventListener(AIVref);
     }
 
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
@@ -132,12 +133,18 @@
         });
     }
 
-    function layoutSwitchFunctionality(AIVObj) {
-        document.getElementById('switchLayout').addEventListener('click', function(event){
-            // console.log(options);
+    function localizationLayoutEventListener(AIVObj) {
+        document.getElementById('localizationLayout').addEventListener('click', function(event){
+            $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
             AIVObj.cy.layout(AIVObj.getCyCerebralLayout()).run();
         });
     }
 
+    function spreadLayoutEventListener(AIVObj) {
+        document.getElementById('spreadLayout').addEventListener('click', function(event){
+            $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
+            AIVObj.cy.layout(AIVObj.getCySpreadLayout()).run();
+        });
+    }
 
 })(window, jQuery, cytoscape);
