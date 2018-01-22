@@ -3,6 +3,8 @@
  * @version 2.0, Dec2017
  * @author Vincent Lau (major additions, AJAX, polishing, CSS, SVGs) <vincente.lau@mail.utoronto.ca>
  * @author Asher Pasha (base app, adding nodes & edges)
+ * @copyright see MIT license on GitHub
+ * @description please note that I intentionally used data properties of nodes instead of classes as there is (as of cytoscape 3.2.7) no getter for classes (i.e. I cannot retrieve the classes a node has). see https://stackoverflow.com/questions/40403498/cytoscape-js-get-classes-and-return-filtered-nodes-getter-not-existent
  */
 (function(window, $, cytoscape, undefined) {	
 	'use strict';
@@ -18,9 +20,10 @@
 	 * @property {boolean} mapManLoadState - Boolean property representing if mapMan AJAX call was successful
 	 * @property {boolean} SUBA4LoadState - Boolean property representing if SUBA4 AJAX call was successful
      * @property {number} nodeSize - "Global" default data such as default node size
-     * @property {number} DNANodeSize - Important for adjusting the donut sizes, TODO: make nodesize options dropdown
+     * @property {number} DNANodeSize - Important for adjusting the donut sizes
 	 * @property {number} searchNodeSize - Size for search genes
 	 * @property {string} nodeDefaultColor - hexcode for regular nodes by default (no expression data)
+	 * @property {Array.<string>} locCompoundNodes - this node will hopefully be filled with the parent nodes for localizations that exist on the app currently
      */
     AIV.chromosomesAdded = {};
     AIV.genesFetched = {};
@@ -32,6 +35,7 @@
 	AIV.searchNodeSize = 65;
 	AIV.nodeDefaultColor = '#cdcdcd';
 	AIV.searchNodeColor = '#ffffff';
+    AIV.locCompoundNodes = [];
 
     /**
 	 * @namespace {object} AIV
@@ -50,12 +54,12 @@
      * @function bindUIEvents - Add functionality to buttons when DOM is loaded
 	 */
 	AIV.bindUIEvents = function() {
-		// Example button 
+		// Example button
 		$('#example').click(function() {
 			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880\nAT1G25420\nAT5G43700");
 		});
 
-		// Settings button 
+		// Settings button
 		$('#settings').click(function(e) {
 			e.preventDefault();
 			$('#wrapper').toggleClass('toggled').delay(500).promise().done(function(){
@@ -65,12 +69,12 @@
             });
         });
 
-		// About button 
+		// About button
 		$('#showAboutModal').click(function(e) {
 			e.preventDefault();
 			$('#AboutModal').modal('show');
 		});
-		
+
 		// Show Legend
 		$('#showLegendModal').click(function(e) {
 			e.preventDefault();
@@ -90,7 +94,7 @@
 				genes = AIV.formatABI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
 
 				AIV.genesList = genes.split("\n");
-				
+
 				// Clear existing data
 				if (typeof AIV.cy !== 'undefined') {
 					AIV.cy.destroy();
@@ -98,6 +102,8 @@
                     //reset existing built-in state data from previous query
                     AIV.chromosomesAdded = {};
                     AIV.mapManLoadState = false;
+                    AIV.SUBA4LoadState = false;
+                    AIV.locCompoundNodes = [];
 				}
 				AIV.initializeCy();
 
@@ -129,22 +135,32 @@
 
 	/**
 	 * @namespace {object} AIV
-	 * @function getCySpreadLayout - Returns layout for Cytoscape
+	 * @function getCySpreadLayout - Returns spread layout for Cytoscape
 	 */
 	AIV.getCySpreadLayout = function() {
 		let layout = {};
 		layout.name = 'spread';
 		layout.minDist = 25;
 		// layout.padding = 1;
-        layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - 55) }; //set boundaries to allow for clearer PDIs (DNA nodes are ~55px and are locked to start at x:50,y:0)
+        layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
 		// layout.stop = function() {}; //For manually adjusting position of nodes after layout is done
 		return layout;
+	};
+
+    /**
+     * @namespace {object} AIV
+     * @function getCyCOSEBilkentLayout - Returns layout for Cytoscape
+     */
+    AIV.getCyCOSEBilkentLayout = function(){
+    	let layout = {};
+    	layout.name = 'cose-bilkent';
+    	return layout;
 	};
 
 	AIV.getCyCerebralLayout = function (){
 		return window.cerebralNamespace.options;
 	};
-	
+
 	/**
 	 * @namespace {object} AIV
 	 * @function getCyStyle - Returns initial stylesheet of Cytoscape
@@ -160,11 +176,14 @@
                     "text-wrap": "wrap", //mulitline support
                     'height': this.nodeSize,
                     'width': this.nodeSize,
+                    'border-style' : 'solid',
+                    'border-width' : '1px',
+                    'border-color' : '#fff'
                 })
-			.selector('.searchGene') //If same properties as above, override them with these values
+			.selector('node[?searchGeneData]') //If same properties as above, override them with these values for search genes
 				.style({
                     'font-size': 14,
-					'z-index': 10000,
+					'z-index': 100,
                     'height' : this.searchNodeSize,
 					'width'  : this.searchNodeSize,
 					'background-color': this.searchNodeColor,
@@ -186,7 +205,7 @@
 					'target-arrow-color' : '#1c1b1d',
                     'target-arrow-shape': 'data(arrowEdges)',
                 })
-			.selector('.DNA')
+			.selector('node[id ^= "DNA"]')
 				.style({
                     'background-color': '#fed7ff',
                     'font-size': '1.1em',
@@ -196,14 +215,59 @@
 					"border-color": "#fff72d",
 					"border-width": "2px",
 					'shape': 'square',
+					'z-index': 1000,
 					'height': this.DNANodeSize,
 					'width': this.DNANodeSize,
 				})
-			.selector('.Effector')
+			.selector('node[id ^= "Effector"]')
 				.style({
 					'shape': 'hexagon',
 					'background-color': '#00FF00'
 				})
+			.selector('#cytoskeletonPCT') //for compound nodes
+				.style({
+					'background-color': '#e8e5e5',
+				})
+			.selector('#cytosolPCT') //for compound nodes
+                .style({
+                    'background-color': '#ffe7ff',
+                })
+			.selector('#endoplasmicReticulumPCT') //for compound nodes
+                .style({
+                    'background-color': '#ff8690',
+                })
+			.selector('#extracellularPCT') //for compound nodes
+                .style({
+                    'background-color': '#ffffdb',
+                })
+			.selector('#golgiPCT') //for compound nodes
+                .style({
+                    'background-color': '#ffff8f',
+                })
+			.selector('#mitochondrionPCT') //for compound nodes
+                .style({
+                    'background-color': '#dfffff',
+                })
+			.selector('#nucleusPCT') //for compound nodes
+                .style({
+                    'background-color': '#4f81ff',
+                })
+			.selector('#peroxisomePCT') //for compound nodes
+                .style({
+                    'background-color': '#ce69ce',
+                })
+			.selector('#plasmaMembranePCT') //for compound nodes
+                .style({
+                    'background-color': '#ffd350',
+                })
+			.selector('#plastidPCT') //for compound nodes
+                .style({
+                    'background-color': '#8bff96',
+                })
+			.selector('#vacuolePCT') //for compound nodes
+                .style({
+                    'background-color': '#ffff70',
+                })
         );
 	};
 
@@ -282,25 +346,66 @@
 	 * @function addNode - generic add nodes to cy core helper function
      * @param {string} node - as the name of the node, i.e. "At3g10000"
      * @param {string} type - as the type of node it is, i.e. "Protein"
-	 * @param {boolean} [searchGene] - optional parameter that signifies node is a search query gene
+	 * @param {boolean} [searchGene=false] - optional parameter that signifies node is a search query gene, will be used directly as a true false value into the data properties of the node
      */
-	AIV.addNode = function(node, type, searchGene) {
+	AIV.addNode = function(node, type, searchGene = false) {
 		let node_id = type + '_' + node;
-		
+
 		// Add the node
 		this.cy.add([
-			{ group: "nodes", data: {id: node_id, name: node}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
+			{ group: "nodes", data: {id: node_id, name: node, searchGeneData : searchGene}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
 		]);
-		
-		this.cy.$('#' + node_id).addClass(type); // Add class such that .Protein, .DNA, .Effector
+    };
 
-		if (searchGene){ //For search genes, add a class for styling later
-            this.cy.$('#' + node_id).addClass('searchGene');
-		}
-		else { // For non-search genes, add a class for disabling display later
-            this.cy.$('#' + node_id).addClass('childGene');
+    /**
+	 * @function addCompoundNode - generic function to add compound nodes to the cy core
+     * @param idOfParent - id of compound node, 'id'
+     * @param nameOfParent - name of the compound node that will be the label
+     */
+	AIV.addCompoundNode = function(idOfParent, nameOfParent){
+		let temp = AIV.cy.add({
+			group: "nodes",
+			data: {
+				id : idOfParent,
+				name: nameOfParent,
+				classes: "compoundNode"
+			},
+		});
+		console.log("temp", temp);
+	};
+
+    AIV.addLocalizationCompoundNodes = function(){
+        for (let i = 0; i < this.locCompoundNodes.length; i++) {
+            console.log(this.locCompoundNodes[i]);
+            let locationBeautified = this.beautifiedLocalization(this.locCompoundNodes[i]);
+            this.addCompoundNode(this.locCompoundNodes[i], locationBeautified);
         }
     };
+
+    AIV.removeAndAddNodesForCompoundNodes = function(){
+        console.log("what is this? kek", this.cy.elements('node[ id ^= "Protein_"]').size());
+        let oldEdges = this.cy.elements('edge');
+        oldEdges.remove();
+        let oldNodes = this.cy.elements('node[ id ^= "Protein_"]');
+		oldNodes.remove();
+
+        let newNodes = [];
+
+        console.log("what is this? lol", oldNodes.size());
+        oldNodes.forEach(function(oldNode, i){
+        	let newData = Object.assign({}, oldNode.data()); // let us make a copy of the previous object not directly mutate it. Hopefully the JS garbage collector will clear the memory (possible TODO ?)
+        	newData.parent = oldNode.data("localizationMajority");
+            console.log(i, oldNode.data());
+        	console.log(i, newData);
+        	newNodes.push({
+				group: "nodes",
+				data: newData,
+			});
+		});
+
+        this.cy.add(newNodes);
+        oldEdges.restore();
+	};
 
     /**
 	 * Take in an object (interaction) data and add it to the 'global' state
@@ -372,9 +477,6 @@
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
         let edge_id = source + '_' + target;
-        if (reference !== "None"){ //TODO: remove this later
-			// console.log(reference, " ", width);
-		}
 		this.cy.add([
 			{
 				group: "edges",
@@ -419,7 +521,7 @@
         this.cy.$("node[id ^='DNA_Chr']:locked").unlock(); //if locked (for example during hide settings, unlock)
         var numOfChromosomes = Object.keys(this.chromosomesAdded).length; //for A. th. the max would be 7
         for (let chr of Object.keys(this.chromosomesAdded)) {
-            this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: this.cy.height() });
+            this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: this.cy.height() - (this.DNANodeSize/2 + 5) });
             this.cy.getElementById(`DNA_Chr${chr}`).lock(); //hardset the position of chr nodes to bottom
             xCoord += viewportWidth/numOfChromosomes;
         }
@@ -931,7 +1033,7 @@
 			{
 				AGI_IDs : [],
 			};
-        this.cy.$('node').forEach(function(node){
+        this.cy.filter("node[name ^= 'At']").forEach(function(node){
             var nodeID = node.data('name');
             if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
                 reqJSON.AGI_IDs.push( nodeID );
@@ -1057,15 +1159,16 @@
 		// Result => we are able to show pie chart values from greatest to least starting from 12 oclock
         pctAndColorArray.sort((itemOne, itemTwo) => itemTwo.pct - itemOne.pct);
 
-        // console.log(pctAndColorArray);
-
-
         // Set a localization data property in the node (highest percent is assumed to be the localization)
 		if (pctAndColorArray.length === 0){
             ABIGene.data('localization', "Unknown");
         }
         else { //remove 'PCT'
-            ABIGene.data('localization', beautifiedLocalization(pctAndColorArray[0].loc));
+            ABIGene.data('localization', this.beautifiedLocalization(pctAndColorArray[0].loc));
+            ABIGene.data('localizationMajority', pctAndColorArray[0].loc); //have this data for making compound nodes
+            if (this.locCompoundNodes.indexOf(pctAndColorArray[0].loc) === -1 ){
+				this.locCompoundNodes.push(pctAndColorArray[0].loc); // append to our state variables which (majority) localizations nodes have, useful for compound nodes
+			}
         }
 
         var initialOffset = 25 * scaling; // Bypass default donut parts start at 3 o'clock instead of 12
@@ -1102,15 +1205,20 @@
             else if (localizationString === "vacuolePCT"){ return '#ecea3a';}
         }
 
-        // Helper function to return better localization string
-		function beautifiedLocalization (dirtyString) {
-        	var beauty = dirtyString.substring(0, dirtyString.length-3); // remove PCT
-        	beauty = beauty.replace(/([A-Z])/g, ' $1').trim(); // add spaces after capitals
-			beauty = beauty.charAt(0).toUpperCase() + beauty.slice(1); //capitalize first letter
-            return beauty;
-		}
-
 	};
+
+    /**
+	 * @namespace {object} AIV
+	 * @function beautifiedLocalization - helper function that beautifes strings, especially from localizations to more reader friendly text
+     * @param {string} dirtyString - take in 'plasmaMembranePCT'
+     * @returns {string} - beautufied string with format such as Plasma Membrane
+     */
+	AIV.beautifiedLocalization = function (dirtyString) {
+        var beauty = dirtyString.substring(0, dirtyString.length-3); // remove PCT
+        beauty = beauty.replace(/([A-Z])/g, ' $1').trim(); // add spaces after capitals
+        beauty = beauty.charAt(0).toUpperCase() + beauty.slice(1); //capitalize first letter
+        return beauty;
+    };
 
     /**
 	 * @namespace {object} AIV
@@ -1145,7 +1253,7 @@
      */
     AIV.createGETMapManURL = function () {
 		var mapmanURL = "https://bar.utoronto.ca/~asher/bar_mapman.php?request=[";
-        this.cy.$('node').forEach(function(node){
+        this.cy.filter("node[name ^= 'At']").forEach(function(node){
             var nodeID = node.data('name');
             if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
                 mapmanURL += `"${nodeID}",`;
@@ -1206,7 +1314,7 @@
 			// console.log(newSVGString);
 			var MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
 			var xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
-			var fontSize = geneNode.hasClass('searchGene') ? 30 : 15; //Determine whether gene is bigger or not (i.e. search gene or not)
+			var fontSize = geneNode.data('searchGeneData') ? 30 : 15; //Determine whether gene is bigger or not (i.e. search gene or not)
 
             newSVGString += `<text x='${xPosition}' y='61%' font-size='${fontSize}'>
 								${MapManCode} 
@@ -1225,8 +1333,6 @@
 	 */
 	AIV.loadData = function() {
 		let success = false; // results
-
-        // Reassign state variable everytime user hits submit button
 
         // Dynamically build an array of promises for the Promise.all call later
 		var promisesArr = [];
@@ -1247,7 +1353,7 @@
 				console.log("Response:", promiseRes);
 
                 // Add Query node (user inputed in HTML form)
-                for (var i = 0; i < AIV.genesList.length; i++) {
+                for (let i = 0; i < AIV.genesList.length; i++) {
                         AIV.addNode(AIV.genesList[i], 'Protein', true);
                 }
 
@@ -1288,11 +1394,12 @@
             })
             .then(function(SUBAJSON){
                 console.log(SUBAJSON);
+                console.log("AIV", AIV);
                 AIV.SUBA4LoadState = true;
                 AIV.addLocalizationDataToNodes(SUBAJSON);
 
                 //Loop through ATG protein nodes and add a SVG string property for bg-image css
-                AIV.cy.$('node').forEach(function(node){
+                AIV.cy.filter("node[name ^= 'At']").forEach(function(node){
                     var nodeID = node.data('name');
                     if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
                         AIV.createSVGPieDonutCartStr(node);

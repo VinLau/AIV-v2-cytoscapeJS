@@ -145,9 +145,16 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
                         return false;
                     }
 
+                    if (k === 11){ //i.e. nucleus
+                       return {
+                           x: Math.round((Math.random() * width) + 5),
+                           y: Math.round((Math.random() * height) + heightAcum - 10) //do not override DNA nodes
+                       };
+                    }
+
                     return {
                         x: Math.round((Math.random() * width) + 5),
-                        y: Math.round((Math.random() * height) + heightAcum + 30)
+                        y: Math.round((Math.random() * height) + heightAcum + 40)
                     };
                 });
                 heightAcum += height + room;

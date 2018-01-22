@@ -34,6 +34,7 @@
         filterSwitchFunctionality(AIVref);
         localizationLayoutEventListener(AIVref);
         spreadLayoutEventListener(AIVref);
+        coseCompoundLayoutEventListener(AIVref);
     }
 
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
@@ -129,7 +130,7 @@
      */
     function filterSwitchFunctionality(AIVObj) {
         document.getElementById('filterCheckbox').addEventListener('change', function(event){
-            AIVObj.cy.$('.childGene').toggleClass('filteredChildNodes');
+            AIVObj.cy.$('node[!searchGeneData][id ^= "Protein"]').toggleClass('filteredChildNodes');
         });
     }
 
@@ -144,6 +145,21 @@
         document.getElementById('spreadLayout').addEventListener('click', function(event){
             $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
             AIVObj.cy.layout(AIVObj.getCySpreadLayout()).run();
+        });
+    }
+
+    function coseCompoundLayoutEventListener(AIVObj) {
+        document.getElementById('coseCompoundLayout').addEventListener('click', function(event){
+            $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
+            // var removedNodesRef = AIVObj.cy.nodes();
+            // console.log("removed:", removedNodesRef);
+            // removedNodesRef.data('parent', '2');
+            // AIVObj.cy.nodes().remove();
+            // AIVObj.cy.add(removedNodesRef);
+            // removedNodesRef.restore();
+            AIVObj.addLocalizationCompoundNodes();
+            AIVObj.removeAndAddNodesForCompoundNodes();
+            AIVObj.cy.layout(AIVObj.getCyCOSEBilkentLayout()).run();
         });
     }
 
