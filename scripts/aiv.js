@@ -24,6 +24,9 @@
 	 * @property {number} searchNodeSize - Size for search genes
 	 * @property {string} nodeDefaultColor - hexcode for regular nodes by default (no expression data)
 	 * @property {Array.<string>} locCompoundNodes - this node will hopefully be filled with the parent nodes for localizations that exist on the app currently
+     * @propery {boolean} coseParentNodesOnCyCore - state variable that stores whether compound nodes have been loaded onto the cy core app
+     * @property {number} defaultZoom - contains a number for how much graph has been zoomed (after a layout has been ran)
+     * @property {object} defaultPan - contains x and y properties for where the graph has been panned, useful for layouts
      */
     AIV.chromosomesAdded = {};
     AIV.genesFetched = {};
@@ -36,6 +39,9 @@
 	AIV.nodeDefaultColor = '#cdcdcd';
 	AIV.searchNodeColor = '#ffffff';
     AIV.locCompoundNodes = [];
+    AIV.coseParentNodesOnCyCore  = false;
+    AIV.defaultZoom = 1;
+    AIV.defaultPan = {x: 0, y:0};
 
     /**
 	 * @namespace {object} AIV
@@ -103,6 +109,7 @@
                     AIV.chromosomesAdded = {};
                     AIV.mapManLoadState = false;
                     AIV.SUBA4LoadState = false;
+                    AIV.coseParentNodesOnCyCore = false;
                     AIV.locCompoundNodes = [];
 				}
 				AIV.initializeCy();
@@ -143,7 +150,10 @@
 		layout.minDist = 25;
 		// layout.padding = 1;
         layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
-		// layout.stop = function() {}; //For manually adjusting position of nodes after layout is done
+        layout.stop = function(){ //this callback gets ran when layout is finished
+            AIV.defaultZoom = AIV.cy.zoom();
+            AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
+        };
 		return layout;
 	};
 
@@ -154,11 +164,20 @@
     AIV.getCyCOSEBilkentLayout = function(){
     	let layout = {};
     	layout.name = 'cose-bilkent';
-    	return layout;
+    	layout.padding = 5;
+        layout.animate = 'end';
+        layout.fit = true;
+        layout.stop = function(){ //this callback gets ran when layout is finished
+            AIV.defaultZoom = AIV.cy.zoom();
+            AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
+        };
+        return layout;
 	};
 
 	AIV.getCyCerebralLayout = function (){
-		return window.cerebralNamespace.options;
+        AIV.defaultZoom = 1; // reset zoom
+        AIV.defaultPan = {x: 0, y:0}; // reset pan
+        return window.cerebralNamespace.options;
 	};
 
 	/**
@@ -224,6 +243,12 @@
 					'shape': 'hexagon',
 					'background-color': '#00FF00'
 				})
+            .selector('[?compoundNode]') //select for ALL compound nodes
+                .style({
+                    'shape': 'roundrectangle',
+                    'font-size' : 18,
+                    'font-family' : "Verdana, Geneva, sans-serif",
+                })
 			.selector('#cytoskeletonPCT') //for compound nodes
 				.style({
 					'background-color': '#e8e5e5',
@@ -368,22 +393,39 @@
 			data: {
 				id : idOfParent,
 				name: nameOfParent,
-				classes: "compoundNode"
+                compoundNode: true, //data property used instead of a class because we cannot remove parent nodes by classes for some reason (cytoscapejs bug?)
 			},
 		});
 		console.log("temp", temp);
 	};
 
+    /**
+     * @function addLocalizationCompoundNodes - specifically add compound nodes to cy core by going into our localization state variable
+     */
     AIV.addLocalizationCompoundNodes = function(){
         for (let i = 0; i < this.locCompoundNodes.length; i++) {
             console.log(this.locCompoundNodes[i]);
             let locationBeautified = this.beautifiedLocalization(this.locCompoundNodes[i]);
             this.addCompoundNode(this.locCompoundNodes[i], locationBeautified);
         }
+        AIV.coseParentNodesOnCyCore = true; // we have added compound nodes, change the state variable
     };
 
+    /**
+     * @function removeLocalizationCompoundNodes - Remove compound nodes from cy core so we can make a nicer layout after the users clicks on cose-bilkent layout and then goes back to the spread layout for example.
+     */
+    AIV.removeLocalizationCompoundNodes = function(){
+        if (!this.coseParentNodesOnCyCore){return} // exit if compound nodes not added yet
+        this.cy.$('node[!compoundNode]').move({ parent : null }); //remove child nodes from parent nodes before removing parent nodes
+        this.cy.$("node[?compoundNode]").remove();
+        this.coseParentNodesOnCyCore = false;
+    };
+
+    /**
+     * @function removeAndAddNodesForCompoundNodes - Unfortuantely cytoscapejs cannot add compound nodes on the fly so we have to remove old nodes and add them back on with a parent property, hence this function
+     */
     AIV.removeAndAddNodesForCompoundNodes = function(){
-        console.log("what is this? kek", this.cy.elements('node[ id ^= "Protein_"]').size());
+        // console.log("what is this? kek", this.cy.elements('node[ id ^= "Protein_"]').size());
         let oldEdges = this.cy.elements('edge');
         oldEdges.remove();
         let oldNodes = this.cy.elements('node[ id ^= "Protein_"]');
@@ -391,12 +433,12 @@
 
         let newNodes = [];
 
-        console.log("what is this? lol", oldNodes.size());
+        // console.log("what is this? lol", oldNodes.size());
         oldNodes.forEach(function(oldNode, i){
         	let newData = Object.assign({}, oldNode.data()); // let us make a copy of the previous object not directly mutate it. Hopefully the JS garbage collector will clear the memory (possible TODO ?)
         	newData.parent = oldNode.data("localizationMajority");
-            console.log(i, oldNode.data());
-        	console.log(i, newData);
+            // console.log(i, oldNode.data());
+        	// console.log(i, newData);
         	newNodes.push({
 				group: "nodes",
 				data: newData,

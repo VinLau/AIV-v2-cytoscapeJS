@@ -35,6 +35,9 @@
         localizationLayoutEventListener(AIVref);
         spreadLayoutEventListener(AIVref);
         coseCompoundLayoutEventListener(AIVref);
+        zoomInEventListener(AIVref);
+        resetEventListener(AIVref);
+        zoomOutEventListener(AIVref);
     }
 
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
@@ -137,6 +140,8 @@
     function localizationLayoutEventListener(AIVObj) {
         document.getElementById('localizationLayout').addEventListener('click', function(event){
             $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
+            AIVObj.removeLocalizationCompoundNodes();
+            AIVObj.cy.reset();
             AIVObj.cy.layout(AIVObj.getCyCerebralLayout()).run();
         });
     }
@@ -144,6 +149,7 @@
     function spreadLayoutEventListener(AIVObj) {
         document.getElementById('spreadLayout').addEventListener('click', function(event){
             $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
+            AIVObj.removeLocalizationCompoundNodes();
             AIVObj.cy.layout(AIVObj.getCySpreadLayout()).run();
         });
     }
@@ -151,15 +157,36 @@
     function coseCompoundLayoutEventListener(AIVObj) {
         document.getElementById('coseCompoundLayout').addEventListener('click', function(event){
             $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
-            // var removedNodesRef = AIVObj.cy.nodes();
-            // console.log("removed:", removedNodesRef);
-            // removedNodesRef.data('parent', '2');
-            // AIVObj.cy.nodes().remove();
-            // AIVObj.cy.add(removedNodesRef);
-            // removedNodesRef.restore();
-            AIVObj.addLocalizationCompoundNodes();
-            AIVObj.removeAndAddNodesForCompoundNodes();
+            if (AIVObj.SUBA4LoadState && !AIVObj.coseParentNodesOnCyCore) { //only run if SUBA4 data loaded and if parent nodes are not already added
+                AIVObj.addLocalizationCompoundNodes();
+                AIVObj.removeAndAddNodesForCompoundNodes();
+            }
             AIVObj.cy.layout(AIVObj.getCyCOSEBilkentLayout()).run();
+        });
+    }
+
+    function zoomInEventListener(AIVObj){
+        document.getElementById('zoomIn').addEventListener('click', function(event){
+            AIVObj.cy.zoom({
+                level: AIVObj.cy.zoom()*2,
+                renderedPosition: { x: AIVObj.cy.height()/2, y: AIVObj.cy.width()/2},
+            });
+        });
+    }
+
+    function zoomOutEventListener(AIVObj){
+        document.getElementById('zoomOut').addEventListener('click', function(event){
+            AIVObj.cy.zoom({
+                level: AIVObj.cy.zoom()*0.5,
+                renderedPosition: { x: AIVObj.cy.height()/2, y: AIVObj.cy.width()/2},
+            });
+        });
+    }
+
+    function resetEventListener(AIVObj){
+        document.getElementById('zoomReset').addEventListener('click', function(event){
+            AIVObj.cy.zoom(AIVObj.defaultZoom);
+            AIVObj.cy.pan(AIVObj.defaultPan);
         });
     }
 
