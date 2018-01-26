@@ -26,6 +26,7 @@
      * @param {object} AIVref - reference to global namespace AIV object, with access to cytoscape methods
      */
     function runUIFunctions(AIVref) {
+        validateGeneForm();
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
         enableInteractionsCheckbox();
@@ -38,6 +39,70 @@
         zoomInEventListener(AIVref);
         resetEventListener(AIVref);
         zoomOutEventListener(AIVref);
+        panLeft(AIVref);
+        panRight(AIVref);
+        panUp(AIVref);
+        panDown(AIVref);
+    }
+
+    function validateGeneForm(){
+        let geneForm = document.getElementById('genes');
+        geneForm.addEventListener('keypress', function handleKeypress(event){
+
+            //remove outer event listener when user pastes own text
+            geneForm.addEventListener('paste', function(event){
+                geneForm.removeEventListener('keypress', handleKeypress);
+            });
+
+            let geneFormValue = geneForm.value;
+            let geneFormValueLen = geneFormValue.length;
+            let key = event.key;
+
+            // Allow backspace, home, end,delete, ctrl, cmd, shift left arrow,right arrow, up arrow, down arrow
+            if (key === "Backspace" ||
+                key === "Home"      ||
+                key === "End"       ||
+                key === "ArrowLeft" ||
+                key === "Left"      ||
+                key === "ArrowRight"||
+                key === "Right"     ||
+                key === "ArrowUp"   ||
+                key === "Up"        ||
+                key === "ArrowDown" ||
+                key === "Control"   ||
+                event.metakey       || //'cmd' in Mac
+                key === "Shift"     ||
+                key === "Down") {
+                return; //don't e.preventdefault()...
+            }
+
+            if (geneFormValueLen % 10 === 0 && (key === "a" || key === "A")){
+                geneForm.value += "A";
+            }
+            else if ((geneFormValueLen % 10 === 1) && (key === "t" || key === "T")){
+                geneForm.value += "t";
+            }
+            else if ((geneFormValueLen % 10 === 2) && key.match(/[1-5]/)){
+                geneForm.value += key;
+            }
+            else if ((geneFormValueLen % 10 === 3) && key.match(/[gmc]/i)){
+                geneForm.value += key;
+            }
+            else if ((geneFormValueLen % 10 === 4) ||
+                     (geneFormValueLen % 10 === 5) ||
+                     (geneFormValueLen % 10 === 6) ||
+                     (geneFormValueLen % 10 === 7) ||
+                     (geneFormValueLen % 10 === 8) &&
+                     key.match(/\d/)){
+                geneForm.value += key;
+            }
+
+            if (geneForm.value.length % 10 === 9){ //automatically add new lines after a person has entered 'At2g10000'
+                geneForm.value += "\n";
+            }
+
+            event.preventDefault();
+        });
     }
 
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
@@ -187,6 +252,30 @@
         document.getElementById('zoomReset').addEventListener('click', function(event){
             AIVObj.cy.zoom(AIVObj.defaultZoom);
             AIVObj.cy.pan(AIVObj.defaultPan);
+        });
+    }
+
+    function panLeft(AIVObj){
+        document.getElementById('panLeft').addEventListener('click', function(){
+            AIVObj.cy.panBy({ x: -100, y: 0});
+        });
+    }
+
+    function panRight(AIVObj){
+        document.getElementById('panRight').addEventListener('click', function(){
+            AIVObj.cy.panBy({ x: 100, y: 0});
+        });
+    }
+
+    function panUp(AIVObj){
+        document.getElementById('panUp').addEventListener('click', function(){
+            AIVObj.cy.panBy({ x: 0, y: 100});
+        });
+    }
+
+    function panDown(AIVObj){
+        document.getElementById('panDown').addEventListener('click', function(){
+            AIVObj.cy.panBy({ x: 0, y: -100});
         });
     }
 
