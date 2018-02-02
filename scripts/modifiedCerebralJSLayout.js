@@ -154,7 +154,7 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
 
                     return {
                         x: Math.round((Math.random() * width) + 5),
-                        y: Math.round((Math.random() * height) + heightAcum + 40)
+                        y: Math.round((Math.random() * height) + heightAcum + 30)
                     };
                 });
                 heightAcum += height + room;

@@ -62,17 +62,7 @@
 	AIV.bindUIEvents = function() {
 		// Example button
 		$('#example').click(function() {
-			$('#genes').val("AT2G34970\nAT3G18130\nAT1G04880\nAT1G25420\nAT5G43700");
-		});
-
-		// Settings button
-		$('#settings').click(function(e) {
-			e.preventDefault();
-			$('#wrapper').toggleClass('toggled').delay(500).promise().done(function(){
-                AIV.cy.resize(); //delay 500ms to allwo for resizing
-                AIV.setDNANodesPosition();
-                AIV.cy.layout(AIV.getCySpreadLayout()).run();
-            });
+			$('#genes').val("AT2G34970\nAT1G04880\nAT1G25420\nAT5G43700"); // add AT3G18130\n later
         });
 
 		// About button
@@ -86,6 +76,12 @@
 			e.preventDefault();
 			$('#LegendModal').modal('show');
 		});
+
+        // Show Legend
+        $('#showFormModal').click(function(e) {
+            e.preventDefault();
+            $('#formModal').modal('show');
+        });
 
 		// Submit button
 		$('#submit').click(function(e) {
@@ -197,7 +193,7 @@
                     'width': this.nodeSize,
                     'border-style' : 'solid',
                     'border-width' : '1px',
-                    'border-color' : '#fff'
+                    'border-color' : '#979797'
                 })
 			.selector('node[?searchGeneData]') //If same properties as above, override them with these values for search genes
 				.style({
@@ -211,6 +207,14 @@
 				.style({
 					'display' : 'none',
 				})
+			.selector('.pearsonfilterEPPI') //to hide/unhide experimentally determined elements
+                .style({
+                    'display' : 'none',
+                })
+			.selector('.pearsonAndInterologfilterPPPI') //to hide/unhide predicted determined elements
+                .style({
+                    'display' : 'none',
+                })
   			.selector('edge')
   				.style({
 					'curve-style': 'data(curveStyle)',
@@ -513,8 +517,9 @@
 	 * @param {boolean} published - to whether this is published interaction data i.e. true
 	 * @param {number | string} interologConfidence  - interolog confidence number, can be negative to positive, or zero (means experimentally validated prediction) i.e. -2121
 	 * @param {string} databaseSource - where did this edge come from ? i.e. "BAR"
+	 * @param {number | string | null} R - the correlation coefficient of the coexpression data (microarray)
 	 */
-	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence, databaseSource) {
+	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence, databaseSource, R) {
 		// let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
@@ -535,7 +540,8 @@
                     interologConfidence: interologConfidence,
 					curveStyle: typeTarget === "DNA" ? "unbundled-bezier" : "haystack",
 					arrowEdges: typeTarget === "DNA" ? "triangle" : "none",
-					databaseOrigin: databaseSource
+					databaseOrigin: databaseSource,
+					pearsonR: R,
  				},
 			}
 		]);
@@ -843,6 +849,7 @@
         var that = this;
         this.cy.on('mouseover', 'edge[source^="Protein"][target^="Protein"]', function(event){
         	var ppiEdge = event.target;
+        	console.log(ppiEdge.data());
         	ppiEdge.qtip(
 				{
                     content:
@@ -900,7 +907,7 @@
             return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PMID ${regexGroup[1]}</a>`;
         }
 		else if ( (regexGroup = referenceStr.match(/^Mind(\d+)$/i)) ){
-            return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${ABIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}}</a>`;
+            return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${ABIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}</a>`;
 		}
 		else if ( (regexGroup = referenceStr.match(/^AI-1.*$/i)) ){
 			return `<a href="http://interactome.dfci.harvard.edu/A_thaliana/index.php" target="_blank">  (A. th. Interactome) ${referenceStr} </a>`;
@@ -965,6 +972,8 @@
 
 				EdgeJSON.interolog_confidence = Number(EdgeJSON.interolog_confidence); //Mutating string into number as the JSON gives "-1000" instead of -1000
 
+                EdgeJSON.correlation_coefficient = Number(EdgeJSON.correlation_coefficient); //Mutating string into number as the JSON gives "-0.2" instead of -0.2
+
 				// Get color
 				edgeColour = this.getEdgeColor(EdgeJSON.correlation_coefficient, EdgeJSON.published, EdgeJSON.index, EdgeJSON.interolog_confidence);
 
@@ -986,10 +995,10 @@
                 }
 
 				if (EdgeJSON.index !== '2') { //i.e. PPI edge
-					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
+					this.addEdges(EdgeJSON.source, typeSource, EdgeJSON.target, typeTarget, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR", EdgeJSON.correlation_coefficient);
 				}
 				else if ( EdgeJSON.index === '2' && (this.cy.getElementById(`${typeSource}_${EdgeJSON.source}_DNA_Chr${EdgeJSON.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
-                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR");
+                    this.addEdges(EdgeJSON.source, typeSource, `Chr${EdgeJSON.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, EdgeJSON.reference, EdgeJSON.published, EdgeJSON.interolog_confidence, "BAR", EdgeJSON.correlation_coefficient);
 				}
 			}
 		} //end of adding nodes and edges
@@ -1058,7 +1067,7 @@
                 AIV.addNode(proteinItem, "Protein");
             }
             if ( AIV.cy.getElementById(`Protein_${queryGeneAsABI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
-                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid ); // 0 represents experimentally validated in our case
+                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid, null ); // 0 represents experimentally validated in our case and we leave R as null
 			}
 		});
 
@@ -1356,9 +1365,9 @@
 			// console.log(newSVGString);
 			var MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
 			var xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
-			var fontSize = geneNode.data('searchGeneData') ? 30 : 15; //Determine whether gene is bigger or not (i.e. search gene or not)
+			var fontSize = geneNode.data('searchGeneData') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
 
-            newSVGString += `<text x='${xPosition}' y='61%' font-size='${fontSize}'>
+            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana">
 								${MapManCode} 
 							</text></svg>`;
 			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);

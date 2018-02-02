@@ -1,10 +1,14 @@
 /*
- * Bootstrap overrides 
- * Author: Asher and Vincent (from line ~ 18 onwards);
+ * Bootstrap overrides, UI options and responsive CSS
+ * Author: Vincent Lau, Asher Pasha (basic configurations at the beginning, mostly been deleted/overwritten);
  * Date: Winter 2017
  */
 
-.navbar-nav > li > a {
+.navbar-brand, .navbar-nav, .navbar {
+	margin-bottom: 0;
+}
+
+.navbar-brand, .navbar-nav li a {
 	padding-top: 22px;
 }
 
@@ -13,9 +17,10 @@
 }
 
 #cy {
-	height: calc(100vh - 125px);
+	height: calc(100vh - 60px);
+	height: -webkit-calc(100vh - 60px);
+	height: -moz-calc(100vh - 60px);
 	width: 100%;
-	position: relative;
 	z-index: 999;
 }
 
@@ -149,8 +154,9 @@ input:checked + .slider:before {
 	border-radius: 50%;
 }
 
+/* buttons */
 .button {
-	padding: 10px;
+	/*padding: 10px;*/
 	font-size: 12px;
 	text-align: center;
 	cursor: pointer;
@@ -168,4 +174,12 @@ input:checked + .slider:before {
 	background-color: #3e8e41;
 	box-shadow: 0 5px #666;
 	transform: translateY(4px);
+}
+
+/* end of buttons css*/
+
+/* input number filters css */
+
+input[type=number]::-webkit-inner-spin-button {
+	opacity: 1;
 }

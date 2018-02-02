@@ -12,11 +12,13 @@
         if (typeof window.aivNamespace.AIV !== 'undefined') { // only run if we have initialized cytoscape app
             let AIV = window.aivNamespace.AIV;
             runUIFunctions(AIV);
+            console.log("this???");
         }
         else { // if not loaded, try again after 1 second
             setTimeout(function(){
                 let AIV = window.aivNamespace.AIV;
                 runUIFunctions(AIV);
+                console.log("orthat??");
             }, 1000);
         }
     });
@@ -27,12 +29,18 @@
      */
     function runUIFunctions(AIVref) {
         validateGeneForm();
+        // showFormOnLoad();
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
         enableInteractionsCheckbox();
         setPNGExport(AIVref);
         setJSONexport(AIVref);
-        filterSwitchFunctionality(AIVref);
+        filterNonQueryGenes(AIVref);
+        restrictUIInputsNumRange();
+        filterExperimentalPPIsSwitch(AIVref);
+        filterExperimentalPPIsInputEListener(AIVref);
+        filterPredictedPPIsSwitch(AIVref);
+        filterPredictedPPIsInputsEListener(AIVref);
         localizationLayoutEventListener(AIVref);
         spreadLayoutEventListener(AIVref);
         coseCompoundLayoutEventListener(AIVref);
@@ -43,6 +51,10 @@
         panRight(AIVref);
         panUp(AIVref);
         panDown(AIVref);
+    }
+
+    function showFormOnLoad(){
+        $('#formModal').modal('show');
     }
 
     function validateGeneForm(){
@@ -72,6 +84,7 @@
                 key === "Control"   ||
                 event.metakey       || //'cmd' in Mac
                 key === "Shift"     ||
+                key === "Enter"     ||
                 key === "Down") {
                 return; //don't e.preventdefault()...
             }
@@ -182,30 +195,159 @@
             //JSON Copy to Clipboard
             document.getElementById('copy-to-clipboard').addEventListener('click', function(event){
                 //make a hidden input to select text from for copying
-                var tempInput = document.createElement('textarea');
-                tempInput.value = JSONStringified;
+                let tempInput = document.createElement('textarea');
+                tempInput.textContent = JSONStringified;
                 document.body.appendChild(tempInput);
-                tempInput.select();
+                let selection = document.getSelection();
+                let range = document.createRange();
+                range.selectNode(tempInput);
+                selection.removeAllRanges();
+                selection.addRange(range);
                 document.execCommand("Copy");
+                selection.removeAllRanges();
                 tempInput.style.display = 'none';
             });
         });
     }
 
     /**
-     * @function filterSwitchFunctionality - add event listener to checkbox to visually filter out non-form gene nodes and edges
+     * @function filterNonQueryGenes - add event listener to checkbox to visually filter out non-form gene nodes and edges
      * @param {object} AIVObj - reference to the AIV namespace object
      */
-    function filterSwitchFunctionality(AIVObj) {
+    function filterNonQueryGenes(AIVObj) {
         document.getElementById('filterCheckbox').addEventListener('change', function(event){
             AIVObj.cy.$('node[!searchGeneData][id ^= "Protein"]').toggleClass('filteredChildNodes');
+            AIVObj.cy.$('node[id ^= "Effector"]').toggleClass('filteredChildNodes');
         });
+    }
+
+    /**
+     * @function pearsonFilterEPPIonEles - Take filter value and use it to find edges with R more than that
+     * value. Then find those nodes that connect to such edges. Within these nodes, filter again by comparing
+     * how many total edges(degree) it has to how many edges connected to it fit the filter. If they're equal
+     * hide the node. This later logic is useful for when we having interactions between interactions.
+     * Lastly hide all the edges that fit the filter as a failsafe (because when you hide nodes, they hide the
+     * edges).
+     * @param {object} AIVObjReference - reference to the AIV namespace object
+     */
+    function pearsonFilterEPPIonEles(AIVObjReference){
+        let filterValue = document.getElementById('EPPICorrThreshold').value;
+        let selector = `edge[pearsonR <= ${filterValue}][?published][target ^= 'Protein']`;
+        let edges = AIVObjReference.cy.$(selector);
+        edges.connectedNodes('node[!searchGeneData][id ^="Protein"]').forEach(function(ele){
+            // console.log(ele.data(), "data, degree", ele.degree());
+            if (ele.connectedEdges(selector).size() === ele.degree()){
+                ele.addClass('pearsonfilterEPPI');
+            }
+        });
+        edges.addClass('pearsonfilterEPPI');
+    }
+
+    function filterExperimentalPPIsSwitch(AIVObj) {
+        document.getElementById('filterEPPIsCheckbox').addEventListener('change', function(event){
+            // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
+            AIVObj.cy.$('.pearsonfilterEPPI').removeClass('pearsonfilterEPPI');
+            if (event.target.checked){
+                document.getElementById('EPPICorrThreshold').removeAttribute("disabled");
+                pearsonFilterEPPIonEles(AIVObj);
+            }
+            else {
+                document.getElementById('EPPICorrThreshold').setAttribute("disabled", "");
+            }
+        });
+    }
+
+    function filterExperimentalPPIsInputEListener(AIVObj){
+        document.getElementById('EPPICorrThreshold').addEventListener('change', function(event){
+            if ( document.getElementById('filterEPPIsCheckbox').checked ){
+                AIVObj.cy.$('.pearsonfilterEPPI').removeClass('pearsonfilterEPPI');
+                pearsonFilterEPPIonEles(AIVObj);
+            }
+        });
+    }
+
+    /**
+     * @function pearsonAndInterologFilterPPPIonEles - Similar logic to pearsonFilterEPPIonEles function but with additonal logic for the interlog confidence threshold (uses an OR cytoscapejs selector)
+     * @param {object} AIVObjReference - reference to the AIV namespace object
+     */
+    function pearsonAndInterologFilterPPPIonEles(AIVObjReference){
+        let filterRValue = Number(document.getElementById('PPPICorrThreshold').value);
+        let filterInterlogConf = Number(document.getElementById('PPPIConfThreshold').value);
+        let selector = `edge[pearsonR <= ${filterRValue}][!published][target ^= 'Protein'], edge[interologConfidence >= 1][interologConfidence <= ${filterInterlogConf}][!published][target ^= 'Protein']`;
+        let edges = AIVObjReference.cy.$(selector); // OR selector
+        edges.connectedNodes('node[!searchGeneData][id ^="Protein"]').forEach(function(ele){
+            // console.log(ele.data(), "data, degree", ele.degree());
+            if (ele.connectedEdges(selector).size() === ele.degree()){
+                ele.addClass('pearsonAndInterologfilterPPPI');
+            }
+        });
+        edges.addClass('pearsonAndInterologfilterPPPI');
+    }
+
+    function filterPredictedPPIsSwitch(AIVObj) {
+        document.getElementById('filterPPPIsCheckbox').addEventListener('change', function(event){
+            // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
+            AIVObj.cy.$('.pearsonAndInterologfilterPPPI').removeClass('pearsonAndInterologfilterPPPI');
+            if (event.target.checked){
+                document.getElementById('PPPICorrThreshold').removeAttribute("disabled");
+                document.getElementById('PPPIConfThreshold').removeAttribute("disabled");
+                pearsonAndInterologFilterPPPIonEles(AIVObj);
+            }
+            else {
+                document.getElementById('PPPICorrThreshold').setAttribute("disabled", "");
+                document.getElementById('PPPIConfThreshold').setAttribute("disabled", "");
+            }
+        });
+    }
+
+    function filterPredictedPPIsInputsEListener(AIVObj){
+        function eListener (event){
+            if ( document.getElementById('filterPPPIsCheckbox').checked ){
+                AIVObj.cy.$('.pearsonAndInterologfilterPPPI').removeClass('pearsonAndInterologfilterPPPI');
+                pearsonAndInterologFilterPPPIonEles(AIVObj);
+            }
+        }
+        document.getElementById('PPPICorrThreshold').addEventListener('change', eListener);
+        document.getElementById('PPPIConfThreshold').addEventListener('change', eListener);
+    }
+
+    function restrictUIInputsNumRange() {
+        function restrictRRange (event){
+            let value = Number(event.target.value);
+            if ( value < -1.0){ event.target.value = -1.0;}
+            else if (value > 1.0) {event.target.value = 1.0;}
+        }
+        document.getElementById('PPPICorrThreshold').addEventListener('input', restrictRRange);
+        document.getElementById('EPPICorrThreshold').addEventListener('input', restrictRRange);
+        document.getElementById('PPPIConfThreshold').addEventListener('input', function(event){
+            let value = Number(event.target.value);
+            if ( value < -0){ event.target.value = 0;}
+            else if (value > 90) {event.target.value = 90;}
+        });
+    }
+
+    /**
+     * function changeLayoutCyHouseCleaning - Helper function that will be run before a new layout is executed
+     * @param {object} AIVObjReference - reference to global namespace AIV object, with access to cytoscape methods
+     * @param {boolean} coseOrNot - boolean to determine if this is a cose layout change or not
+     */
+    function changeLayoutCyHouseCleaning(AIVObjReference, coseOrNot){
+        $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
+        AIVObjReference.cy.reset();
+        if (!coseOrNot){
+            AIVObjReference.removeLocalizationCompoundNodes();
+        }
+        let nodeListCheckboxes = document.querySelectorAll('input:checked.filter-switch'); // NodeList of checked UI checkboxes (not form checkboxes)
+        if (nodeListCheckboxes.length > 0) { //reset UI checkboxes
+            [].forEach.call(nodeListCheckboxes, function(node){ //nodeList forEach hack (some browsers don't support NodeList.forEach
+                node.click(); // turn off checkbox, setting .checked DOES not fire events!
+            });
+        }
     }
 
     function localizationLayoutEventListener(AIVObj) {
         document.getElementById('localizationLayout').addEventListener('click', function(event){
-            $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
-            AIVObj.removeLocalizationCompoundNodes();
+            changeLayoutCyHouseCleaning(AIVObj, false);
             AIVObj.cy.reset();
             AIVObj.cy.layout(AIVObj.getCyCerebralLayout()).run();
         });
@@ -213,15 +355,14 @@
 
     function spreadLayoutEventListener(AIVObj) {
         document.getElementById('spreadLayout').addEventListener('click', function(event){
-            $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
-            AIVObj.removeLocalizationCompoundNodes();
+            changeLayoutCyHouseCleaning(AIVObj, false);
             AIVObj.cy.layout(AIVObj.getCySpreadLayout()).run();
         });
     }
 
     function coseCompoundLayoutEventListener(AIVObj) {
         document.getElementById('coseCompoundLayout').addEventListener('click', function(event){
-            $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
+            changeLayoutCyHouseCleaning(AIVObj, true);
             if (AIVObj.SUBA4LoadState && !AIVObj.coseParentNodesOnCyCore) { //only run if SUBA4 data loaded and if parent nodes are not already added
                 AIVObj.addLocalizationCompoundNodes();
                 AIVObj.removeAndAddNodesForCompoundNodes();
@@ -255,24 +396,40 @@
         });
     }
 
+    /**
+     * @function panLeft - simple UI function to pan left 100 pixels on cy core
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function panLeft(AIVObj){
         document.getElementById('panLeft').addEventListener('click', function(){
             AIVObj.cy.panBy({ x: -100, y: 0});
         });
     }
 
+    /**
+     * @function panRight - simple UI function to pan right 100 pixels on cy core
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function panRight(AIVObj){
         document.getElementById('panRight').addEventListener('click', function(){
             AIVObj.cy.panBy({ x: 100, y: 0});
         });
     }
 
+    /**
+     * @function panUp - simple UI function to pan up 100 pixels on cy core
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function panUp(AIVObj){
         document.getElementById('panUp').addEventListener('click', function(){
             AIVObj.cy.panBy({ x: 0, y: 100});
         });
     }
 
+    /**
+     * @function panDown - simple UI function to pan down 100 pixels on cy core
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function panDown(AIVObj){
         document.getElementById('panDown').addEventListener('click', function(){
             AIVObj.cy.panBy({ x: 0, y: -100});

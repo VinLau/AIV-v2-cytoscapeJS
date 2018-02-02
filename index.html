@@ -63,116 +63,154 @@
                 </div>
                 <ul class="nav navbar-nav">
                     <li><h3 class="active">Arabidopsis Interactions Viewer 2.0</h3></li>
-                    <li><a id="settings" href="#">Show/Hide Settings</a></li>
+                    <li><a id="showFormModal" href="#">Submit Query</a></li>
                     <li><a id="showLegendModal" href="#">Legend</a></li>
                     <li><a id="showAboutModal" href="#">About AIV</a></li>
                 </ul>
+                <label class="switch">
+                    <input id="filterCheckbox" type="checkbox" class="filter-switch">
+                    <span class="slider round"></span>
+                </label>
+
+                <button class="button" id="spreadLayout">Spread Layout</button>
+
+                <button class="button" id="localizationLayout">Localization Layout</button>
+
+                <button class="button" id="coseCompoundLayout">Group By Localization</button>
+
+                <button class="button" id="zoomIn">+</button>
+
+                <button class="button" id="zoomOut">-</button>
+
+                <button class="button" id="zoomReset">reset</button>
+
+                <button class="button" id="panLeft"><</button>
+
+                <button class="button" id="panRight">></button>
+
+                <button class="button" id="panUp">^</button>
+
+                <button class="button" id="panDown">D</button>
+
+                <label class="switch">
+                    <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch">
+                    <span class="slider round"></span>
+                </label>
+                <label for="EPPICorrThreshold">
+                    E-PPI Correlation Threshold:
+                </label>
+                <input id="EPPICorrThreshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
+
+                <label class="switch">
+                    <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch">
+                    <span class="slider round"></span>
+                </label>
+                <label for="PPPICorrThreshold">
+                    P-PPI Correlation Threshold:
+                </label>
+                <input id="PPPICorrThreshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
+                <label for="PPPIConfThreshold">
+                    P-PPI Confidence Threshold:
+                </label>
+                <input id="PPPIConfThreshold" type="number" min="0" max="90.0" step="1.0" value ="3.0" maxlength="2" disabled/>
+
             </div>
         </nav>
-        <div id="wrapper" class="toggled">
-            <aside id="sidebar-wrapper">
-                <form id="input_form">
-                    <div class="form-group">
-                        <label for="genes">Please enter a list of genes:</label>
-                        <textarea class="form-control gene-form" row="20" id="genes"></textarea>
-                        <br>
-                        <p>Select options:</p>
-
-                        <div class="checkbox">
-                            <label><input id="published" type="checkbox" value="">Show only interactions from published data sets</label>
-                        </div>
-
-                        <div class="checkbox">
-                            <label><input id="predSUBA" type="checkbox" value="" checked>Include predicted data for localization scores</label>
-                        </div>
-
-                        <p>Select databases to query:</p>
-
-                        <div class="checkbox">
-                            <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
-                            <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
-                        </div>
-
-                        <div class="checkbox">
-                            <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
-                            <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
-                        </div>
-
-                        <div class="checkbox">
-                            <label><input id="queryBAR" type="checkbox" value="" checked>Query protein-protein interactions from BAR</label>
-                        </div>
-
-                        <div class="checkbox">
-                            <label class="can-be-disabled" ><input id="recursive" type="checkbox" value="" disabled>Search for interactions between interactors</label>
-                        </div>
-
-                        <div class="checkbox">
-                            <label><input id="queryDna" type="checkbox" value="" checked >Query protein-DNA interactions from BAR</label>
-                        </div>
-
-                        <hr>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <input type="submit" id="submit" class="btn btn-success center-block" value="Submit">
-                            </div>
-
-                            <div class="col-md-4">
-                                <input type="reset" class="btn btn-success center-block" value="Reset">
-                            </div>
-
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-success center-block" id="example">Example</button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <button type="button" class="btn btn-success center-block" id="showPNGModal">PNG</button>
-                            </div>
-
-                            <div class="col-md-6">
-                                <button type="button" class="btn btn-success center-block" id="showJSONModal">JSON</button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </aside> <!-- sibebar wrapper -->
-
-            <label class="switch">
-                <input id="filterCheckbox" type="checkbox">
-                <span class="slider round"></span>
-            </label>
-
-            <button class="button" id="spreadLayout">Spread Layout</button>
-
-            <button class="button" id="localizationLayout">Localization Layout</button>
-
-            <button class="button" id="coseCompoundLayout">Group By Localization</button>
-
-            <button class="button" id="zoomIn">+</button>
-
-            <button class="button" id="zoomOut">-</button>
-
-            <button class="button" id="zoomReset">reset</button>
-
-            <button class="button" id="panLeft"><</button>
-
-            <button class="button" id="panRight">></button>
-
-            <button class="button" id="panUp">^</button>
-
-            <button class="button" id="panDown">D</button>
+        <main>
 
             <!-- Page content -->
-            <div id="page-content-wrapper">
+            <div>
                 <div id="cy"></div>
                 <div id="loading">
                     <span class="fa  fa-spinner fa-spin"></span>
                 </div>
             </div> <!-- Page content -->
 
-        </div> <!-- wrapper -->
+        </main> <!-- wrapper -->
 
         <!-- Modals -->
+
+        <!-- Form -->
+        <div id="formModal" class="modal fade">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4>Welcome to AIV 2.0</h4>
+                        <h6>This tool will visualize predicted and experimentally validated protein-protein/DNA interactions</h6>
+                    </div>
+                    <div class="modal-body">
+                        <form id="input_form">
+                            <div class="form-group">
+                                <label for="genes">Please enter a list of genes:</label>
+                                <textarea class="form-control gene-form" row="20" id="genes"></textarea>
+                                <br>
+                                <p>Select options:</p>
+
+                                <div class="checkbox">
+                                    <label><input id="published" type="checkbox" value="">Show only interactions from published data sets</label>
+                                </div>
+
+                                <div class="checkbox">
+                                    <label><input id="predSUBA" type="checkbox" value="" checked>Include predicted data for localization scores</label>
+                                </div>
+
+                                <p>Select databases to query:</p>
+
+                                <div class="checkbox">
+                                    <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
+                                    <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
+                                </div>
+
+                                <div class="checkbox">
+                                    <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
+                                    <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
+                                </div>
+
+                                <div class="checkbox">
+                                    <label><input id="queryBAR" type="checkbox" value="" checked>Query protein-protein interactions from BAR</label>
+                                </div>
+
+                                <div class="checkbox">
+                                    <label class="can-be-disabled" ><input id="recursive" type="checkbox" value="" disabled>Search for interactions between interactors</label>
+                                </div>
+
+                                <div class="checkbox">
+                                    <label><input id="queryDna" type="checkbox" value="" checked >Query protein-DNA interactions from BAR</label>
+                                </div>
+
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <input type="submit" id="submit" class="btn btn-success center-block" value="Submit">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <input type="reset" class="btn btn-success center-block" value="Reset">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <button type="button" class="btn btn-success center-block" id="example">Example</button>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-success center-block" id="showPNGModal">PNG</button>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-success center-block" id="showJSONModal">JSON</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- Form -->
+
         <!-- About -->
         <div id="AboutModal" class="modal fade">
             <div class="modal-dialog">
