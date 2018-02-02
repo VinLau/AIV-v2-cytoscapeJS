@@ -1187,7 +1187,7 @@
 		SVGstr += `<circle class="donut-hole" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent"></circle>`;
 
 		//The below donut segment will appear for genes without SUBA data... it will be all grey
-		SVGstr += `<circle class="donut-unfilled-ring" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent" stroke="#56595b" stroke-width="${strokeWidth}"></circle>`;
+		SVGstr += `<circle class="donut-unfilled-ring" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent" stroke="#56595b" stroke-width="${strokeWidth}" display="block"></circle>`;
 
 		// Figure out which 'PCT' properties are greater than zero and then programatically add them
 		// as donut-segments. Note that some calculations are involved based
@@ -1227,7 +1227,7 @@
 
         // Based on the sorted array we created above, let's add some 'donut segments' to the SVG string
         pctAndColorArray.forEach(function(pctAndColor){
-        	SVGstr += `<circle class="donut-segment" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}"  fill="transparent" stroke="${pctAndColor.color}" stroke-width="${strokeWidth}" stroke-dasharray="${pctAndColor.pct * scaling} ${(100 - pctAndColor.pct) * scaling}" stroke-dashoffset="${initialOffset}"></circle>`;
+        	SVGstr += `<circle class="donut-segment" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}"  fill="transparent" stroke="${pctAndColor.color}" stroke-width="${strokeWidth}" stroke-dasharray="${pctAndColor.pct * scaling} ${(100 - pctAndColor.pct) * scaling}" stroke-dashoffset="${initialOffset}" display="block"></circle>`;
 
             allSegsLength += pctAndColor.pct;
 
@@ -1292,6 +1292,26 @@
 						'border-color' : '#99cc00',
 					})
 		);
+	};
+
+    /**
+     * @namespace {object} AIV
+     * @function hideDonuts - un/hides donuts by changing display attribute inside the svg
+     * @param {boolean} hide - boolean to determine if we are hiding or not
+     */
+    AIV.hideDonuts = function(hide) {
+        this.cy.$('node[?MapManCode1]').forEach(function(node){ //check for nodes with a MapMan
+            let newSVGString = decodeURIComponent(node.data('svgDonut'));
+            newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
+            if (hide){
+                newSVGString = newSVGString.replace(/"block"/g, '"none"'); //change display attribute
+            }
+            else {
+                newSVGString = newSVGString.replace(/"none"/g, '"block"');
+            }
+            newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
+            node.data('svgDonut', newSVGString);
+        });
 	};
 
     /**
@@ -1367,15 +1387,35 @@
 			var xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
 			var fontSize = geneNode.data('searchGeneData') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
 
-            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana">
-								${MapManCode} 
-							</text></svg>`;
+            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana" visibility="visible">${MapManCode}</text></svg>`;
 			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
 
 			geneNode.data('svgDonut', newSVGString);
 		}
 
 	};
+
+    /**
+     * @namespace {object} AIV
+     * @function hideMapMan - un/hides MapMan centre by un/enabling visibility attribute inside the svg
+     * @param {boolean} hide - boolean to determine if we are hiding or not
+     */
+    AIV.hideMapMan = function(hide){
+		this.cy.$('node[?MapManCode1]').forEach(function(node){ //check for nodes with a MapMan
+			let newSVGString = decodeURIComponent(node.data('svgDonut'));
+            newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
+            if (hide){
+                newSVGString = newSVGString.replace('"visible"', '"hidden"'); //change visbility attribute
+            }
+            else {
+                newSVGString = newSVGString.replace('"hidden"', '"visible"');
+            }
+            newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
+            node.data('svgDonut', newSVGString);
+		});
+	};
+
+
 
 	/**
 	 * @namespace {object} AIV

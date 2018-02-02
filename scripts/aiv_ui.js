@@ -51,6 +51,8 @@
         panRight(AIVref);
         panUp(AIVref);
         panDown(AIVref);
+        hideUnhideMapMan(AIVref);
+        hideUnhideDonuts(AIVref);
     }
 
     function showFormOnLoad(){
@@ -327,7 +329,37 @@
     }
 
     /**
-     * function changeLayoutCyHouseCleaning - Helper function that will be run before a new layout is executed
+     * @function hideUnhideMapMan - event listener binding function for hiding mapman donut centres
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
+    function hideUnhideMapMan(AIVObj) {
+        document.getElementById('hideMapMan').addEventListener('change', function(event){
+            if (event.target.checked){
+                AIVObj.hideMapMan(true);
+            }
+            else {
+                AIVObj.hideMapMan(false);
+            }
+        });
+    }
+
+    /**
+     * @function hideUnhideDonuts - event listener binding function for hiding pie chart donuts
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
+    function hideUnhideDonuts(AIVObj) {
+        document.getElementById('hideDonut').addEventListener('change', function(event){
+            if (event.target.checked){
+                AIVObj.hideDonuts(true);
+            }
+            else {
+                AIVObj.hideDonuts(false);
+            }
+        });
+    }
+
+    /**
+     * @function changeLayoutCyHouseCleaning - Helper function that will be run before a new layout is executed
      * @param {object} AIVObjReference - reference to global namespace AIV object, with access to cytoscape methods
      * @param {boolean} coseOrNot - boolean to determine if this is a cose layout change or not
      */
