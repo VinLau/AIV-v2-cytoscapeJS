@@ -10,9 +10,9 @@ setTimeout(function(){
         // "At2g24790\n" +
         // "At2g28200\n" +
         // "At1g73360");
-    )
+    );
     $('#submit').click();
-}, 250);
+}, 500);
 
 //"AT2G34970\nAT3G18130\nAT1G04880\nAT1G25420\nAT5G43700"
 //"AT2G34970"

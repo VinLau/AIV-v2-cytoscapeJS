@@ -1,51 +1,70 @@
 /*
  * Bootstrap overrides, UI options and responsive CSS
- * Author: Vincent Lau, Asher Pasha (basic configurations at the beginning, mostly been deleted/overwritten);
- * Date: Winter 2017
+ * Author: Vincent Lau, Asher Pasha (basic configurations at the beginning, nearly all been deleted/overwritten);
+ * Date: Spring 2018
  */
 
+*, h1, h2, h3, h4, h5, h6, p, div{ /* defaults and bootstrap overriding */
+	font-family: "Verdana", "sans-serif";
+	margin: 0;
+	padding: 0;
+}
+
+/*bootstrap overrides*/
 .navbar-brand, .navbar-nav, .navbar {
 	margin-bottom: 0;
 }
 
-.navbar-brand, .navbar-nav li a {
-	padding-top: 22px;
+.container-fluid {
+	padding: 0;
+}
+
+.navbar-header {
+	margin-top: calc((72px - 56px)/2);
+}
+
+/*end of bootstrap overrides*/
+
+/* form css */
+
+/* gene input box*/
+#genes {
+	height: 300px;
 }
 
 .gene-form {
 	max-height: 40vh;
 }
 
-#cy {
-	height: calc(100vh - 60px);
-	height: -webkit-calc(100vh - 60px);
-	height: -moz-calc(100vh - 60px);
+/* expanding summary */
+.collapse{
+	cursor: pointer;
+	display: block;
+	color: #99cc00;
+}
+.collapse + input{
+	display: none; /* hide the checkboxes */
+}
+.collapse + input + p{
+	/*display:none;*/
+	height: 0;
+	width: 0;
+	visibility: hidden;
+	opacity: 0;
+	transition: visibility 0s, opacity 0.5s linear;
+	overflow:hidden
+}
+.collapse + input:checked + p{
+	height: 100%;
 	width: 100%;
-	z-index: 999;
+	visibility: visible;
+	opacity: 1;
+	overflow:hidden
+	/*display:block;*/
 }
+/* end of expanding summary*/
 
-.qtip-bootstrap > .qtip-titlebar {
-	font-size: 1.1rem;
-}
-
-.qtip-bootstrap > .qtip-content {
-  font-family: "Bodoni MT", "Arial Black", "arial", "sans-serif";
-  font-size: 1.75rem;
-}
-
-.qtip-bootstrap.q-tip-effector-node {
-  background-color: lightcyan;
-}
-
-.qtip-bootstrap.q-tip-protein-node {
-  background-color: lemonchiffon;
-}
-
-.pdi-table-scroll-pane {
-	width: 100%;
-	height: 80px; /* overflow property only works for block elements with a specified height. */
-	overflow: auto;
-}
+/* end form css */
 
 /* These two CSS selectors are for centering larger modals such as the JSON and PNG export*/
 .centered-modal.in {
@@ -57,7 +76,11 @@
 }
 
 #PNGModal > .modal-dialog { /*To make it so the modal fills whole page*/
-	width: 80vw;
+	width: 98vw;
+}
+
+#PNGModal .modal-header {
+	padding: 10px;
 }
 
 #JSONModal > .modal-dialog {
@@ -73,7 +96,7 @@
 	overflow: auto;
 }
 
-/* loading spinner before app is loaded*/
+/* loading spinner before cytoscape app is loaded*/
 #loading {
 	position: absolute;
 	display: block;
@@ -90,96 +113,370 @@
 	display: none;
 }
 
-/*Make by default, the disabled checkboxes grey*/
+/*Make by default, the disabled checkboxes in gene form grey*/
 .can-be-disabled {
 	color: #ccc;
 }
 
-/* The switch - the box around the slider */
-.switch {
+/* begin slider checkbox CSS, credits to https://codepen.io/Qvcool/pen/bdzVYW */
+
+.slider-checkbox {
 	position: relative;
-	display: inline-block;
-	width: 60px;
-	height: 34px;
 }
-
-/* Hide default HTML checkbox */
-.switch input {display:none;}
-
-/* The slider */
-.slider {
-	position: absolute;
+.slider-checkbox input {
+	margin: 0;
+	margin-top: 1px;
 	cursor: pointer;
+	opacity: 0;
+	-ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+	filter: alpha(opacity=0);
+	-moz-opacity: 0;
+	-khtml-opacity: 0;
+	opacity: 0;
+	position: absolute;
+	z-index: 1;
 	top: 0;
 	left: 0;
-	right: 0;
-	bottom: 0;
-	background-color: #ccc;
-	-webkit-transition: .4s;
-	transition: .4s;
+	background: red;
+	width: 40px;
+	height: 20px;
 }
-
-.slider:before {
+.slider-checkbox input:checked + .label-checkbox::before {
+	background-color: #99cc00;
+	content: "  ";
+	padding-left: 6px;
+}
+.slider-checkbox input:checked + .label-checkbox::after {
+	left: 21px;
+}
+.slider-checkbox .label-checkbox {
+	position: relative;
+	padding-left: 46px;
+}
+.slider-checkbox .label-checkbox::before, .slider-checkbox .label-checkbox::after {
 	position: absolute;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+	transition: background-color 0.3s, left 0.3s;
+}
+.slider-checkbox .label-checkbox::before {
+	content: "  ";
+	color: #fff;
+	box-sizing: border-box;
+	padding-left: 23px;
+	font-size: 12px;
+	line-height: 20px;
+	background-color: #888;
+	left: 0;
+	top: 0;
+	height: 20px;
+	width: 40px;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+}
+.slider-checkbox .label-checkbox:after {
 	content: "";
-	height: 26px;
-	width: 26px;
-	left: 4px;
-	bottom: 4px;
-	background-color: white;
-	-webkit-transition: .4s;
-	transition: .4s;
+	letter-spacing: 20px;
+	background: #fff;
+	left: 1px;
+	top: 1px;
+	height: 18px;
+	width: 18px;
 }
 
-input:checked + .slider {
-	background-color: #2196F3;
-}
-
-input:focus + .slider {
-	box-shadow: 0 0 1px #2196F3;
-}
-
-input:checked + .slider:before {
-	-webkit-transform: translateX(26px);
-	-ms-transform: translateX(26px);
-	transform: translateX(26px);
-}
-
-/* Rounded sliders */
-.slider.round {
-	border-radius: 34px;
-}
-
-.slider.round:before {
-	border-radius: 50%;
-}
+/* end of slider CSS */
 
 /* buttons */
-.button {
-	/*padding: 10px;*/
+
+/*layout buttons */
+.button-layout {
+	height: 50px;
+	width: 50px;
 	font-size: 12px;
 	text-align: center;
 	cursor: pointer;
 	outline: none;
-	color: #fff;
-	background-color: #4CAF50;
-	border: none;
-	border-radius: 15px;
-	box-shadow: 0 9px #999;
+	background-color: #fff;
+	border: 1px solid black;
+	border-radius: 2px;
+	box-shadow: 2px 2px #999;
 }
 
-.button:hover {background-color: #3e8e41}
-
-.button:active {
-	background-color: #3e8e41;
-	box-shadow: 0 5px #666;
+.button-layout:active {
+	box-shadow: 5px 5px #666;
 	transform: translateY(4px);
 }
+
+#spreadLayout {
+	background: url(../images/spreadLayoutIcon.svg);
+	background-size:contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#localizationLayout {
+	background: url(../images/cerebralLayoutIcon.svg);
+	background-size:contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#coseCompoundLayout {
+	background: url(../images/coseBilkentLayoutIcon.svg);
+	background-size:contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+/*end of layout buttons */
+
+/* zooming buttons */
+
+.button-zoom {
+	height: 35px;
+	width: 35px;
+	/* transparent button */
+	background-color: Transparent;
+	background-repeat: no-repeat;
+	border: none;
+	cursor: pointer;
+	overflow: hidden;
+	outline: none;
+	margin: 0 2px;
+}
+
+/* end of zooming buttons */
+
+/* pan buttons */
+
+.button-pan {
+	height: 22px;
+	width: 22px;
+	/* transparent button */
+	background-color: Transparent;
+	background-repeat: no-repeat;
+	border: none;
+	cursor: pointer;
+	overflow: hidden;
+	outline: none;
+}
+
+#zoomReset {
+	padding-top: 3px;
+}
+/* end of pan buttons */
+
+/* export & form buttons */
+.export-button, .form-button {
+	padding: 1px;
+	text-align: center;
+	cursor: pointer;
+	outline: none;
+	background-color: #ececec;
+	border: 1px solid black;
+	border-radius: 2px;
+	box-shadow: 2px 2px #999;
+	margin: 2px 0;
+}
+
+.export-button:active, .form-button:active {
+	box-shadow: 5px 5px #666;
+	transform: translateY(2px);
+}
+
+/* end export & form buttons */
 
 /* end of buttons css*/
 
 /* input number filters css */
 
-input[type=number]::-webkit-inner-spin-button {
+.threshold::-webkit-inner-spin-button {
 	opacity: 1;
 }
+
+.threshold{
+	width: 50px;
+	height: 20px;
+}
+
+/* end input number filters css */
+
+/* flexbox css */
+
+/*flex container for the nav bar excluding img*/
+.flex-container-main {
+	display: flex;
+	flex-flow: row wrap;
+}
+
+.flex-container-main label {
+	font-size: 12px;
+	font-weight: 500;
+}
+/*end flex container for the nav bar excluding img*/
+
+/* flex container for modal header */
+.flex-container-header{
+	display: flex;
+	justify-content: space-between;
+}
+/* end flex container for modals  */
+
+/* flex container for the title and form */
+.flex-container-title {
+	display: flex;
+	flex-flow: row wrap;
+	align-items: center;
+}
+
+.flex-container-title p{
+	margin: 0 5px;
+	cursor: pointer;
+}
+/* end flex container for the title and form */
+
+/* flex container for the layout buttons */
+.flex-container-layout-buttons{
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: center;
+	width: 190px;
+	padding: 0 5px;
+}
+
+.flex-container-layout-buttons > p {
+	flex: 1 0 100%;
+	font-size: 12px;
+	font-weight: 600;
+	text-align: center;
+	margin: 0;
+	padding: 0;
+}
+
+.flex-container-layout-buttons > button {
+	margin: 0 5px;
+}
+/* end css flex container for the layout buttons */
+
+/* flex container for the zoom/pan buttons */
+.flex-container-zoom-pan-buttons{
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+/* end flex container for the zoom/pan buttons */
+
+/* flex container for the pan buttons */
+.flex-container-zoom-buttons {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+/* end flex container for the pan buttons */
+
+
+/* flex container for the pan buttons */
+.flex-container-pan-buttons{
+	width: 80px;
+	margin-bottom: 7px;
+	display: flex;
+	flex-flow: row wrap;
+	align-items: center;
+	justify-content: center;
+}
+
+.flex-container-pan-buttons > #panUp {
+	flex: 1 0 100%;
+}
+
+.flex-container-pan-buttons > #panDown {
+	flex: 1 0 100%;
+}
+/* end flex container for the pan buttons */
+
+/* flex container for the pan buttons */
+.flex-container-PPPI-filter {
+	display:flex;
+	flex-flow: column wrap;
+}
+/*end flex container for the pan buttons */
+
+/* some spacing for the flex items */
+.filter-column {
+	margin: 0 5px;
+}
+/* end some spacing for the flex items */
+
+/* flex container for the export buttons */
+.flex-container-export {
+	display:flex;
+	flex-flow: column wrap;
+}
+/* end flex container for the export buttons */
+
+/* end flexbox css */
+
+/* cytoscape CSS */
+
+#cy {
+	height: calc(100vh - 80px);
+	height: -webkit-calc(100vh - 80px);
+	height: -moz-calc(100vh - 80px);
+	width: 100%;
+	z-index: 999;
+}
+
+/* qtip CSS*/
+.qtip-light > .qtip-titlebar {
+	font-size: 1.5rem;
+}
+
+.qtip-light > .qtip-content {
+	font-family: "Verdana", "sans-serif";
+	font-size: 1.35rem;
+}
+
+.qtip-light.qtip-effector-node {
+	/*background-color: lightcyan;*/
+}
+
+.qtip-light.qtip-protein-node {
+	/*background-color: lemonchiffon;*/
+}
+
+.qtip-light.qtip-dna {
+	max-width: 280px;
+	max-height: 300px;
+}
+
+.pdi-table-scroll-pane {
+	width: 100%;
+	height: 280px; /* overflow property only works for block elements with a specified height. */
+	overflow: auto;
+}
+
+.pdi-table-scroll-pane table {
+	border-collapse: collapse;
+	table-layout: fixed;
+	font-size: 1rem;
+}
+
+.pdi-table-scroll-pane table, th, td {
+	border: 1px solid #777777;
+	text-align: center;
+	width: 100%;
+}
+
+.pdi-table-scroll-pane td:first-child { /*bold first column*/
+	font-weight: bold;
+}
+
+.pdi-table-scroll-pane tr:nth-child(even) {
+	background-color: #ddd;
+}
+/* end of qtip CSS*/
+
+/* end cytoscape CSS */

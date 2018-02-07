@@ -47,7 +47,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css" integrity="sha256-akwTLZec/XAFvgYgVH1T5/369lhA2Efr22xzCNl1nHs=" crossorigin="anonymous"/>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+        <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
 
         <!-- To simplify coding TODO: Remove this during launch -->
         <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
@@ -59,69 +59,124 @@
         <nav class="navbar navbar-default">
             <div class="container-fluid">
                 <div class="navbar-header">
-                    <a href="//bar.utoronto.ca"><img src="//bar.utoronto.ca/BAR/images/BAR.png" id="logo" class="img-responsive center-block"></a>
+                    <a href="//bar.utoronto.ca">
+                        <img src="//bar.utoronto.ca/BAR/images/BAR.png" id="logo" class="img-responsive center-block">
+                    </a>
                 </div>
-                <ul class="nav navbar-nav">
-                    <li><h3 class="active">Arabidopsis Interactions Viewer 2.0</h3></li>
-                    <li><a id="showFormModal" href="#">Submit Query</a></li>
-                    <li><a id="showLegendModal" href="#">Legend</a></li>
-                    <li><a id="showAboutModal" href="#">About AIV</a></li>
-                </ul>
-                <label class="switch">
-                    <input id="filterCheckbox" type="checkbox" class="filter-switch">
-                    <span class="slider round"></span>
-                </label>
 
-                <button class="button" id="spreadLayout">Spread Layout</button>
+                <div class="flex-container-main">
+                    <div class="flex-container-title">
+                        <h3>Arabidopsis Interactions Viewer 2.0</h3>
+                        <p id="showFormModal">Query</p>
+                        <p id="showLegendModal">Legend</p>
+                    </div>
 
-                <button class="button" id="localizationLayout">Localization Layout</button>
+                    <div class="flex-container-layout-buttons">
+                        <p> Layouts </p>
+                        <button class="button-layout" id="spreadLayout"></button>
 
-                <button class="button" id="coseCompoundLayout">Group By Localization</button>
+                        <button class="button-layout" id="localizationLayout"></button>
 
-                <button class="button" id="zoomIn">+</button>
+                        <button class="button-layout" id="coseCompoundLayout"></button>
+                    </div>
 
-                <button class="button" id="zoomOut">-</button>
+                    <div class="flex-container-zoom-pan-buttons">
+                        <div class="flex-container-zoom-buttons">
+                            <button class="button-zoom" id="zoomIn">
+                                <i class="fas fa-search-plus fa-2x"></i>
+                            </button>
 
-                <button class="button" id="zoomReset">reset</button>
+                            <button class="button-zoom" id="zoomOut">
+                                <i class="fas fa-search-minus fa-2x"></i>
+                            </button>
+                        </div>
 
-                <button class="button" id="panLeft"><</button>
+                        <div class="flex-container-pan-buttons">
+                            <button class="button-pan" id="panUp">
+                                <i class="fas fa-caret-up fa-2x"></i>
+                            </button>
 
-                <button class="button" id="panRight">></button>
+                            <button class="button-pan" id="panLeft">
+                                <i class="fas fa-caret-left fa-2x"></i>
+                            </button>
 
-                <button class="button" id="panUp">^</button>
+                            <button class="button-pan" id="zoomReset">
+                                <i class="fas fa-arrows-alt fa-lg"></i>
+                            </button>
 
-                <button class="button" id="panDown">D</button>
+                            <button class="button-pan" id="panRight">
+                                <i class="fas fa-caret-right fa-2x"></i>
+                            </button>
 
-                <label class="switch">
-                    <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch">
-                    <span class="slider round"></span>
-                </label>
-                <label for="EPPICorrThreshold">
-                    E-PPI Correlation Threshold:
-                </label>
-                <input id="EPPICorrThreshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
+                            <button class="button-pan" id="panDown">
+                                <i class="fas fa-caret-down fa-2x"></i>
+                            </button>
+                        </div>
 
-                <label class="switch">
-                    <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch">
-                    <span class="slider round"></span>
-                </label>
-                <label for="PPPICorrThreshold">
-                    P-PPI Correlation Threshold:
-                </label>
-                <input id="PPPICorrThreshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
-                <label for="PPPIConfThreshold">
-                    P-PPI Confidence Threshold:
-                </label>
-                <input id="PPPIConfThreshold" type="number" min="0" max="90.0" step="1.0" value ="3.0" maxlength="2" disabled/>
+                    </div>
 
-                <label class="switch">
-                    <input id="hideMapMan" type="checkbox" class="filter-switch">
-                    <span class="slider round"></span>
-                </label>
-                <label class="switch">
-                    <input id="hideDonut" type="checkbox" class="filter-switch">
-                    <span class="slider round"></span>
-                </label>
+                    <div class="filter-column">
+                        <section class="slider-checkbox">
+                            <input id="filterCheckbox" type="checkbox" class="filter-switch">
+                            <label class="label-checkbox" for="filterCheckbox">
+                                Hide Non-Query Genes
+                            </label>
+                        </section>
+                        <section class="slider-checkbox">
+                            <input id="hideMapMan" type="checkbox" class="">
+                            <label class="label-checkbox" for="hideMapMan">
+                                Hide MapMan Numbers
+                            </label>
+                        </section>
+                        <section class="slider-checkbox">
+                            <input id="hideDonut" type="checkbox" class="">
+                            <label class="label-checkbox" for="hideDonut">
+                                Hide Localization Data
+                            </label>
+                        </section>
+                    </div>
+
+                    <div class="filter-column">
+                        <section class="slider-checkbox">
+                            <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch">
+                            <label class="label-checkbox" for="filterEPPIsCheckbox">
+                                Show Experimental PPIs with:
+                            </label>
+                        </section>
+                        <label for="EPPICorrThreshold" class="threshold-label">
+                            Correlation Coefficient greater than
+                        </label>
+                        <input id="EPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
+                    </div>
+
+                    <div class="flex-container-PPPI-filter filter-column">
+                        <section class="slider-checkbox">
+                            <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch">
+                            <label class="label-checkbox" for="filterPPPIsCheckbox">
+                                Show Predicted PPIs with:
+                            </label>
+                        </section>
+                        <div>
+                            <label for="PPPICorrThreshold">
+                                Correlation Coefficient greater than
+                            </label>
+                            <input id="PPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
+                        </div>
+                        <div>
+                            <label for="PPPIConfThreshold">
+                                Interolog Confidence greater than
+                            </label>
+                            <input id="PPPIConfThreshold" class="threshold" type="number" min="0" max="90.0" step="1.0" value ="3.0" maxlength="2" disabled/>
+                        </div>
+                    </div>
+
+                    <div class="flex-container-export">
+                        <p>Export</p>
+                        <button type="button" class="export-button" id="showPNGModal">PNG</button>
+                        <button type="button" class="export-button" id="showJSONModal">JSON</button>
+                    </div>
+
+                </div>
 
             </div>
         </nav>
@@ -131,7 +186,6 @@
             <div>
                 <div id="cy"></div>
                 <div id="loading">
-                    <span class="fa  fa-spinner fa-spin"></span>
                 </div>
             </div> <!-- Page content -->
 
@@ -144,120 +198,91 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4>Welcome to AIV 2.0</h4>
-                        <h6>This tool will visualize predicted and experimentally validated protein-protein/DNA interactions</h6>
+                        <div class="flex-container-header">
+                            <h4>Welcome to AIV 2.0</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                        <br>
+                        <h6>Visualize predicted and experimentally validated protein-protein/DNA interactions</h6>
+                        <br>
+                        <label class="collapse" for="aboutUs">Click to learn more</label>
+                        <input id="aboutUs" type="checkbox">
+                        <p>The Arabidopsis Interactions Viewer queries a database of 70944 predicted and 36352 confirmed Arabidopsis interacting
+                            proteins. We have also included 2.8 million experimentally determined protein-DNA interactions. The predicted interactions (interologs) were generated by Drs Matt Geisler and Jane Geisler-Lee at the Southern Illinois University. Their current version is Interactome 2.0. The confirmed Arabidopsis interacting proteins come from
+                            BIND, the Biomolecular Interaction Network Database, from high-density Arabidopsis protein microarrays (Popescu et al.,
+                            2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein
+                            INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several
+                            different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to
+                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. The DNA-protein data were generously provided by O'Mailey et al. (2016), Gaudinier et al. (2011), Taylor-Teeples (2015), Li et al. (2014), and Brady et al. (2011). All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. Additional protein function data is from MapMan.</p>
                     </div>
                     <div class="modal-body">
                         <form id="input_form">
                             <div class="form-group">
                                 <label for="genes">Please enter a list of genes:</label>
-                                <textarea class="form-control gene-form" row="20" id="genes"></textarea>
+                                <textarea class="form-control gene-form" id="genes" rows="15"></textarea>
                                 <br>
                                 <p>Select options:</p>
 
                                 <div class="checkbox">
-                                    <label><input id="published" type="checkbox" value="">Show only interactions from published data sets</label>
+                                    <label><input id="published" type="checkbox" class="form-chkbox" value="">Show only interactions from published data sets</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="predSUBA" type="checkbox" value="" checked>Include predicted data for localization scores</label>
+                                    <label><input id="predSUBA" type="checkbox" class="form-chkbox" value="" checked>Include predicted data for localization scores</label>
                                 </div>
 
                                 <p>Select databases to query:</p>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
+                                    <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" class="form-chkbox" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
                                     <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
+                                    <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" class="form-chkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
                                     <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="queryBAR" type="checkbox" value="" checked>Query protein-protein interactions from BAR</label>
+                                    <label><input id="queryBAR" type="checkbox" class="form-chkbox" value="" checked>Query protein-protein interactions from BAR</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled" ><input id="recursive" type="checkbox" value="" disabled>Search for interactions between interactors</label>
+                                    <label class="can-be-disabled" ><input id="recursive" type="checkbox" class="form-chkbox" value="" disabled>Search for interactions between interactors</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="queryDna" type="checkbox" value="" checked >Query protein-DNA interactions from BAR</label>
+                                    <label><input id="queryDna" class="form-chkbox" type="checkbox" value="" checked >Query protein-DNA interactions from BAR</label>
                                 </div>
 
-                                <hr>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <input type="submit" id="submit" class="btn btn-success center-block" value="Submit">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <input type="reset" class="btn btn-success center-block" value="Reset">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <button type="button" class="btn btn-success center-block" id="example">Example</button>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <button type="button" class="btn btn-success center-block" id="showPNGModal">PNG</button>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <button type="button" class="btn btn-success center-block" id="showJSONModal">JSON</button>
-                                    </div>
-                                </div>
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <div class="pull-left">
+                            <input type="submit" id="submit" class="form-button" value="Submit">
+                            <input type="reset" id="resetForm" class="form-button" value="Reset">
+                            <button type="button" class="form-button" id="example">Example</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div> <!-- Form -->
-
-        <!-- About -->
-        <div id="AboutModal" class="modal fade">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h4>About AIV 2.0</h4>
-                    </div>
-                    <div class="modal-body">
-                        <p>The Arabidopsis Interactions Viewer queries a database of 70944 predicted and 36352 confirmed Arabidopsis interacting
-                            proteins. The predicted interactions (interologs) were generated by Drs Matt Geisler and Jane Geisler-Lee at the Southern
-                            Illinois University. Their current version is Interactome 2.0. The confirmed Arabidopsis interacting proteins come from
-                            BIND, the Biomolecular Interaction Network Database, from high-density Arabidopsis protein microarrays (Popescu et al.,
-                            2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein
-                            INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several
-                            different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to
-                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. All subcellular
-                            localisation data is from SUBA, the Arabidopsis Subcellular Database. These localisations do not include predicted
-                            localisations. Additional protein function data is from MapMan.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div> <!-- About AIV 2.0 -->
 
         <!-- Legend -->
         <div id="LegendModal" class="modal fade">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4>Legend</h4>
+                        <div class="flex-container-header">
+                            <h4>Legend</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
                     </div>
                     <div class="modal-body">
                         <img src="images/legendAIV.png" alt="Legend">
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -268,13 +293,13 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4>PNG Export</h4>
+                        <div class="flex-container-header">
+                            <h4>PNG Export</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
                     </div>
                     <div class="modal-body">
                         <img id="png-export" src="" alt="PNG export">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -285,7 +310,10 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4>JSON Export</h4>
+                        <div class="flex-container-header">
+                            <h4>JSON Export</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
                     </div>
                     <div class="modal-body ">
                         <pre>
@@ -295,8 +323,9 @@
                         </pre>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" id="copy-to-clipboard" class="btn btn-default">Copy to Clipboard</button>
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="button" id="copy-to-clipboard" class="btn btn-default" title="May not be supported in some browsers">
+                            Copy to Clipboard
+                        </button>
                     </div>
                 </div>
             </div>

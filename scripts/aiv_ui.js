@@ -29,10 +29,13 @@
      */
     function runUIFunctions(AIVref) {
         validateGeneForm();
-        // showFormOnLoad();
+        enableInteractionsCheckbox();
+        addExampleEListener();
+        showFormOnLoad();
+        addResetEListener();
+        showModals();
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
-        enableInteractionsCheckbox();
         setPNGExport(AIVref);
         setJSONexport(AIVref);
         filterNonQueryGenes(AIVref);
@@ -53,12 +56,48 @@
         panDown(AIVref);
         hideUnhideMapMan(AIVref);
         hideUnhideDonuts(AIVref);
+        qTipsUI();
     }
 
+    /** @function showFormOnLoad - show gene form upon load so we can get user started immediately*/
     function showFormOnLoad(){
         $('#formModal').modal('show');
     }
 
+    /** @function addExampleEListener - example form*/
+    function addExampleEListener() {
+        $('#example').click(function() {
+            $('#genes').val("AT2G34970\nAT1G04880\nAT1G25420\nAT5G43700");
+            $('.form-group .form-chkbox').prop('checked', false);
+            document.getElementById('queryBAR').click();
+            $('#predSUBA').prop('checked', true);
+        });
+    }
+
+    /** @function addResetEListener - reset form*/
+    function addResetEListener(){
+        document.getElementById('resetForm').addEventListener('click', function() {
+            $('.form-group .form-chkbox').prop('checked', false);
+            $('#genes').val('');
+        });
+    }
+
+    /** @function addResetEListener - modal functionality*/
+    function showModals(){
+        // Show Legend
+        $('#showLegendModal').click(function(e) {
+            e.preventDefault();
+            $('#LegendModal').modal('show');
+        });
+
+        // Show Legend
+        $('#showFormModal').click(function(e) {
+            e.preventDefault();
+            $('#formModal').modal('show');
+        });
+    }
+
+    /** @function validateGeneForm - restrict user input into the gene form*/
     function validateGeneForm(){
         let geneForm = document.getElementById('genes');
         geneForm.addEventListener('keypress', function handleKeypress(event){
@@ -245,6 +284,10 @@
         edges.addClass('pearsonfilterEPPI');
     }
 
+    /**
+     * @function filterExperimentalPPIsSwitch - add switch/checkbox functionality to filter EPPIs
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
     function filterExperimentalPPIsSwitch(AIVObj) {
         document.getElementById('filterEPPIsCheckbox').addEventListener('change', function(event){
             // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
@@ -259,6 +302,10 @@
         });
     }
 
+    /**
+     * @function filterExperimentalPPIsInputEListener - add event listeners to the EPPI thersholds (correlation coefficients)
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
     function filterExperimentalPPIsInputEListener(AIVObj){
         document.getElementById('EPPICorrThreshold').addEventListener('change', function(event){
             if ( document.getElementById('filterEPPIsCheckbox').checked ){
@@ -286,6 +333,10 @@
         edges.addClass('pearsonAndInterologfilterPPPI');
     }
 
+    /**
+     * @function hideUnhideMapMan - add switch/checkbox functionality to filter PPPIs
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
     function filterPredictedPPIsSwitch(AIVObj) {
         document.getElementById('filterPPPIsCheckbox').addEventListener('change', function(event){
             // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
@@ -302,6 +353,10 @@
         });
     }
 
+    /**
+     * @function hideUnhideMapMan - add event listeners to the PPPI thersholds (confidence and correlation coefficients)
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
     function filterPredictedPPIsInputsEListener(AIVObj){
         function eListener (event){
             if ( document.getElementById('filterPPPIsCheckbox').checked ){
@@ -313,6 +368,9 @@
         document.getElementById('PPPIConfThreshold').addEventListener('change', eListener);
     }
 
+    /**
+     * @function restrictUIInputsNumRange - restrict the threshold values
+     */
     function restrictUIInputsNumRange() {
         function restrictRRange (event){
             let value = Number(event.target.value);
@@ -334,12 +392,7 @@
      */
     function hideUnhideMapMan(AIVObj) {
         document.getElementById('hideMapMan').addEventListener('change', function(event){
-            if (event.target.checked){
-                AIVObj.hideMapMan(true);
-            }
-            else {
-                AIVObj.hideMapMan(false);
-            }
+            AIVObj.hideMapMan(event.target.checked);
         });
     }
 
@@ -349,12 +402,7 @@
      */
     function hideUnhideDonuts(AIVObj) {
         document.getElementById('hideDonut').addEventListener('change', function(event){
-            if (event.target.checked){
-                AIVObj.hideDonuts(true);
-            }
-            else {
-                AIVObj.hideDonuts(false);
-            }
+            AIVObj.hideDonuts(event.target.checked);
         });
     }
 
@@ -377,6 +425,10 @@
         }
     }
 
+    /**
+     * @function spreadLayoutEventListener - change to cerebral/layered layout
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function localizationLayoutEventListener(AIVObj) {
         document.getElementById('localizationLayout').addEventListener('click', function(event){
             changeLayoutCyHouseCleaning(AIVObj, false);
@@ -385,6 +437,10 @@
         });
     }
 
+    /**
+     * @function spreadLayoutEventListener - change to spread layout
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function spreadLayoutEventListener(AIVObj) {
         document.getElementById('spreadLayout').addEventListener('click', function(event){
             changeLayoutCyHouseCleaning(AIVObj, false);
@@ -392,6 +448,10 @@
         });
     }
 
+    /**
+     * @function coseCompoundLayoutEventListener - change to cose compound layout, after doing some checks
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function coseCompoundLayoutEventListener(AIVObj) {
         document.getElementById('coseCompoundLayout').addEventListener('click', function(event){
             changeLayoutCyHouseCleaning(AIVObj, true);
@@ -403,6 +463,10 @@
         });
     }
 
+    /**
+     * @function resetEventListener - zoom in e listener
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function zoomInEventListener(AIVObj){
         document.getElementById('zoomIn').addEventListener('click', function(event){
             AIVObj.cy.zoom({
@@ -412,6 +476,10 @@
         });
     }
 
+    /**
+     * @function zoomOutEventListener - zoom out e listener
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function zoomOutEventListener(AIVObj){
         document.getElementById('zoomOut').addEventListener('click', function(event){
             AIVObj.cy.zoom({
@@ -421,6 +489,10 @@
         });
     }
 
+    /**
+     * @function resetEventListener - reset zoom and pan
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
     function resetEventListener(AIVObj){
         document.getElementById('zoomReset').addEventListener('click', function(event){
             AIVObj.cy.zoom(AIVObj.defaultZoom);
@@ -465,6 +537,20 @@
     function panDown(AIVObj){
         document.getElementById('panDown').addEventListener('click', function(){
             AIVObj.cy.panBy({ x: 0, y: -100});
+        });
+    }
+
+    /**
+     * @function qTipsUI - bind qTips to HTML elements which have the title attribute
+     */
+    function qTipsUI(){
+        $('#copy-to-clipboard[title]').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'bottom center',
+                at: 'top center',
+                target: $('#copy-to-clipboard')
+            }
         });
     }
 

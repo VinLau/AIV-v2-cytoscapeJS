@@ -52,48 +52,33 @@
         window.aivNamespace = {};
         window.aivNamespace.AIV = AIV;
 		// Bind User events
-		this.bindUIEvents();
+		this.bindSubmit();
 	};
 
 	/**
      * @namespace {object} AIV
-     * @function bindUIEvents - Add functionality to buttons when DOM is loaded
+     * @function bindSubmit - Add functionality to buttons when DOM is loaded
 	 */
-	AIV.bindUIEvents = function() {
-		// Example button
-		$('#example').click(function() {
-			$('#genes').val("AT2G34970\nAT1G04880\nAT1G25420\nAT5G43700"); // add AT3G18130\n later
-        });
-
-		// About button
-		$('#showAboutModal').click(function(e) {
-			e.preventDefault();
-			$('#AboutModal').modal('show');
-		});
-
-		// Show Legend
-		$('#showLegendModal').click(function(e) {
-			e.preventDefault();
-			$('#LegendModal').modal('show');
-		});
-
-        // Show Legend
-        $('#showFormModal').click(function(e) {
-            e.preventDefault();
-            $('#formModal').modal('show');
-        });
-
+	AIV.bindSubmit = function() {
 		// Submit button
 		$('#submit').click(function(e) {
 			// Stop system submit, unless needed later on
 			e.preventDefault();
-            document.getElementById('loading').classList.remove('loaded'); //add loading spinner
 
             // Get the list of genes
 			let genes = $.trim($('#genes').val());
 
-			if (genes !== '') {
-				genes = AIV.formatABI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
+			if (genes !== '' && $('.form-chkbox:checked').length > 0) {
+                document.getElementById('loading').classList.remove('loaded'); //remove previous loading spinner
+                let iconNode = document.createElement("i");
+                iconNode.classList.add('fa');
+                iconNode.classList.add('fa-spinner');
+                iconNode.classList.add('fa-spin');
+                document.getElementById('loading').appendChild(iconNode); // add loading spinner
+
+                $('#formModal').modal('hide'); // hide modal
+
+                genes = AIV.formatABI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
 
 				AIV.genesList = genes.split("\n");
 
@@ -112,15 +97,10 @@
 
 				AIV.loadData();
 			} else {
-				window.alert('No genes provided.');
+				window.alert('Form is incomplete!');
 			}
 		});
 
-		// Set height of genes textbox TODO: reformat this with responsive CSS instead of jQuery
-		var genesHeight = $(window).height() - 530;
-		if (genesHeight > 0) {
-			$('#genes').css('height', genesHeight + 'px');
-		}
 	};
 
     /**
@@ -400,7 +380,7 @@
                 compoundNode: true, //data property used instead of a class because we cannot remove parent nodes by classes for some reason (cytoscapejs bug?)
 			},
 		});
-		console.log("temp", temp);
+		// console.log("temp", temp);
 	};
 
     /**
@@ -408,7 +388,7 @@
      */
     AIV.addLocalizationCompoundNodes = function(){
         for (let i = 0; i < this.locCompoundNodes.length; i++) {
-            console.log(this.locCompoundNodes[i]);
+            // console.log(this.locCompoundNodes[i]);
             let locationBeautified = this.beautifiedLocalization(this.locCompoundNodes[i]);
             this.addCompoundNode(this.locCompoundNodes[i], locationBeautified);
         }
@@ -472,7 +452,7 @@
 
         // console.log("addDNANodes", DNAObjectData, "chrNum");
 	    if (AIV.chromosomesAdded.hasOwnProperty(chrNum)){
-            console.log("chromosome property already added");
+            // console.log("chromosome property already added");
             AIV.chromosomesAdded[chrNum].push(DNAObjectData);
 	    }
         else { // Adding chromosome to DOM as it does not exist on app yet
@@ -582,7 +562,7 @@
 	 * @returns {string} - a nicely parsed HTML table
 	 */
 	AIV.createPDItable = function (arrayPDIdata) {
-		console.log(arrayPDIdata);
+		// console.log(arrayPDIdata);
 		var PDIsInChr = {};
 		var targets = [];
 		var pubmedRefHashTable = {};
@@ -600,19 +580,23 @@
 		});
         // console.log(pubmedRefHashTable, "pubmed ref hashtable");
         for (let protein of Object.keys(PDIsInChr)) { //add query proteins to the header of table
-			htmlTABLE += `<th>${protein}(${PDIsInChr[protein].length} PDIs)</th>`;
+			htmlTABLE += `<th>${protein}<br>(${PDIsInChr[protein].length} PDIs)</th>`;
 		}
         htmlTABLE += "</tr>";
 		targets.forEach(function(targetDNAGene){ //process remaining rows for each target DNA gene
 			htmlTABLE += `<tr><td>${targetDNAGene}</td>`;
             for (let protein of Object.keys(PDIsInChr)) {
                 if (PDIsInChr[protein].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
+					let cellContent = "<td>";
 					AIV.sanitizeReferenceIDs(pubmedRefHashTable[protein + '_' + targetDNAGene]).forEach(function(ref){
-						htmlTABLE += "<td>" +  AIV.returnReferenceLink(ref, targetDNAGene) + "</td>";
+                        cellContent += AIV.returnReferenceLink(ref, targetDNAGene).replace(/('_blank'>).*/, "$1") +
+							'<i class="fas fa-external-link-alt fa-lg"></i>' +
+							'</a>';
 					});
-				}
+                    htmlTABLE += cellContent + '</td>';
+                }
 				else {
-                	htmlTABLE += "<td>No PDI</td>";
+                	htmlTABLE += '<td><i class="fas fa-times fa-lg" style="color: red;"></i></td>';
 				}
             }
 			htmlTABLE += "</tr>";
@@ -631,7 +615,7 @@
 	AIV.addChrNodeQtips = function () {
         var that = this;
         for (let chr of Object.keys(this.chromosomesAdded)){
-            console.log(this.chromosomesAdded[chr], `chr${chr}`);
+            // console.log(this.chromosomesAdded[chr], `chr${chr}`);
             this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function(event){
                 var chrNode = event.target;
                 // console.log(`You're hovering over chr ${chr}`);
@@ -646,7 +630,7 @@
 									},
                                 text: that.createPDItable(that.chromosomesAdded[chr])
                             },
-                        style    : { classes : 'qtip-cluetip'},
+                        style    : { classes : 'qtip-light qtip-dna'},
                         show:
                             {
                                 solo : true, //only one qTip at a time
@@ -671,7 +655,7 @@
     AIV.addProteinNodeQtips = function() {
         this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
             var protein = event.target;
-            console.log(protein.data());
+            // console.log(protein.data());
             protein.qtip(
                 {
                     overwrite: false, //make sure tooltip won't be overriden once created
@@ -684,7 +668,7 @@
 									text :
                                     //Use jquery AJAX method which uses promises/deferred objects in conjunction with qTip built-in api.set() method which allows one to set the options of this qTip. Default value while loading is plain text to notify user.
                                         function(event, api) {
-                                            console.log(`AJAX protein data call for ${protein.data("name")}`);
+                                            // console.log(`AJAX protein data call for ${protein.data("name")}`);
                                             if (AIV.genesFetched[protein.data("name")] !== undefined){ //Check with state variable to reload our fetched data stored in global state
                                                 return AIV.genesFetched[protein.data("name")]; //return the stored value as the text value to the text property
                                             }
@@ -696,7 +680,7 @@
                                                 AIV.genesFetching[protein.data("name")] = true;
 
                                                 $.ajax({
-                                                    url: `https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/webservices/araport/api/bar_gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL TODO: remove cors now when uploaded to server
+                                                    url: `https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/webservices/bar_araport/gene_summary_by_locus.php?locus=${protein.data("name")}` // Use data-url attribute for the URL TODO: remove cors now when uploaded to server
                                                 })
                                                     .then(function (content) {
                                                         var returnHTML = "";
@@ -729,7 +713,7 @@
                                         }
 
 								},
-                    style    : { classes : 'qtip-bootstrap q-tip-protein-node'},
+                    style    : { classes : 'qtip-light qtip-protein-node'},
                     show:
                         {
                             solo : true,
@@ -753,7 +737,7 @@
         for (let i = 1; i < ( protein.data('numOfMapMans') + 1 ) ; i++) {
             baseString += `<p> MapMan Code ${i} : ` + protein.data('MapManCode' + i) + '</p>' + `<p> MapMan Annotation ${i} : ` + protein.data('MapManName' + i) + '</p>';
         }
-        console.log(baseString);
+        // console.log(baseString);
         return baseString;
 	};
 
@@ -776,7 +760,7 @@
         if (protein.data('plastidPCT')){ baseString += `<p> Plastid loc. : ${(protein.data('plastidPCT')*100).toFixed(2)}% </p>`;}
         if (protein.data('vacuolePCT')){ baseString += `<p> Vacuole loc. : ${(protein.data('vacuolePCT')*100).toFixed(2)}% </p>`;}
 
-        console.log(baseString);
+        // console.log(baseString);
         return baseString;
     };
 
@@ -798,7 +782,7 @@
                             },
                         text: " "
                     },
-                    style    : { classes : 'qtip-bootstrap q-tip-effector-node'},
+                    style    : { classes : 'qtip-light qtip-effector-node'},
                     show:
                         {
                             solo : true,
@@ -849,19 +833,21 @@
         var that = this;
         this.cy.on('mouseover', 'edge[source^="Protein"][target^="Protein"]', function(event){
         	var ppiEdge = event.target;
-        	console.log(ppiEdge.data());
+        	// console.log(ppiEdge.data());
         	ppiEdge.qtip(
 				{
                     content:
                         {
                             title:
 								{
-                            		text: "Edge " + ppiEdge.data("source") + " to " + ppiEdge.data("target"),
+                            		text: ppiEdge.data("source").replace("_", " ") + " to " + ppiEdge.data("target").replace("_", " "),
 									button: "Close"
                             	},
-                            text : that.createPPIEdgeText( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('interologConfidence'), ppiEdge.data('databaseOrigin') ),
+							text : that.createPPIEdgeText( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('interologConfidence'), ppiEdge.data('databaseOrigin') ) +
+							(ppiEdge.data("interologConfidence") > 0 ? "<p>Interolog Confidence:" + ppiEdge.data("interologConfidence") + "</p>" : "") +
+							"<p>Correlation Coefficient:" + ppiEdge.data("pearsonR") + "</p>", //the ternary operator here is to make sure we're returning the interolog confidence value not the SPPI rank
                         },
-                    style  : { classes : 'qtip-bootstrap' },
+                    style  : { classes : 'qtip-light qtip-ppi-edge' },
                     show:
                         {
                             solo : true,
@@ -941,7 +927,7 @@
 
 			let dataSubset = data[this.genesList[i]]; //'[]' expression to access an object property
 
-			console.log(dataSubset);
+			// console.log(dataSubset);
 
 			// Add Nodes for each query. We skip the last one because that is the recursive flag
 			for (let j = 0; j < dataSubset.length - 1; j++) {
@@ -1018,8 +1004,8 @@
         let style = 'solid';
         let width = '11';
 
-        console.log(PSICQUICdata);
-		console.log("queryGene:", queryGeneAsABI);
+        // console.log(PSICQUICdata);
+        // console.log("queryGene:", queryGeneAsABI);
 
 		let regex;
 		if (INTACTorBioGrid === "INTACT") {
@@ -1055,7 +1041,7 @@
             return index === selfArr.indexOf(item);
         });
 
-        console.log(arrPPIsProteinsUnique);
+        // console.log(arrPPIsProteinsUnique);
 
         /*
         Loop through each PPI interaction and add the corresponding edge
@@ -1300,7 +1286,7 @@
      * @param {boolean} hide - boolean to determine if we are hiding or not
      */
     AIV.hideDonuts = function(hide) {
-        this.cy.$('node[?MapManCode1]').forEach(function(node){ //check for nodes with a MapMan
+        this.cy.$('node[?svgDonut]').forEach(function(node){ //check for nodes with an SVG donut
             let newSVGString = decodeURIComponent(node.data('svgDonut'));
             newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
             if (hide){
@@ -1344,7 +1330,7 @@
      * @param {object} MapManJSON - the JSON response we receive from the MapMan API
      */
     AIV.processMapMan = function (MapManJSON) {
-		console.log(MapManJSON);
+		// console.log(MapManJSON);
         // Iterate through each result item and inside however many annotations it has...
 		MapManJSON.forEach(function(geneMapMan) {
             var particularGene = AIV.cy.$('node[name = "' + geneMapMan.request.agi + '"]');
@@ -1437,11 +1423,11 @@
         if ($('#queryBioGrid').is(':checked')) {
             promisesArr = promisesArr.concat(this.createBioGridAjaxPromise());
         }
-		console.log(promisesArr);
+		// console.log(promisesArr);
 
 		Promise.all(promisesArr)
 			.then(function(promiseRes) {
-				console.log("Response:", promiseRes);
+				// console.log("Response:", promiseRes);
 
                 // Add Query node (user inputed in HTML form)
                 for (let i = 0; i < AIV.genesList.length; i++) {
@@ -1468,8 +1454,9 @@
                 AIV.setDNANodesPosition();
                 AIV.cy.layout(AIV.getCySpreadLayout()).run();
 
-                document.getElementById('loading').classList.add('loaded'); //remove loading spinner
-            })
+                document.getElementById('loading').classList.add('loaded'); //hide loading spinner
+            	$('#loading').children().remove() //delete the loading spinner divs
+			})
             .catch(function(err){
 
             })
@@ -1484,8 +1471,8 @@
                 });
             })
             .then(function(SUBAJSON){
-                console.log(SUBAJSON);
-                console.log("AIV", AIV);
+                // console.log(SUBAJSON);
+                // console.log("AIV", AIV);
                 AIV.SUBA4LoadState = true;
                 AIV.addLocalizationDataToNodes(SUBAJSON);
 
