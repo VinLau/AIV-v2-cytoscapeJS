@@ -12,13 +12,11 @@
         if (typeof window.aivNamespace.AIV !== 'undefined') { // only run if we have initialized cytoscape app
             let AIV = window.aivNamespace.AIV;
             runUIFunctions(AIV);
-            console.log("this???");
         }
         else { // if not loaded, try again after 1 second
             setTimeout(function(){
                 let AIV = window.aivNamespace.AIV;
                 runUIFunctions(AIV);
-                console.log("orthat??");
             }, 1000);
         }
     });
@@ -67,17 +65,22 @@
     /** @function addExampleEListener - example form*/
     function addExampleEListener() {
         $('#example').click(function() {
+            addResetEListener();
             $('#genes').val("AT2G34970\nAT1G04880\nAT1G25420\nAT5G43700");
-            $('.form-group .form-chkbox').prop('checked', false);
             document.getElementById('queryBAR').click();
-            $('#predSUBA').prop('checked', true);
+            document.getElementById('predSUBA').click();
         });
     }
 
     /** @function addResetEListener - reset form*/
     function addResetEListener(){
         document.getElementById('resetForm').addEventListener('click', function() {
-            $('.form-group .form-chkbox').prop('checked', false);
+            let nodeListCheckboxes = document.querySelectorAll('input:checked.form-chkbox'); // NodeList of checked form checkboxes
+            if (nodeListCheckboxes.length > 0) { //reset form checkboxes
+                [].forEach.call(nodeListCheckboxes, function(node){ //nodeList forEach hack (some browsers don't support NodeList.forEach
+                    node.click(); // turn off checkbox, setting .checked DOES not fire events!
+                });
+            }
             $('#genes').val('');
         });
     }
@@ -413,7 +416,8 @@
      */
     function changeLayoutCyHouseCleaning(AIVObjReference, coseOrNot){
         $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
-        AIVObjReference.cy.reset();
+        AIVObjReference.cy.removeListener('zoom pan', window.cerebralNamespace.zoomPanCerebralEListener); // remove the canvas resizing event listener when the user selected cerebral layout
+        AIVObjReference.cy.reset(); //resets pan and zoom positions
         if (!coseOrNot){
             AIVObjReference.removeLocalizationCompoundNodes();
         }

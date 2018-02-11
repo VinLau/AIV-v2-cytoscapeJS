@@ -27,6 +27,9 @@
         <!-- Cytoscape -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
 
+        <!-- Cytoscape Canvas -->
+        <script src="https://cdn.rawgit.com/classcraft/cytoscape.js-canvas/21c1084d/src/cytoscape-canvas.js"></script>
+
         <!-- Layout -->
         <script src="https://cdn.rawgit.com/maxkfranz/weaver/v1.2.0/dist/weaver.min.js"></script>
         <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-spread/9ce8be33/cytoscape-spread.js"></script>
@@ -49,9 +52,7 @@
         <!-- Font Awesome -->
         <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
 
-        <!-- To simplify coding TODO: Remove this during launch -->
-        <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
-        <script src="./scripts/automateInput.js"></script>
+
 
     </head>
 
@@ -117,19 +118,19 @@
 
                     <div class="filter-column">
                         <section class="slider-checkbox">
-                            <input id="filterCheckbox" type="checkbox" class="filter-switch">
+                            <input id="filterCheckbox" type="checkbox" class="filter-switch submit-reset">
                             <label class="label-checkbox" for="filterCheckbox">
                                 Hide Non-Query Genes
                             </label>
                         </section>
                         <section class="slider-checkbox">
-                            <input id="hideMapMan" type="checkbox" class="">
+                            <input id="hideMapMan" type="checkbox" class="submit-reset">
                             <label class="label-checkbox" for="hideMapMan">
                                 Hide MapMan Numbers
                             </label>
                         </section>
                         <section class="slider-checkbox">
-                            <input id="hideDonut" type="checkbox" class="">
+                            <input id="hideDonut" type="checkbox" class="submit-reset">
                             <label class="label-checkbox" for="hideDonut">
                                 Hide Localization Data
                             </label>
@@ -138,7 +139,7 @@
 
                     <div class="filter-column">
                         <section class="slider-checkbox">
-                            <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch">
+                            <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
                             <label class="label-checkbox" for="filterEPPIsCheckbox">
                                 Show Experimental PPIs with:
                             </label>
@@ -151,7 +152,7 @@
 
                     <div class="flex-container-PPPI-filter filter-column">
                         <section class="slider-checkbox">
-                            <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch">
+                            <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
                             <label class="label-checkbox" for="filterPPPIsCheckbox">
                                 Show Predicted PPIs with:
                             </label>
@@ -213,7 +214,7 @@
                             2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein
                             INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several
                             different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to
-                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. The DNA-protein data were generously provided by O'Mailey et al. (2016), Gaudinier et al. (2011), Taylor-Teeples (2015), Li et al. (2014), and Brady et al. (2011). All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. Additional protein function data is from MapMan.</p>
+                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. The DNA-protein data were generously provided by O'Mailey et al. (2016), Gaudinier et al. (2011), Taylor-Teeples (2015), Li et al. (2014), and Brady et al. (2011). All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. Additional protein function data is from MapMan. Built with CytoscapeJS, much thanks to Max Franz for development advice.</p>
                     </div>
                     <div class="modal-body">
                         <form id="input_form">
@@ -228,31 +229,31 @@
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="predSUBA" type="checkbox" class="form-chkbox" value="" checked>Include predicted data for localization scores</label>
+                                    <label><input id="predSUBA" type="checkbox" class="form-chkbox" value="">Include predicted data for localization scores</label>
                                 </div>
 
                                 <p>Select databases to query:</p>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" class="form-chkbox" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
+                                    <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" class="form-chkbox form-chk-needed" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
                                     <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" class="form-chkbox" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
+                                    <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" class="form-chkbox form-chk-needed" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
                                     <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="queryBAR" type="checkbox" class="form-chkbox" value="" checked>Query protein-protein interactions from BAR</label>
+                                    <label><input id="queryBAR" type="checkbox" class="form-chkbox form-chk-needed" value="">Query protein-protein interactions from BAR</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled" ><input id="recursive" type="checkbox" class="form-chkbox" value="" disabled>Search for interactions between interactors</label>
+                                    <label class="can-be-disabled" ><input id="recursive" type="checkbox" class="form-chkbox form-chk-needed" value="" disabled>Search for interactions between interactors</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="queryDna" class="form-chkbox" type="checkbox" value="" checked >Query protein-DNA interactions from BAR</label>
+                                    <label><input id="queryDna" class="form-chkbox" type="checkbox" value="">Query protein-DNA interactions from BAR</label>
                                 </div>
 
                             </div>
@@ -323,7 +324,7 @@
                         </pre>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" id="copy-to-clipboard" class="btn btn-default" title="May not be supported in some browsers">
+                        <button type="button" id="copy-to-clipboard" class="btn btn-default" title="Not be supported in some browsers">
                             Copy to Clipboard
                         </button>
                     </div>

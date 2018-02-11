@@ -68,7 +68,7 @@
             // Get the list of genes
 			let genes = $.trim($('#genes').val());
 
-			if (genes !== '' && $('.form-chkbox:checked').length > 0) {
+			if (genes !== '' && $('.form-chk-needed:checked').length > 0) {
                 document.getElementById('loading').classList.remove('loaded'); //remove previous loading spinner
                 let iconNode = document.createElement("i");
                 iconNode.classList.add('fa');
@@ -205,7 +205,7 @@
 					'line-style': 'data(edgeStyle)',
 					'control-point-distances' : '50', // only for unbunlded-bezier edges (DNA edges)
 					'control-point-weights'   : '0.65',
-					'target-arrow-color' : '#1c1b1d',
+					'target-arrow-color' : '#557e00',
                     'target-arrow-shape': 'data(arrowEdges)',
                 })
 			.selector('node[id ^= "DNA"]')
@@ -291,7 +291,9 @@
 
   			boxSelectionEnabled: false,
 
-  			autounselectify: true,
+            userZoomingEnabled: false,
+
+            autounselectify: true,
 
   			style: this.getCyStyle(),
 
@@ -1114,19 +1116,21 @@
 			var nodeID = "A" + geneSUBAData.id.substring(1).toLowerCase(); //AT1G04170 to At1g04170
             if (typeof geneSUBAData.data !== "undefined"){
                 AIV.cy.$('node[name = "' + nodeID + '"]')
-                    .data('predictedSUBA',  ( geneSUBAData.includes_predicted === "yes" ) )
-                    .data('experimentalSUBA',  ( geneSUBAData.includes_experimental === "yes" ) )
-                    .data('cytoskeletonPCT', countLocScore ( geneSUBAData.data.cytoskeleton, denoTotal ) )
-                    .data('cytosolPCT', countLocScore ( geneSUBAData.data.cytosol, denoTotal ) )
-                    .data('endoplasmicReticulumPCT', countLocScore ( geneSUBAData.data['endoplasmic reticulum'], denoTotal ) )
-                    .data('extracellularPCT', countLocScore ( geneSUBAData.data.extracellular, denoTotal ) )
-                    .data('golgiPCT', countLocScore ( geneSUBAData.data.golgi, denoTotal ) )
-                    .data('mitochondrionPCT', countLocScore ( geneSUBAData.data.mitochondrion, denoTotal ) )
-                    .data('nucleusPCT', countLocScore ( geneSUBAData.data.nucleus, denoTotal ) )
-                    .data('peroxisomePCT', countLocScore ( geneSUBAData.data.peroxisome, denoTotal ) )
-                    .data('plasmaMembranePCT', countLocScore ( geneSUBAData.data['plasma membrane'], denoTotal ) )
-                    .data('plastidPCT', countLocScore ( geneSUBAData.data.plastid, denoTotal ) )
-                    .data('vacuolePCT', countLocScore ( geneSUBAData.data.vacuole, denoTotal ) );
+					.data({
+                        predictedSUBA :  ( geneSUBAData.includes_predicted === "yes" ),
+                        experimentalSUBA : ( geneSUBAData.includes_experimental === "yes" ),
+                        cytoskeletonPCT : countLocScore ( geneSUBAData.data.cytoskeleton, denoTotal ),
+                        cytosolPCT : countLocScore ( geneSUBAData.data.cytosol, denoTotal ),
+                        endoplasmicReticulumPCT : countLocScore ( geneSUBAData.data['endoplasmic reticulum'], denoTotal ),
+                        extracellularPCT : countLocScore ( geneSUBAData.data.extracellular, denoTotal ),
+                        golgiPCT : countLocScore ( geneSUBAData.data.golgi, denoTotal ),
+                        mitochondrionPCT : countLocScore ( geneSUBAData.data.mitochondrion, denoTotal ),
+                        nucleusPCT : countLocScore ( geneSUBAData.data.nucleus, denoTotal ),
+                        peroxisomePCT : countLocScore ( geneSUBAData.data.peroxisome, denoTotal ),
+                        plasmaMembranePCT : countLocScore ( geneSUBAData.data['plasma membrane'], denoTotal ),
+                        plastidPCT : countLocScore ( geneSUBAData.data.plastid, denoTotal ),
+                        vacuolePCT : countLocScore ( geneSUBAData.data.vacuole, denoTotal ),
+					});
             }
 
 		});
@@ -1201,8 +1205,10 @@
             ABIGene.data('localization', "Unknown");
         }
         else { //remove 'PCT'
-            ABIGene.data('localization', this.beautifiedLocalization(pctAndColorArray[0].loc));
-            ABIGene.data('localizationMajority', pctAndColorArray[0].loc); //have this data for making compound nodes
+			ABIGene.data({
+                localization : this.beautifiedLocalization(pctAndColorArray[0].loc),
+                localizationMajority : pctAndColorArray[0].loc, //have this data for making compound nodes
+			});
             if (this.locCompoundNodes.indexOf(pctAndColorArray[0].loc) === -1 ){
 				this.locCompoundNodes.push(pctAndColorArray[0].loc); // append to our state variables which (majority) localizations nodes have, useful for compound nodes
 			}
