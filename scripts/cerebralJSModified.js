@@ -43,7 +43,7 @@ var gridLineWidth = 0.5;
 var gridColor = 'black';
 
 // Font of the labels of each layer
-var font = "14pt Times New Roman";
+var font = "14pt Verdana";
 
 //Edges color, width and label color
 var edgeColor = '5f5f5f';

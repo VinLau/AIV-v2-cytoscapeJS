@@ -33,7 +33,7 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
         background: "#FFFFFF", //background color
         lineWidth: 0.2, // widht of the line between layers
         strokeStyle: 'black', // color of the line between layers
-        font: "12pt Arial", // font of the labels of each layer
+        font: "12pt Verdana", // font of the labels of each layer
     };
 
     function CerebralLayout(options) {
@@ -85,8 +85,7 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
          * @function zoomPanCerebralEListener - event listener cb for the zoom and pan events when cerebral layout is chosen
          */
         function zoomPanCerebralEListener () {
-            // console.log("e");
-            underlayer.resetTransform(ctx);
+            // clear context and set context to the cy core app (setTransform call), then draw with runCerebral
             underlayer.clear(ctx);
             underlayer.setTransform(ctx);
             // draw the cellular localization layers
@@ -180,7 +179,7 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
 
                             return {
                                 x: Math.round((Math.random() * width) + 5),
-                                y: Math.round((Math.random() * height) + heightAcum + 30)
+                                y: Math.round((Math.random() * height) + heightAcum + 25)
                             };
                         });
                     }

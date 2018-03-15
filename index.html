@@ -52,7 +52,15 @@
         <!-- Font Awesome -->
         <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
 
+        <!-- TableFilterJS -->
+        <script src="https://cdn.rawgit.com/koalyptus/TableFilter/07eebbd5/dist/tablefilter/tablefilter.js"></script>
 
+        <!--TableCSVExportjs-->
+        <script src="https://cdn.rawgit.com/zachwick/TableCSVExport/398707ef/jquery.TableCSVExport.js"></script>
+
+        <!-- To simplify coding TODO: Remove this during launch -->
+        <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
+        <script src="./scripts/automateInput.js"></script>
 
     </head>
 
@@ -118,8 +126,8 @@
 
                     <div class="filter-column">
                         <section class="slider-checkbox">
-                            <input id="filterCheckbox" type="checkbox" class="filter-switch submit-reset">
-                            <label class="label-checkbox" for="filterCheckbox">
+                            <input id="filterNonQueryCheckbox" type="checkbox" class="filter-switch submit-reset">
+                            <label class="label-checkbox" for="filterNonQueryCheckbox">
                                 Hide Non-Query Genes
                             </label>
                         </section>
@@ -172,7 +180,7 @@
                     </div>
 
                     <div class="flex-container-export">
-                        <p>Export</p>
+                        <button type="button" class="export-button" id="showCSVModal">CSV</button>
                         <button type="button" class="export-button" id="showPNGModal">PNG</button>
                         <button type="button" class="export-button" id="showJSONModal">JSON</button>
                     </div>
@@ -214,13 +222,14 @@
                             2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein
                             INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several
                             different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to
-                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. The DNA-protein data were generously provided by O'Mailey et al. (2016), Gaudinier et al. (2011), Taylor-Teeples (2015), Li et al. (2014), and Brady et al. (2011). All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. Additional protein function data is from MapMan. Built with CytoscapeJS, much thanks to Max Franz for development advice.</p>
+                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. The DNA-protein data were generously provided by O'Mailey et al. (2016), Gaudinier et al. (2011), Taylor-Teeples (2015), Li et al. (2014), and Brady et al. (2011). All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. Additional protein function data is from MapMan. Built with CytoscapeJS, much thanks to Max Franz and Asher Pasha for development advice. Developed by Vincent Lau
+                            <a href="https://github.com/VinLau/AIV-v2-cytoscapeJS" target="_blank">Github Repo</a></p>
                     </div>
                     <div class="modal-body">
                         <form id="input_form">
                             <div class="form-group">
                                 <label for="genes">Please enter a list of genes:</label>
-                                <textarea class="form-control gene-form" id="genes" rows="15"></textarea>
+                                <textarea class="form-control gene-form" id="genes" rows="15" placeholder="At2g34970"></textarea>
                                 <br>
                                 <p>Select options:</p>
 
@@ -229,7 +238,7 @@
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="predSUBA" type="checkbox" class="form-chkbox" value="">Include predicted data for localization scores</label>
+                                    <label><input id="predSUBA" type="checkbox" class="form-chkbox" value="" checked>Include predicted data for localization scores</label>
                                 </div>
 
                                 <p>Select databases to query:</p>
@@ -245,15 +254,15 @@
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="queryBAR" type="checkbox" class="form-chkbox form-chk-needed" value="">Query protein-protein interactions from BAR</label>
+                                    <label><input id="queryBAR" type="checkbox" class="form-chkbox form-chk-needed" value="" checked>Query protein-protein interactions from BAR</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled" ><input id="recursive" type="checkbox" class="form-chkbox form-chk-needed" value="" disabled>Search for interactions between interactors</label>
+                                    <label class="" ><input id="recursive" type="checkbox" class="form-chkbox form-chk-needed" value="">Search for interactions between interactors</label>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label><input id="queryDna" class="form-chkbox" type="checkbox" value="">Query protein-DNA interactions from BAR</label>
+                                    <label><input id="queryDna" class="form-chkbox" type="checkbox" value="" checked>Query protein-DNA interactions from BAR</label>
                                 </div>
 
                             </div>
@@ -326,6 +335,43 @@
                     <div class="modal-footer">
                         <button type="button" id="copy-to-clipboard" class="btn btn-default" title="Not be supported in some browsers">
                             Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV Export -->
+        <div id="CSVModal" class="modal fade centered-modal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="flex-container-header">
+                            <h4>CSV Export</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                    <div class="modal-body ">
+                        <table id="csvTable">
+                            <tr>
+                                <th>Interaction Type </th>
+                                <th>Database Source</th>
+                                <th>Gene 1 (Target)</th>
+                                <th>Gene 2 (Source)</th>
+                                <th>Gene 1 Annotation</th>
+                                <th>Gene 2 Annotation</th>
+                                <th>Interolog Confidence/S-PPI rank</th>
+                                <th>Pearson Correlation</th>
+                                <th>Reference</th>
+                                <th>MI Term</th>
+                                <th>Gene 1 Localization</th>
+                                <th>Gene 2 Localization</th>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="exportCSV" class="btn btn-default">
+                            Download CSV
                         </button>
                     </div>
                 </div>

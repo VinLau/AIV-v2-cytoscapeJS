@@ -32,6 +32,14 @@
 	height: 300px;
 }
 
+#genes.input-error::placeholder {
+	color: red;
+}
+
+#genes.input-error::-ms-input-placeholder  { /* edge */
+	color: red;
+}
+
 .gene-form {
 	max-height: 40vh;
 }
@@ -92,6 +100,15 @@
 }
 
 #JSONModal .modal-body {
+	height: 80vh;
+	overflow: auto;
+}
+
+#CSVModal > .modal-dialog {
+	width: 90vw;
+}
+
+#CSVModal .modal-body {
 	height: 80vh;
 	overflow: auto;
 }

@@ -34,6 +34,8 @@
         showModals();
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
+        setTableFilter(AIVref);
+        setCSVExport();
         setPNGExport(AIVref);
         setJSONexport(AIVref);
         filterNonQueryGenes(AIVref);
@@ -65,24 +67,30 @@
     /** @function addExampleEListener - example form*/
     function addExampleEListener() {
         $('#example').click(function() {
-            addResetEListener();
-            $('#genes').val("AT2G34970\nAT1G04880\nAT1G25420\nAT5G43700");
+            $('#genes').val("At2g34970\nAt1g04880\nAt1g25420\nAt5g43700");
+            resetForm();
             document.getElementById('queryBAR').click();
+            document.getElementById('queryDna').click();
             document.getElementById('predSUBA').click();
         });
     }
 
-    /** @function addResetEListener - reset form*/
+    /** @function addResetEListener - reset form event button listener */
     function addResetEListener(){
         document.getElementById('resetForm').addEventListener('click', function() {
-            let nodeListCheckboxes = document.querySelectorAll('input:checked.form-chkbox'); // NodeList of checked form checkboxes
-            if (nodeListCheckboxes.length > 0) { //reset form checkboxes
-                [].forEach.call(nodeListCheckboxes, function(node){ //nodeList forEach hack (some browsers don't support NodeList.forEach
-                    node.click(); // turn off checkbox, setting .checked DOES not fire events!
-                });
-            }
+            resetForm();
             $('#genes').val('');
         });
+    }
+
+    /** @function resetForm - reset the form*/
+    function resetForm () {
+        let nodeListCheckboxes = document.querySelectorAll('input:checked.form-chkbox'); // NodeList of checked form checkboxes
+        if (nodeListCheckboxes.length > 0) { //reset form checkboxes
+            [].forEach.call(nodeListCheckboxes, function(node){ //nodeList forEach hack (some browsers don't support NodeList.forEach
+                node.click(); // turn off checkbox, setting .checked DOES not fire events!
+            });
+        }
     }
 
     /** @function addResetEListener - modal functionality*/
@@ -216,6 +224,44 @@
     }
 
     /**
+     * @function setTableFilter - add event listener to button to show filtered table
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
+    function setTableFilter(AIVObj){
+        document.getElementById('showCSVModal').addEventListener('click', function(event){
+            if (! $(".inf")[0]) { // only create a new table filter row if one doesn't exist
+                var filtersConfig = {
+                    base_path: 'https://cdn.rawgit.com/koalyptus/TableFilter/07eebbd5/dist/tablefilter/',
+                    auto_filter: {
+                        delay: 500 //milliseconds
+                    },
+                    filters_row_index: 1,
+                    state: true,
+                    alternate_rows: true,
+                    rows_counter: true,
+                    btn_reset: true,
+                    status_bar: true,
+                    msg_filter: 'Filtering...'
+                };
+                var tf = new TableFilter('csvTable', filtersConfig);
+                tf.init();
+            }
+
+            $('#CSVModal').modal('show');
+        });
+    }
+
+    /**
+     * @function setCSVExport - add event listener to button to allow for CSV download/export
+     */
+    function setCSVExport(){
+        document.getElementById('exportCSV').addEventListener('click', function(event){
+            event.preventDefault();
+            $('#csvTable').TableCSVExport({delivery: 'download', filename: 'aiv-interaction-data.csv'});
+        });
+    }
+
+    /**
      * @function setPNGExport - add event listener to button, use native cytoscape png method
      * @param {object} AIVObj - reference to the AIV namespace object
      */
@@ -259,9 +305,11 @@
      * @param {object} AIVObj - reference to the AIV namespace object
      */
     function filterNonQueryGenes(AIVObj) {
-        document.getElementById('filterCheckbox').addEventListener('change', function(event){
+        document.getElementById('filterNonQueryCheckbox').addEventListener('change', function(event){
+            AIVObj.cy.startBatch();
             AIVObj.cy.$('node[!searchGeneData][id ^= "Protein"]').toggleClass('filteredChildNodes');
             AIVObj.cy.$('node[id ^= "Effector"]').toggleClass('filteredChildNodes');
+            AIVObj.cy.endBatch();
         });
     }
 
