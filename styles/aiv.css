@@ -347,9 +347,21 @@
 	align-items: center;
 }
 
-.flex-container-title p{
+.flex-container-title-aiv {
+	display: flex;
+	flex-flow: column wrap;
+	align-items: flex-start;
+	margin-right: 2rem;
+}
+
+.flex-container-title-aiv h3{
+	font-family: "Source Sans Pro", "Lucida Sans Typewriter", monospace;
+}
+
+.flex-container-title h4{
 	margin: 0 5px;
 	cursor: pointer;
+	text-shadow: 2px 2px 4px darkgray;
 }
 /* end flex container for the title and form */
 
@@ -414,18 +426,86 @@
 }
 /* end flex container for the pan buttons */
 
-/* flex container for the pan buttons */
+/* flex container for the ppi filter*/
 .flex-container-PPPI-filter {
 	display:flex;
 	flex-flow: column wrap;
 }
-/*end flex container for the pan buttons */
+
+/*end flex container for ppi filter*/
 
 /* some spacing for the flex items */
 .filter-column {
 	margin: 0 5px;
 }
 /* end some spacing for the flex items */
+
+/* css for experimental filters */
+
+#multi-select{
+	position: relative;
+	width: 100%;
+}
+
+#pseudo-select-box{
+	position: relative;
+}
+
+#pseudo-select-box select{
+	width: 100%;
+}
+
+#overSelect{
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0
+}
+
+#ref-checkboxes{
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 20px;
+	bottom: 0;
+	z-index: 1000;
+	width: 100%;
+	display: none;
+	border: 1px #dadada solid;
+}
+
+#ref-checkboxes label{
+	background-color: #cdcdcd;
+	margin: 0;
+	width: 100%;
+	display: block;
+}
+
+#ref-checkboxes label:hover {
+	background-color: #99cc00;
+}
+
+/* end css for experimental filters */
+
+/* flex container for the dropdown*/
+.flex-container-dropdowns {
+	display: flex;
+	flex-flow: column wrap;
+}
+
+/* styling the expression overlay dropdowns */
+#dropdown-source, #dropdown-tissues{
+	max-width: 20rem;
+}
+
+.not-allowed{
+	cursor: not-allowed;
+	color: #878787;
+}
+/* end styling the expression overlay dropdowns */
+
+/* end flex container for the dropdown*/
 
 /* flex container for the export buttons */
 .flex-container-export {

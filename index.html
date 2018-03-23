@@ -52,8 +52,11 @@
         <!-- Font Awesome -->
         <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
 
+        <!-- Google Font -->
+        <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
+
         <!-- TableFilterJS -->
-        <script src="https://cdn.rawgit.com/koalyptus/TableFilter/07eebbd5/dist/tablefilter/tablefilter.js"></script>
+        <script src="https://unpkg.com/tablefilter@latest/dist/tablefilter/tablefilter.js"></script>
 
         <!--TableCSVExportjs-->
         <script src="https://cdn.rawgit.com/zachwick/TableCSVExport/398707ef/jquery.TableCSVExport.js"></script>
@@ -75,9 +78,13 @@
 
                 <div class="flex-container-main">
                     <div class="flex-container-title">
-                        <h3>Arabidopsis Interactions Viewer 2.0</h3>
-                        <p id="showFormModal">Query</p>
-                        <p id="showLegendModal">Legend</p>
+                        <div class="flex-container-title-aiv">
+                            <h3>Arabidopsis</h3>
+                            <h3>Interactions </h3>
+                            <h3>Viewer &nbsp &nbsp 2.0</h3>
+                        </div>
+                        <h4 id="showFormModal">Query</h4>
+                        <h4 id="showLegendModal">Legend</h4>
                     </div>
 
                     <div class="flex-container-layout-buttons">
@@ -156,6 +163,17 @@
                             Correlation Coefficient greater than
                         </label>
                         <input id="EPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="0.5" maxlength="2" disabled/>
+                        <div id="multi-select">
+                            <div id="pseudo-select-box">
+                                <select id="pseudo-select" class="not-allowed">
+                                    <option>By specific publication(s)</option>
+                                </select>
+                                <div id="overSelect" class="not-allowed"></div>
+                            </div>
+                            <div id="ref-checkboxes">
+                                <!-- The checkboxes will be added dynamically here -->
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex-container-PPPI-filter filter-column">
@@ -173,16 +191,27 @@
                         </div>
                         <div>
                             <label for="PPPIConfThreshold">
-                                Interolog Confidence greater than
+                                Interolog Confidence greater than &nbsp
                             </label>
                             <input id="PPPIConfThreshold" class="threshold" type="number" min="0" max="90.0" step="1.0" value ="3.0" maxlength="2" disabled/>
                         </div>
                     </div>
 
+                    <div class="flex-container-dropdowns">
+                        <p>Data Source</p>
+                        <select id="dropdown-source" disabled>
+                            <option>Select Source</option>
+                        </select>
+                        <p>Tissue/Condition</p>
+                        <select id="dropdown-tissues" class="not-allowed" disabled>
+                            <option>Select Tissue</option>
+                        </select>
+                    </div>
+
                     <div class="flex-container-export">
-                        <button type="button" class="export-button" id="showCSVModal">CSV</button>
-                        <button type="button" class="export-button" id="showPNGModal">PNG</button>
-                        <button type="button" class="export-button" id="showJSONModal">JSON</button>
+                        <button type="button" class="export-button" id="showCSVModal">Export CSV</button>
+                        <button type="button" class="export-button" id="showPNGModal">Export PNG</button>
+                        <button type="button" class="export-button" id="showJSONModal">Export JSON</button>
                     </div>
 
                 </div>
@@ -208,7 +237,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <div class="flex-container-header">
-                            <h4>Welcome to AIV 2.0</h4>
+                            <h4>Welcome to Arabidopsis Interactions Viewer 2.0</h4>
                             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                         </div>
                         <br>
@@ -353,20 +382,24 @@
                     </div>
                     <div class="modal-body ">
                         <table id="csvTable">
-                            <tr>
-                                <th>Interaction Type </th>
-                                <th>Database Source</th>
-                                <th>Gene 1 (Target)</th>
-                                <th>Gene 2 (Source)</th>
-                                <th>Gene 1 Annotation</th>
-                                <th>Gene 2 Annotation</th>
-                                <th>Interolog Confidence/S-PPI rank</th>
-                                <th>Pearson Correlation</th>
-                                <th>Reference</th>
-                                <th>MI Term</th>
-                                <th>Gene 1 Localization</th>
-                                <th>Gene 2 Localization</th>
-                            </tr>
+                            <thead>
+                                <tr>
+                                    <th>Interaction Type </th>
+                                    <th>Database Source</th>
+                                    <th>Gene 1 (Target)</th>
+                                    <th>Gene 2 (Source)</th>
+                                    <th>Gene 1 Annotation</th>
+                                    <th>Gene 2 Annotation</th>
+                                    <th>Interolog Confidence/S-PPI rank</th>
+                                    <th>Pearson Correlation</th>
+                                    <th>Reference</th>
+                                    <th>MI Term</th>
+                                    <th>Gene 1 Localization</th>
+                                    <th>Gene 2 Localization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
                         </table>
                     </div>
                     <div class="modal-footer">

@@ -34,6 +34,9 @@
         showModals();
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
+        getXMLSourcesModifyDropdown();
+        getXMLTissuesFromConditionAJAX();
+        tissueDropdownChangeSelectColor();
         setTableFilter(AIVref);
         setCSVExport();
         setPNGExport(AIVref);
@@ -42,6 +45,8 @@
         restrictUIInputsNumRange();
         filterExperimentalPPIsSwitch(AIVref);
         filterExperimentalPPIsInputEListener(AIVref);
+        showReferenceChkboxes();
+        filterEdgesByRefFunctionality(AIVref);
         filterPredictedPPIsSwitch(AIVref);
         filterPredictedPPIsInputsEListener(AIVref);
         localizationLayoutEventListener(AIVref);
@@ -88,7 +93,7 @@
         let nodeListCheckboxes = document.querySelectorAll('input:checked.form-chkbox'); // NodeList of checked form checkboxes
         if (nodeListCheckboxes.length > 0) { //reset form checkboxes
             [].forEach.call(nodeListCheckboxes, function(node){ //nodeList forEach hack (some browsers don't support NodeList.forEach
-                node.click(); // turn off checkbox, setting .checked DOES not fire events!
+                node.click(); // turn off checkbox, setting .checked DOES not fire certain events!
             });
         }
     }
@@ -170,6 +175,66 @@
         });
     }
 
+    /***
+     * @function getXMLSourcesModifyDropdown- perform AJAX to get the experimental conditions for our XML data
+     */
+    function getXMLSourcesModifyDropdown(){
+        $.ajax({
+            url: "https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/~asher/getXML.php?species=arabidopsis",
+            type: "GET"
+        })
+            .then((res)=>{
+                let options = "";
+                for (let conditions of Object.keys(res)){
+                    options += `<option>${res[conditions]}</option>`;
+                }
+
+                //append the HTML and also enable the dropdown
+                $('#dropdown-source').append(options).prop('disabled', false);
+            });
+    }
+
+    /**
+     * @function getXMLTissuesFromConditionAJAX - When a user clicks on an experimental condition outside of the
+     * 'Select Condition' we will then populate and enable the tissue dropdown
+     */
+    function getXMLTissuesFromConditionAJAX(){
+        document.getElementById('dropdown-source').addEventListener('change', function(event){
+            let secondDropdown = $('#dropdown-tissues');
+            if (event.target.value === "Select Source"){
+                return;
+            }
+            $.ajax({
+               url: "https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/~asher/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
+               type: "GET",
+            })
+                .then((res) =>{
+                    let options = "";
+                    for (let i = 0; i < res.length; i++) {
+                        if (i === 0 ){ //change colour of second dropdown
+                            secondDropdown.css({
+                                backgroundColor : `${res[i].colour}`,
+                                color           : "black",
+                            });
+                        }
+                        options += `<option style="background-color: ${res[i].colour}; color: black">${res[i].tissue}</option>`;
+                    }
+                    secondDropdown.css({'cursor': 'pointer'}).html(options).prop('disabled', false);
+                });
+        });
+    }
+
+    /**
+     * @function tissueDropdownChangeSelectColor - simple event listener that will change the options
+     * node's background colour to the according dropdown menu choice
+     */
+    function tissueDropdownChangeSelectColor(){
+        document.getElementById('dropdown-tissues').addEventListener('change', function(event){
+            let dropdown = event.target;
+            dropdown.style.backgroundColor = dropdown[dropdown.selectedIndex].style.backgroundColor;
+        });
+    }
+
     /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
     function checkBIOGRIDServerStatus(){
         $.ajax({
@@ -230,8 +295,8 @@
     function setTableFilter(AIVObj){
         document.getElementById('showCSVModal').addEventListener('click', function(event){
             if (! $(".inf")[0]) { // only create a new table filter row if one doesn't exist
-                var filtersConfig = {
-                    base_path: 'https://cdn.rawgit.com/koalyptus/TableFilter/07eebbd5/dist/tablefilter/',
+                let filtersConfig = {
+                    base_path: 'https://unpkg.com/tablefilter@latest/dist/tablefilter/',
                     auto_filter: {
                         delay: 500 //milliseconds
                     },
@@ -241,9 +306,26 @@
                     rows_counter: true,
                     btn_reset: true,
                     status_bar: true,
-                    msg_filter: 'Filtering...'
+                    msg_filter: 'Filtering...',
+
+                    col_types: [
+                        'string',
+                        'string',
+                        'string',
+                        'string',
+                        'string',
+                        'string',
+                        'formatted-number',
+                        'formatted-number',
+                        'string',
+                        'string',
+                        'string',
+                        'string',
+                    ],
+
+                    extensions: [{ name: 'sort' }]
                 };
-                var tf = new TableFilter('csvTable', filtersConfig);
+                let tf = new TableFilter('csvTable', filtersConfig);
                 tf.init();
             }
 
@@ -318,6 +400,7 @@
      * value. Then find those nodes that connect to such edges. Within these nodes, filter again by comparing
      * how many total edges(degree) it has to how many edges connected to it fit the filter. If they're equal
      * hide the node. This later logic is useful for when we having interactions between interactions.
+     * I had to do this because if you just hide the edges they'll leave the nodes left on the app
      * Lastly hide all the edges that fit the filter as a failsafe (because when you hide nodes, they hide the
      * edges).
      * @param {object} AIVObjReference - reference to the AIV namespace object
@@ -343,15 +426,89 @@
         document.getElementById('filterEPPIsCheckbox').addEventListener('change', function(event){
             // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
             AIVObj.cy.$('.pearsonfilterEPPI').removeClass('pearsonfilterEPPI');
+            // below logic is for cleaner UI to disable filters when switch is off
             if (event.target.checked){
                 document.getElementById('EPPICorrThreshold').removeAttribute("disabled");
+                document.getElementById('overSelect').classList.remove('not-allowed');
+                document.getElementById('pseudo-select').classList.remove('not-allowed');
                 pearsonFilterEPPIonEles(AIVObj);
             }
             else {
                 document.getElementById('EPPICorrThreshold').setAttribute("disabled", "");
+                document.getElementById('overSelect').classList.add('not-allowed');
+                document.getElementById('pseudo-select').classList.add('not-allowed');
+
+                // below logic will recheck every checkbox in the reference box
+                let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
+                [].forEach.call(uncheckedBoxes, function(node) { //nodelist hack for unsupported browsers
+                    node.click(); //recheck
+                });
             }
         });
     }
+
+    /**
+     * @function filterEdgesByRefFunctionality - add switch/checkbox functionality to filter EPPIs...
+     * If you are confused about the logic go to function desc in pearsonFilterEPPIonEles
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
+    function filterEdgesByRefFunctionality(AIVObj){
+        document.getElementById('ref-checkboxes').addEventListener('change', function(e){
+            AIVObj.cy.$('.filterByReference').removeClass('filterByReference');
+            let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
+
+            [].forEach.call(uncheckedBoxes, function(node){ //nodelist hack for unsupported browsers
+                console.log(node.value);
+                // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
+                let selector = `edge[reference = '${node.value}']`;
+                let edges = AIVObj.cy.$(selector);
+                edges.connectedNodes('node[!searchGeneData][id ^="Protein"], node[!searchGeneData][id ^="Effector"]').forEach(function(ele){
+                    if (ele.connectedEdges(selector).size() === ele.degree()) {
+                        ele.addClass('filterByReference');
+                        console.log("HIDDEN!");
+                    }
+                });
+                edges.addClass('filterByReference'); // hide the edge now
+            });
+
+        });
+    }
+
+    /**
+     * @function showReferenceChkboxes - add event listener to a pseudo element (an anchor for relative positioning) to show the 'hidden checkboxes'
+     */
+    function showReferenceChkboxes() {
+        let expanded = false;
+        let checkboxes = $("#ref-checkboxes");
+        document.getElementById('pseudo-select-box').addEventListener('click', function(e){
+            if (!document.getElementById('filterEPPIsCheckbox').checked){
+                return; // exit immediately if user doesnt have filter on
+            }
+
+            if (!expanded) {
+                checkboxes.css('display', 'block');
+                expanded = true;
+            }
+            else {
+                checkboxes.css('display', 'none');
+                expanded = false;
+            }
+            // Below is a 'hack' to remove the text selection that seldom happens with this multi select hack :P
+            if (window.getSelection) {window.getSelection().removeAllRanges();}
+            else if (document.selection) {document.selection.empty();}
+        });
+
+        document.addEventListener('click', function(e){ //event listener to handle clicks outside of dropdown
+            let multiSelectDiv = $("#multi-select");
+
+            // if the target of the click isn't the container nor a descendant of the container
+            if (!multiSelectDiv.is(e.target) && multiSelectDiv.has(e.target).length === 0) {
+                checkboxes.css('display', 'none');
+                expanded = false;
+            }
+        });
+    }
+
 
     /**
      * @function filterExperimentalPPIsInputEListener - add event listeners to the EPPI thersholds (correlation coefficients)
@@ -392,6 +549,7 @@
         document.getElementById('filterPPPIsCheckbox').addEventListener('change', function(event){
             // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
             AIVObj.cy.$('.pearsonAndInterologfilterPPPI').removeClass('pearsonAndInterologfilterPPPI');
+            // below logic is for cleaner UI to disable filters when switch is off
             if (event.target.checked){
                 document.getElementById('PPPICorrThreshold').removeAttribute("disabled");
                 document.getElementById('PPPIConfThreshold').removeAttribute("disabled");
