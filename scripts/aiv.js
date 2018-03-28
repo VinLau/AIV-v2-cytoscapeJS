@@ -15,8 +15,6 @@
     /**
 	 * @namespace {object} AIV - Important hash tables to store state data and styling global data
      * @property {object} chromosomesAdded - Object property for 'state' of how many PDI chromosomes exist
-	 * @property {object} genesFetched - Object property for 'state' of which gene data have been fetched (so we don't refetch)
-	 * @property {object} genesFetching - Object property for 'state' of loading API gene information calls
 	 * @property {boolean} mapManLoadState - Boolean property representing if mapMan AJAX call was successful
 	 * @property {boolean} SUBA4LoadState - Boolean property representing if SUBA4 AJAX call was successful
 	 * @property {string} temptempHtmlTableStr - Temporary variable to store HTML table to later be added to DOM
@@ -28,10 +26,10 @@
      * @propery {boolean} coseParentNodesOnCyCore - state variable that stores whether compound nodes have been loaded onto the cy core app
      * @property {number} defaultZoom - contains a number for how much graph has been zoomed (after a layout has been ran)
      * @property {object} defaultPan - contains x and y properties for where the graph has been panned, useful for layouts
+	 * @property {object} miFilter - a list of unuseful mi terms that ideally would be filled out if a PPI/PDI does not have another meaningful name
+	 * @property {object} miTerms - a dictionary of frequently occuring (needs to be curated manually as EMBL doesn't have an API) MI terms that come from our dapseq ppi webservice
      */
     AIV.chromosomesAdded = {};
-    AIV.genesFetched = {};
-	AIV.genesFetching = {};
     AIV.geneAnnoFetched = {};
     AIV.geneAnnoFetchState = false;
 	AIV.mapManLoadState = false;
@@ -46,6 +44,44 @@
     AIV.coseParentNodesOnCyCore  = false;
     AIV.defaultZoom = 1;
     AIV.defaultPan = {x: 0, y:0};
+    AIV.miFilter =["0469" , "0463", "0467", "0190", "1014", "0915", "0914", "0407", "0686", "0045", "0462", "1178"];
+    AIV.miTerms =
+	{
+        "0004" : "affinity chromotography technology",
+        "0007" : "anti tag co-immunoprecipitation",
+        "0018" : "two hybrid",
+        "0019" : "coimmunoprecipitation",
+        "0030" : "cross-linking study",
+        "0045" : "experimental interaction detection",
+		"0047" : "far western blotting",
+		"0055" : "fluorescent resonance energy transfer",
+        "0064" : "interologs mapping",
+		"0065" : "isothermal titration calorimetry",
+        "0067" : "tandem affinity purification",
+        "0071" : "molecular sieving",
+        "0084" : "phage display",
+        "0085" : "phylogenetic profile",
+        "0096" : "pull down",
+        "0112" : "ubiquitin reconstruction",
+		"0190" : "reactome",
+        "0217" : "phosphorylation reaction",
+        "0364" : "inferred by curator",
+        "0397" : "two hybrid array",
+		"0407" : "direct interaction",
+		"432"  : "one hybrid", // error in the database, not a 4 digit num
+		"0437" : "protein three hybrid",
+		"0462" : "bind",
+		"0463" : "biogrid",
+		"0467" : "reactome",
+        "0469" : "intact",
+		"0686" : "unspecified method",
+		"0809" : "bimolecular fluorescence complementation",
+		"0914" : "association",
+ 		"0915" : "physical association",
+		"1014" : "string",
+		"1178" : "sequence based prediction of binding of transcription factor to transcribed gene regulatory elements",
+		"2189" : "avexis"
+	};
 
     /**
 	 * @namespace {object} AIV
@@ -94,6 +130,9 @@
 					//remove existing interactions table except headers
                     $("#csvTable").find("tr:gt(0)").remove();
                     $(".inf").remove();
+
+                    //reset the reference filters for the next query
+					$("#ref-checkboxes").empty();
 
                     //reset existing built-in state data from previous query
 					AIV.tempHtmlTableStr = "";
@@ -510,12 +549,29 @@
 	 * @param {number | string} interologConfidence  - interolog confidence number, can be negative to positive, or zero (means experimentally validated prediction) i.e. -2121
 	 * @param {string} databaseSource - where did this edge come from ? i.e. "BAR"
 	 * @param {number | string | null} R - the correlation coefficient of the coexpression data (microarray)
+	 * @param {string} miTermsString - string of miTerms, can be delimited by a '|'
 	 */
-	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence, databaseSource, R) {
+	AIV.addEdges = function(source, typeSource, target, typeTarget, colour, style, width, reference, published, interologConfidence, databaseSource, R, miTermsString) {
 		// let edge_id = typeSource + '_' + source + '_' + typeTarget + '_' + target;
 		source = typeSource + '_' + source;
 		target = typeTarget + '_' + target;
         let edge_id = source + '_' + target;
+        // process and format mi terms, specifically, look up via dictionary the annotations
+		let mi = [];
+        // console.log(target);
+        // console.log(miTermsString);
+        // need to do a check for where the database came from as it is parsed differently and that INTACT/BIOGRID already come with MI term annotations
+        if (miTermsString !== null && miTermsString !== undefined && databaseSource === "BAR"){
+			let miArray = miTermsString.split('|');
+            miArray.forEach(function(miTerm){
+                if (AIV.miTerms[miTerm] !== undefined){
+                    mi.push(`${miTerm} (${AIV.miTerms[miTerm]})`);
+                }
+            });
+        }
+        else if (databaseSource === "INTACT" || databaseSource === "BioGrid") {
+        	mi.push(miTermsString.replace('"', ' ')); // replace for " inside '0018"(two hybrid)'
+		}
 		this.cy.add([
 			{
 				group: "edges",
@@ -534,14 +590,15 @@
 					arrowEdges: typeTarget === "DNA" ? "triangle" : "none",
 					databaseOrigin: databaseSource,
 					pearsonR: R,
+					miAnnotated: mi,
  				},
 			}
 		]);
 	};
 
 	/**
-	* This function will take the name property of a DNA Chr node and parse it nicely for display
-	* on the cy core
+	 * @namespace {object} AIV
+     * @function addNumberOfPDIsToNodeLabel - This function will take the name property of a DNA Chr node and parse it nicely for display on the cy core
 	 */
 	AIV.addNumberOfPDIsToNodeLabel = function () {
         for (let chr of Object.keys(this.chromosomesAdded)) {
@@ -667,21 +724,21 @@
     AIV.addProteinNodeQtips = function() {
         this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
             let protein = event.target;
-            // console.log(protein.data());
+			let agiName = protein.data("name");
             protein.qtip(
                 {
                     overwrite: false, //make sure tooltip won't be overriden once created
                     content  : {
                     				title :
 										{
-                    						text : "Protein " + protein.data("name"),
+                    						text : "Protein " + agiName,
 											button: 'Close'
                                     	},
 									text :
                                         function(event, api) {
                     						let HTML = "";
                     						if (AIV.geneAnnoFetchState){
-                    							let gene = AIV.geneAnnoFetched[protein.data('name')];
+                    							let gene = AIV.geneAnnoFetched[agiName];
                     							HTML += `<p>Annotation: ${gene.desc}</p>`;
                     							if (gene.synonyms.length > 0) {
                     								HTML += `<p>Synoynms: ${gene.synonyms.join(', ')}</p>`;
@@ -834,22 +891,23 @@
      * @function addPPIEdgeQtips - Add qTips (tooltips) to protein protein interaction edges
      */
     AIV.addPPIEdgeQtips = function() {
-        var that = this;
+        let that = this;
         this.cy.on('mouseover', 'edge[source^="Protein"][target^="Protein"]', function(event){
-        	var ppiEdge = event.target;
-        	// console.log(ppiEdge.data());
+        	let ppiEdge = event.target;
+        	let edgeData = ppiEdge.data();
         	ppiEdge.qtip(
 				{
                     content:
                         {
                             title:
 								{
-                            		text: ppiEdge.data("source").replace("_", " ") + " to " + ppiEdge.data("target").replace("_", " "),
+                            		text: edgeData.source.replace("_", " ") + " to " + edgeData.target.replace("_", " "),
 									button: "Close"
                             	},
-							text : that.createPPIEdgeText( ppiEdge.data("source"), ppiEdge.data("target"), ppiEdge.data("reference"), ppiEdge.data('interologConfidence'), ppiEdge.data('databaseOrigin') ) +
-							(ppiEdge.data("interologConfidence") > 0 ? "<p>Interolog Confidence:" + ppiEdge.data("interologConfidence") + "</p>" : "") +
-							"<p>Correlation Coefficient:" + ppiEdge.data("pearsonR") + "</p>", //the ternary operator here is to make sure we're returning the interolog confidence value not the SPPI rank
+							text : that.createPPIEdgeText( edgeData.source, edgeData.target, edgeData.reference, edgeData.interologConfidence, edgeData.databaseOrigin ) +
+							(edgeData.interologConfidence >= 1 ? `<p>Interolog Confidence: ${edgeData.interologConfidence}</p>` : "") + //ternary operator is to return the interolog confidence value not the SPPI rank
+							`<p>Correlation Coefficient: ${edgeData.pearsonR} </p>` +
+							(edgeData.miAnnotated.length > 0 ? `<p>MI Term(s): ${edgeData.miAnnotated.join(', ')} </p>` : ""),
                         },
                     style  : { classes : 'qtip-light qtip-ppi-edge' },
                     show:
@@ -962,7 +1020,6 @@
 					typeTarget = 'Effector';
 				}
 
-
 				//Build publication array for dropdown later
                 if (publicationsPPIArr.indexOf(edgeData.reference) === -1){
 					if (typeTarget === 'Protein' || typeTarget === 'Effector'){
@@ -995,42 +1052,48 @@
                 }
 
 				if (edgeData.index !== '2') { //i.e. PPI edge
-					this.addEdges(edgeData.source, typeSource, edgeData.target, typeTarget, edgeColour, style, width, edgeData.reference, edgeData.published, edgeData.interolog_confidence, dbSrc, edgeData.correlation_coefficient);
-					this.addTableRow("protein-protein", dbSrc, edgeData.source, edgeData.target, edgeData.interolog_confidence, edgeData.correlation_coefficient, edgeData.reference);
+					this.addEdges(edgeData.source, typeSource, edgeData.target, typeTarget, edgeColour, style, width, edgeData.reference, edgeData.published, edgeData.interolog_confidence, dbSrc, edgeData.correlation_coefficient, edgeData.mi);
+					this.addTableRow("protein-protein", dbSrc, edgeData.source, edgeData.target, edgeData.interolog_confidence, edgeData.correlation_coefficient, edgeData.reference, edgeData.mi);
 				}
 				else if ( edgeData.index === '2' && (this.cy.getElementById(`${typeSource}_${edgeData.source}_DNA_Chr${edgeData.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
-                    this.addEdges(edgeData.source, typeSource, `Chr${edgeData.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, edgeData.reference, edgeData.published, edgeData.interolog_confidence, dbSrc, edgeData.correlation_coefficient);
-                    this.addTableRow("protein-DNA", dbSrc, edgeData.source, edgeData.target, edgeData.interolog_confidence, edgeData.correlation_coefficient, edgeData.reference);
+                    this.addEdges(edgeData.source, typeSource, `Chr${edgeData.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, edgeData.reference, edgeData.published, edgeData.interolog_confidence, dbSrc, edgeData.correlation_coefficient, edgeData.mi);
+                    this.addTableRow("protein-DNA", dbSrc, edgeData.source, edgeData.target, edgeData.interolog_confidence, edgeData.correlation_coefficient, edgeData.reference, edgeData.mi);
 				}
 			}
 		} //end of adding nodes and edges
 
-		buildRefDropdown(publicationsPPIArr);
+		this.buildRefDropdown(publicationsPPIArr);
+	};
 
-		//helper function that will build the dynamic reference dropdown, take in an array of PPI ref strings
-		function buildRefDropdown(arrayOfPubs){
-			let tempArrPubs = arrayOfPubs;
-            let whereNoneIs = tempArrPubs.indexOf('None');
-			if (whereNoneIs !== -1){ //remove "None" from our list of publications...
-				tempArrPubs.splice(whereNoneIs, 1);
-			}
-            let inputsLabelsHTML = "";
-            tempArrPubs.forEach(function(ref){
-				inputsLabelsHTML +=
-					`
+    /**
+	 * @namespace {object} AIV
+     * @function buildRefDropdown - helper function that will build the dynamic reference dropdown, take in an array of PPI ref strings
+     * @param arrayOfPubs - an array of publications for ex, ["None", "PubMed19095804", ...]
+     */
+	AIV.buildRefDropdown = function(arrayOfPubs){
+        let tempArrPubs = arrayOfPubs;
+        let whereNoneIs = tempArrPubs.indexOf('None');
+        if (whereNoneIs !== -1){ //remove "None" from our list of publications...
+            tempArrPubs.splice(whereNoneIs, 1);
+        }
+        let inputsLabelsHTML = "";
+        tempArrPubs.forEach(function(ref){
+        	if (! document.getElementById(`${ref}-checkbox`)){ // check if DOM node exists before appending
+                inputsLabelsHTML +=
+                    `
 					<label for="${ref}-checkbox">
 						<input type="checkbox" id="${ref}-checkbox" class="ref-checkbox" value="${ref}" checked>
 						${ref}
 					</label>
 					`;
-			});
-			$('#ref-checkboxes').html(inputsLabelsHTML);
-		}
-	};
+			}
+        });
+        $('#ref-checkboxes').append(inputsLabelsHTML);
+    };
 
     /**
 	 * @namespace {object} AIV
-	 * @function - parsePSICQUICInteractionsData - Take in the PSICQUICdata param which is the text response we get back from the AJAX call and parse it via regex (based on whether it is from INTACT or BioGrid). Then add unique edges and nodes.
+	 * @function - parsePSICQUICInteractionsData - Take in non-BAR PSICQUICdata param which is the text response we get back from the AJAX call and parse it via regex (based on whether it is from INTACT or BioGrid). Then add unique edges and nodes.
      * @param {string} PSICQUICdata - should be a bunch of PSICQUIC formatted text
      * @param {string} queryGeneAsABI - should be something like "At3g10000"
      * @param {string} INTACTorBioGrid - should either be "INTACT" or "BioGrid"
@@ -1046,16 +1109,17 @@
 
 		let regex;
 		if (INTACTorBioGrid === "INTACT") {
-			// example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus.*(pubmed:\d+)
-            regex = new RegExp("uniprotkb:(?!" + queryGeneAsABI +")(At\\d[gcm]\\d{5})\\(locus.*(pubmed:\\d+)", "gi");
+			// example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus.*psi-mi:"MI:(\d+"\(.*?\)).*(pubmed:\d+) WITH GI flags!
+            regex = new RegExp("uniprotkb:(?!" + queryGeneAsABI +")(At\\d[gcm]\\d{5})\\(locus.*psi-mi:\"MI:(\\d+\"\\(.*?\\)).*(pubmed:\\d+)", "gi");
 		}
 		else if (INTACTorBioGrid === "BioGrid"){
-			// example \|entrez gene\/locuslink:(?!At3g18130)(At\d[gcm]\d{5})[\t|].*(pubmed:\d+)
-			regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsABI + ")(At\\d[gcm]\\d{5})[\\t|].*(pubmed:\\d+)", "gi");
+			// example \|entrez gene\/locuslink:(?!At3g18130)(At\d[gcm]\d{5})[\t|].*psi-mi:"MI:(\d+"\(.*?\)).*(pubmed:\d+) WITH GI flags!
+			regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsABI + ")(At\\d[gcm]\\d{5})[\\t|].*psi-mi:\"MI:(\\d+\"\\(.*?\\)).*(pubmed:\\d+)", "gi");
 		}
 
 		let match;
 		let arrPPIsProteinsRaw = []; // array will be populated with ABI identifiers of genes that interact with the queryGeneAsABI via regex...
+		let miTermPSICQUIC = []; // array to be populated with MI terms with their annotations i.e. ['0018"(two hybrid)', ...]
 		let pubmedIdArr = []; // array to store string of pubmed IDs
 
 		/*
@@ -1070,8 +1134,9 @@
             if (match.index === regex.lastIndex) {
                 regex.lastIndex++;
             }
-            arrPPIsProteinsRaw.push( AIV.formatABI ( match[1] ) ); //look for second captured group, i.e. "At2g10000"
-			pubmedIdArr.push(match[2]); //look for third captured group (i.e. "23667124")
+            arrPPIsProteinsRaw.push( AIV.formatABI ( match[1] ) ); // 1st captured group, i.e. "At2g10000"
+			miTermPSICQUIC.push(match[2]); // push the 2nd group (i.e '0018"(two hybrid)', yes with '"'!)
+			pubmedIdArr.push(match[3]); //look for third captured group (i.e. "23667124")
         }
 
         let arrPPIsProteinsUnique = arrPPIsProteinsRaw.filter(function(item, index, selfArr){ //delete duplicates
@@ -1090,10 +1155,15 @@
                 AIV.addNode(proteinItem, "Protein");
             }
             if ( AIV.cy.getElementById(`Protein_${queryGeneAsABI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
-                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid, null ); // 0 represents experimentally validated in our case and we leave R as null
-                	AIV.addTableRow("Protein", INTACTorBioGrid, queryGeneAsABI, proteinItem, "PSICQUIC confirmed", "N/A", pubmedIdArr[index]);
+                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid, null, miTermPSICQUIC[index] ); // 0 represents experimentally validated in our case and we leave R as null
+                	AIV.addTableRow("Protein-Protein", INTACTorBioGrid, queryGeneAsABI, proteinItem, "PSICQUIC confirmed", "N/A", pubmedIdArr[index], miTermPSICQUIC[index]);
 			}
 		});
+
+        let pubmedIdArrUnique = pubmedIdArr.filter(function(item, index, selfArr){ // delete duplicates
+        	return index === selfArr.indexOf(item);
+		});
+        this.buildRefDropdown(pubmedIdArrUnique);
 
     };
 
@@ -1103,8 +1173,8 @@
      * @param {string} dbSource - database source, ex BAR
      * @param {string} sourceGene - AGI source gene
      * @param {string} targetGene - AGI target gene
-     * @param {number} interoConf - interologconfidence, if it exists
-     * @param {number} pearsonCC - pearson correlation coefficient
+     * @param {number|string} interoConf - interologconfidence, if it exists
+     * @param {number|string} pearsonCC - pearson correlation coefficient
      * @param {string} ref - if a published interaction, pubmed or DOI or MIND etc
      * @param miTerm - MI term that describes what type of a experiment was performed
      */
@@ -1115,14 +1185,30 @@
          * Some notes:
          * For interlog confidence it represents multiple things: FEMO score, interolog confidence, SPPI rank and experimentally determined
          * Talked with nick to represent '0' (experimentally determined) as 'N/A' hence the ternary operator
+		 * Parse mi terms for BAR/INTACT/BioGrid, then format nicely if more than one mi term
 		 * Also need a 'ppiOrPdi' to make ppis and pdis distinct for localization cells
          */
         let ppiOrPdi = "ppi";
         if (intType === "protein-DNA"){ ppiOrPdi = "pdi";}
+
         let referencesCleaned = "";
         this.sanitizeReferenceIDs(ref).forEach(function(ref){
             referencesCleaned += `<p> ${AIV.returnReferenceLink(ref, sourceGene)} </p>`;
         });
+
+        let miFormattedHTML = "";
+        if (miTerm !== null && miTerm !== undefined && dbSource === "BAR"){
+            let miArray = miTerm.split('|');
+            miArray.forEach(function(miTerm){
+                if (AIV.miTerms[miTerm] !== undefined){
+                    miFormattedHTML += `<p>${miTerm} (${AIV.miTerms[miTerm]})</p>`;
+                }
+            });
+		}
+        else if (dbSource === "INTACT" || dbSource === "BioGrid") {
+            miFormattedHTML += `<p>${miTerm.replace('"', ' ')}</p>`; // replace for " inside '0018"(two hybrid)'
+        }
+
         this.tempHtmlTableStr +=
 			`<tr>
 				<td>${intType}</td>
@@ -1134,7 +1220,7 @@
 				<td>${interoConf === 0 ? "N/A" : interoConf }</td>
 				<td>${pearsonCC}</td>
 				<td>${referencesCleaned.match(/.*undefined.*/) ? "None" : referencesCleaned}</td>
-				<td>${miTerm}</td>
+				<td>${miFormattedHTML ? miFormattedHTML : "None"}</td>
 				<td class="${sourceGene}-loc">Fetching Data</td>
 				<td class="${targetGene}-${ppiOrPdi}-loc">${ppiOrPdi === "pdi" ? "Nucleus(assumed)" : "Fetching Data"}</td>
 			</tr>`;
@@ -1671,7 +1757,7 @@
             req += "&querydna=false";
         }
 
-        var serviceURL = 'http://bar.utoronto.ca/~asher/new_aiv/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
+        var serviceURL = 'http://bar.utoronto.ca/~vlau/interactions/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
 
 		return $.ajax({
             url: serviceURL,
