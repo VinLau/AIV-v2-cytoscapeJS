@@ -4,7 +4,7 @@
  * @author Vincent Lau (major additions, AJAX, polishing, CSS, SVGs, UX/UI, tables, tooltips) <vincente.lau@mail.utoronto.ca>
  * @author Asher Pasha (base app, adding nodes & edges)
  * @copyright see MIT license on GitHub
- * @description please note that I intentionally used data properties of nodes instead of classes as there is (as of cytoscape 3.2.7) no getter for classes (i.e. I cannot retrieve the classes a node has). see https://stackoverflow.com/questions/40403498/cytoscape-js-get-classes-and-return-filtered-nodes-getter-not-existent
+ * @description please note that I seldom intentionally used data properties to nodes instead of classes as we cannot ( to my knowledge), select nodes by NOT having a class
  */
 (function(window, $, cytoscape, undefined) {
 	'use strict';
@@ -15,8 +15,10 @@
     /**
 	 * @namespace {object} AIV - Important hash tables to store state data and styling global data
      * @property {object} chromosomesAdded - Object property for 'state' of how many PDI chromosomes exist
+	 * @property {object} geneAnnoFetched - A hash of the AGI annotations in the app so far
 	 * @property {boolean} mapManLoadState - Boolean property representing if mapMan AJAX call was successful
 	 * @property {boolean} SUBA4LoadState - Boolean property representing if SUBA4 AJAX call was successful
+	 * @property {object} exprLoadState - State of the expression values the user has loaded for the current query genes
 	 * @property {string} temptempHtmlTableStr - Temporary variable to store HTML table to later be added to DOM
      * @property {number} nodeSize - "Global" default data such as default node size
      * @property {number} DNANodeSize - Important for adjusting the donut sizes
@@ -31,9 +33,10 @@
      */
     AIV.chromosomesAdded = {};
     AIV.geneAnnoFetched = {};
-    AIV.geneAnnoFetchState = false;
+    AIV.geneAnnoLoadState = false;
 	AIV.mapManLoadState = false;
 	AIV.SUBA4LoadState = false;
+	AIV.exprLoadState = {absolute: false, relative: false};
 	AIV.temptempHtmlTableStr = "";
     AIV.nodeSize = 35;
 	AIV.DNANodeSize = 55;
@@ -69,7 +72,8 @@
         "0397" : "two hybrid array",
 		"0407" : "direct interaction",
 		"432"  : "one hybrid", // error in the database, not a 4 digit num
-		"0437" : "protein three hybrid",
+        "0432" : "one hybrid",
+        "0437" : "protein three hybrid",
 		"0462" : "bind",
 		"0463" : "biogrid",
 		"0467" : "reactome",
@@ -137,9 +141,10 @@
                     //reset existing built-in state data from previous query
 					AIV.tempHtmlTableStr = "";
                     AIV.chromosomesAdded = {};
-                    AIV.geneAnnoFetchState = false;
+                    AIV.geneAnnoLoadState = false;
                     AIV.mapManLoadState = false;
                     AIV.SUBA4LoadState = false;
+                    AIV.exprLoadState = {absolute: false, relative: false};
                     AIV.coseParentNodesOnCyCore = false;
                     AIV.locCompoundNodes = [];
 				}
@@ -431,7 +436,7 @@
 			data: {
 				id : idOfParent,
 				name: nameOfParent,
-                compoundNode: true, //data property used instead of a class because we cannot remove parent nodes by classes for some reason (cytoscapejs bug?)
+                compoundNode: true, //data property used instead of a class because we cannot select nodes by NOT having a class
 			},
 		});
 	};
@@ -527,7 +532,8 @@
                 data:
                     {
                         id: "DNA_Chr" + chrNumber,
-                        name: "Chr-" + chrName
+                        name: "Chr-" + chrName,
+                        localization: "Nucleus"
                     },
                 classes: 'DNA'
             }
@@ -613,16 +619,25 @@
 	 * @function setDNANodesPosition - Lock the position of the DNA nodes at the bottom of the cy app
 	 */
 	AIV.setDNANodesPosition = function () {
-        var xCoord = 50;
-        var viewportWidth = this.cy.width();
+        let xCoord = 50;
+        let viewportWidth = this.cy.width();
         this.cy.$("node[id ^='DNA_Chr']:locked").unlock(); //if locked (for example during hide settings, unlock)
-        var numOfChromosomes = Object.keys(this.chromosomesAdded).length; //for A. th. the max would be 7
+        let numOfChromosomes = Object.keys(this.chromosomesAdded).length; //for A. th. the max would be 7
         for (let chr of Object.keys(this.chromosomesAdded)) {
-            this.cy.getElementById(`DNA_Chr${chr}`).position({x: xCoord, y: this.cy.height() - (this.DNANodeSize/2 + 5) });
-            this.cy.getElementById(`DNA_Chr${chr}`).lock(); //hardset the position of chr nodes to bottom
+        	let chrNode = this.cy.getElementById(`DNA_Chr${chr}`);
+            chrNode.position({x: xCoord, y: this.cy.height() - (this.DNANodeSize/2 + 5) });
+            chrNode.lock(); //hardset the position of chr nodes to bottom
             xCoord += viewportWidth/numOfChromosomes;
         }
     };
+
+    /**
+     * @namespace {object} AIV
+     * @function resizeEListener - Resize UI listener when app is loaded, i.e. reposition the chr nodes if the browser size changes
+     */
+	AIV.resizeEListener = function () {
+		this.cy.on('resize', this.setDNANodesPosition.bind(AIV));
+	};
 
 	/**
 	 * @namespace {object} AIV
@@ -737,7 +752,7 @@
 									text :
                                         function(event, api) {
                     						let HTML = "";
-                    						if (AIV.geneAnnoFetchState){
+                    						if (AIV.geneAnnoLoadState){
                     							let gene = AIV.geneAnnoFetched[agiName];
                     							HTML += `<p>Annotation: ${gene.desc}</p>`;
                     							if (gene.synonyms.length > 0) {
@@ -1452,7 +1467,7 @@
 	};
 
     /**
-	 * @function transferLocDataToTable - parse every protein and effector node on the DOM and modify the 'csv' table accordingly (add a unoredered list of localization percentage scores)
+	 * @function transferLocDataToTable - parse every protein and effector node on the DOM and modify the 'csv' table accordingly (add an unordered list of localization percentage scores)
      */
     AIV.transferLocDataToTable = function() {
         this.parseProteinNodes(function(node){
@@ -1659,6 +1674,7 @@
                 AIV.addEffectorNodeQtips();
                 AIV.cy.style(AIV.getCyStyle()).update();
                 AIV.setDNANodesPosition();
+                AIV.resizeEListener();
                 AIV.cy.layout(AIV.getCySpreadLayout()).run();
 
                 document.getElementById('loading').classList.add('loaded'); //hide loading spinner
@@ -1813,7 +1829,7 @@
 		// console.log(ABIsArr);
 		this.createGeneSummariesAjaxPromise(ABIsArr)
 			.then(res => {
-                AIV.geneAnnoFetchState = true;
+                AIV.geneAnnoLoadState = true;
 				for(let gene of Object.keys(res)){
 					let desc = res[gene].brief_description;
 					let synonyms = res[gene].synonyms;

@@ -56,17 +56,6 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
         canvas.setAttribute("id", "cerebralBackground"); // NOTE: instead added a regular id for removal later
         canvas.setAttribute("width", container.clientWidth);
         canvas.setAttribute("height", container.clientHeight);
-        var aux = [];
-        for (let l = 0; l < container.childNodes.length; l++) {
-            if (container.childNodes[l].innerHTML && container.childNodes[l].innerHTML.startsWith("<canvas")) {
-                container.childNodes[l].appendChild(canvas);
-            } else {
-                aux.push(container.childNodes[l]);
-            }
-        }
-        for (let e = 0; e < aux.length; e++) {
-            container.removeChild(aux[e]);
-        }
         var ctx = canvas.getContext("2d");
         ctx.globalCompositeOperation = 'source-over';
 
@@ -77,9 +66,18 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
 
         // NOTE: on zoom of the cy core (i.e. pressing zoom in and zoom out buttons)
         cy.on("zoom pan", zoomPanCerebralEListener);
+        // When resizing the browser window, rerun the layout
+        cy.on("cyCanvas.resize", resizeCerebralElistener);
 
         // add namespace reference for later event listener removal
         window.cerebralNamespace.zoomPanCerebralEListener = zoomPanCerebralEListener;
+
+        /**
+         * @function resizeCerebralElistener - event listener cb for the resize event when cerebral layout is chosen
+         */
+        function resizeCerebralElistener() {
+            runCerebral(true);
+        }
 
         /**
          * @function zoomPanCerebralEListener - event listener cb for the zoom and pan events when cerebral layout is chosen
@@ -163,6 +161,7 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
                         y = line / 2;
                     }
 
+                    ctx.textAlign="end";
                     ctx.fillText(options.layers[k], container.clientWidth - 10, y);
                     if (moveNodes){
                         nodesAuxInLayer.positions(function (element, j) { //NOTE: changed here from elements, j to elements, j, likely to cytoscapejs version update
@@ -173,16 +172,17 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
                             if (k === 11) { //i.e. nucleus
                                 return {
                                     x: Math.round((Math.random() * width) + 5),
-                                    y: Math.round((Math.random() * height) + heightAcum - 10) //do not override DNA nodes
+                                    y: Math.round((Math.random() * height) + heightAcum - 10) //do not overlay over DNA nodes
                                 };
                             }
 
                             return {
                                 x: Math.round((Math.random() * width) + 5),
-                                y: Math.round((Math.random() * height) + heightAcum + 25)
+                                y: Math.round((Math.random() * height) + heightAcum + 20)
                             };
                         });
                     }
+
                     heightAcum += height + room;
                 }
             }

@@ -199,13 +199,39 @@
 
                     <div class="flex-container-dropdowns">
                         <p>Data Source</p>
-                        <select id="dropdown-source" disabled>
+                        <select id="dropdownSource" disabled>
                             <option>Select Source</option>
                         </select>
                         <p>Tissue/Condition</p>
-                        <select id="dropdown-tissues" class="not-allowed" disabled>
+                        <select id="dropdownTissues" class="not-allowed" disabled>
                             <option>Select Tissue</option>
                         </select>
+                    </div>
+
+                    <div class="flex-container-dropdowns">
+                        <section id="exprnOverlayChkAndLabel" class="slider-checkbox not-allowed" title="Select a source & tissue first!">
+                            <input id="exprnOverlayChkbox" type="checkbox" class="submit-reset" disabled>
+                            <label class="label-checkbox" for="exprnOverlayChkbox">
+                                Overlay Expression
+                            </label>
+                        </section>
+                        <form>
+                            <input name="expression_mode" value="absolute" id="absExpression" type="radio" checked> <!-- Absolute as default -->
+                            <label for="absExpression">
+                                Abs
+                            </label>
+                            <input name="expression_mode" value="relative" id="relExpression" type="radio">
+                            <label for="relExpression">
+                                Rel
+                            </label>
+                        </form>
+                        <section class="slider-checkbox">
+                            <input id="exprThresholdChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
+                            <label class="label-checkbox" for="exprThresholdChkbox">
+                                Apply Threshold
+                            </label>
+                        </section>
+                        <input id="exprThreshold" type="number">
                     </div>
 
                     <div class="flex-container-export">
@@ -213,16 +239,16 @@
                         <button type="button" class="export-button" id="showPNGModal">Export PNG</button>
                         <button type="button" class="export-button" id="showJSONModal">Export JSON</button>
                     </div>
-
                 </div>
-
             </div>
         </nav>
         <main>
 
             <!-- Page content -->
             <div>
-                <div id="cy"></div>
+                <div id="cy">
+                    <canvas id="exprGradientCanvas" width="55" height="300"></canvas>
+                </div>
                 <div id="loading">
                 </div>
             </div> <!-- Page content -->
@@ -273,12 +299,12 @@
                                 <p>Select databases to query:</p>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled"><input id="queryBioGrid" type="checkbox" value="" class="form-chkbox form-chk-needed" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
+                                    <label class="not-allowed"><input id="queryBioGrid" type="checkbox" value="" class="form-chkbox form-chk-needed" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
                                     <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="can-be-disabled"><input id="queryIntAct" type="checkbox" class="form-chkbox form-chk-needed" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
+                                    <label class="not-allowed"><input id="queryIntAct" type="checkbox" class="form-chkbox form-chk-needed" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
                                     <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
                                 </div>
 
@@ -362,7 +388,7 @@
                         </pre>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" id="copy-to-clipboard" class="btn btn-default" title="Not be supported in some browsers">
+                        <button type="button" id="copy-to-clipboard" class="btn btn-default" title="Not supported in some browsers">
                             Copy to Clipboard
                         </button>
                     </div>

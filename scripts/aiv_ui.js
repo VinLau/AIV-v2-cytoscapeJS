@@ -36,7 +36,9 @@
         checkBIOGRIDServerStatus();
         getXMLSourcesModifyDropdown();
         getXMLTissuesFromConditionAJAX();
-        tissueDropdownChangeSelectColor();
+        tissueDropdownChangeSelectColor(AIVref);
+        expressionQtip();
+        expressionOverlayEListener(AIVref);
         setTableFilter(AIVref);
         setCSVExport();
         setPNGExport(AIVref);
@@ -180,7 +182,7 @@
      */
     function getXMLSourcesModifyDropdown(){
         $.ajax({
-            url: "https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/~asher/getXML.php?species=arabidopsis",
+            url: "http://bar.utoronto.ca/~asher/vincent/getXML.php?species=arabidopsis",
             type: "GET"
         })
             .then((res)=>{
@@ -190,22 +192,22 @@
                 }
 
                 //append the HTML and also enable the dropdown
-                $('#dropdown-source').append(options).prop('disabled', false);
+                $('#dropdownSource').append(options).prop('disabled', false);
             });
     }
 
     /**
      * @function getXMLTissuesFromConditionAJAX - When a user clicks on an experimental condition outside of the
-     * 'Select Condition' we will then populate and enable the tissue dropdown
+     * 'Select Condition' we will then populate and enable the tissue dropdown and overlay expression checkbox
      */
     function getXMLTissuesFromConditionAJAX(){
-        document.getElementById('dropdown-source').addEventListener('change', function(event){
-            let secondDropdown = $('#dropdown-tissues');
+        document.getElementById('dropdownSource').addEventListener('change', function(event){
+            let secondDropdown = $('#dropdownTissues');
             if (event.target.value === "Select Source"){
                 return;
             }
             $.ajax({
-               url: "https://cors-anywhere.herokuapp.com/http://bar.utoronto.ca/~asher/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
+               url: "http://bar.utoronto.ca/~asher/vincent/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
                type: "GET",
             })
                 .then((res) =>{
@@ -219,7 +221,10 @@
                         }
                         options += `<option style="background-color: ${res[i].colour}; color: black">${res[i].tissue}</option>`;
                     }
-                    secondDropdown.css({'cursor': 'pointer'}).html(options).prop('disabled', false);
+                    secondDropdown.removeClass('not-allowed').html(options).prop('disabled', false);
+                    document.getElementById("exprnOverlayChkAndLabel").classList.remove('not-allowed');
+                    document.getElementById("exprnOverlayChkbox").disabled = false;
+                    $('#exprnOverlayChkAndLabel').qtip('disable', true);
                 });
         });
     }
@@ -227,15 +232,197 @@
     /**
      * @function tissueDropdownChangeSelectColor - simple event listener that will change the options
      * node's background colour to the according dropdown menu choice
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
      */
-    function tissueDropdownChangeSelectColor(){
-        document.getElementById('dropdown-tissues').addEventListener('change', function(event){
+    function tissueDropdownChangeSelectColor(AIVObj){
+        document.getElementById('dropdownTissues').addEventListener('change', function(event){
             let dropdown = event.target;
             dropdown.style.backgroundColor = dropdown[dropdown.selectedIndex].style.backgroundColor;
+            if (document.getElementById('exprnOverlayChkbox').checked){
+                // reset expr state variable and overlay the app/redraw gradient
+                AIVObj.exprLoadState = {absolute: false, relative: false};
+                overlayExpression(AIVObj);
+            }
         });
     }
 
-    /** @function checkBIOGRIDServerStatus - Check BIOGRID webservice status*/
+    function expressionQtip () {
+        $('#exprnOverlayChkAndLabel[title]').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'top center',
+                at: 'bottom center'
+            },
+            hide: {
+                event: 'unfocus mouseleave'
+            }
+        });
+    }
+
+    function expressionOverlayEListener(AIVObj){
+        document.getElementById('exprnOverlayChkbox').addEventListener('change', function(){
+            overlayExpression(AIVObj);
+        });
+    }
+
+    function thresholdSwitchEListener(AIVObj) {
+        document.getElementById('exprThresholdChkbox').addEventListener('change', function(){
+
+        });
+    }
+
+    function overlayExpression (AIVObj){
+        if (!document.getElementById('exprnOverlayChkbox').checked){
+            document.getElementById("exprGradientCanvas").getContext("2d").clearRect(0, 0, 65, 300);
+            retnExprCSSLoadGradient(AIVObj).update(); // update to baseline stylesheet
+            if (document.getElementById('exprThresholdChkbox').checked){
+                document.getElementById('exprThresholdChkbox').click();
+            }
+            return; //only process for when checked
+        }
+        let firstDropdown = document.getElementById('dropdownSource');
+        let secondDropdown = document.getElementById('dropdownTissues');
+        let geneList = [];
+        AIVObj.cy.filter("node[name ^= 'At']").forEach(function(node){
+            let nodeID = node.data('name');
+            if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)){ //only get ABI IDs, i.e. exclude effectors
+                geneList.push(nodeID);
+            }
+        });
+        let inputMode = $('input[name=expression_mode]:checked').val();
+        let postObject = {
+            geneIDs: geneList,
+            species: "arabidopsis",
+            inputMode:  inputMode,
+            dataSource: firstDropdown.options[ firstDropdown.selectedIndex ].text,
+            tissue: secondDropdown.options[ secondDropdown.selectedIndex ].text,
+            tissuesCompare: "",
+        };
+
+        console.log(postObject);
+        let expLdState = AIVObj.exprLoadState;
+        console.log("load state", expLdState);
+        if (inputMode === "absolute"){
+            if (!expLdState.absolute){
+                createExpressionAJAX(postObject, inputMode, AIVObj);
+            }
+            else {
+                document.getElementById("exprGradientCanvas").getContext("2d").drawImage(expLdState.absolute.cache.canvas, 0, 0);
+                retnExprCSSLoadGradient(AIVObj, "absolute", expLdState.absolute.lowerBd , expLdState.absolute.upperBd, false).update();
+            }
+        }
+        else if (inputMode === "relative"){
+            if (!expLdState.relative){
+                createExpressionAJAX(postObject, inputMode, AIVObj);
+            }
+            else {
+
+            }
+        }
+    }
+
+    function createExpressionAJAX(listOfAGIsAndExprsnModes, mode, AIVObj) {
+        return $.ajax({
+            url: "http://bar.utoronto.ca/~asher/vincent/getSample.php",
+            type: "POST",
+            data: JSON.stringify( listOfAGIsAndExprsnModes ),
+            contentType : 'application/json',
+            dataType: 'json'
+        })
+            .then((res)=>{
+                if (mode === "absolute") {
+                    absoluteModeOverlay(res, AIVObj);
+                }
+            })
+            .catch((err)=>{
+
+            });
+
+        function absoluteModeOverlay(resData, AIVRef){
+            let maxThreshold = 0;
+            let userDefinedLimit = document.getElementById('exprThresholdChkbox').checked;
+            for (let geneExpKey of Object.keys(resData)){
+                let geneExp = resData[geneExpKey];
+                let expressionVal = geneExp.mean;
+                if (expressionVal <= 0 ){continue;} // don't need any more parsing if we don't have a nonzero value!
+                AIVRef.cy.$id(`Protein_${geneExpKey}`)
+                    .data({
+                    absExpMn : expressionVal,
+                    absExpSD : geneExp.sd
+                    });
+                if (!userDefinedLimit){
+                    if (expressionVal > maxThreshold){
+                        maxThreshold = geneExp.mean; // Itereate N times to find max expression level
+                    }
+                }
+            }
+            if (userDefinedLimit) {
+                maxThreshold = Number(document.getElementById('exprThreshold').value);
+            }
+            retnExprCSSLoadGradient(AIVRef, "absolute", 0, maxThreshold, true).update();
+        }
+    }
+
+    function retnExprCSSLoadGradient (AIVObj, mode, lowerBound, upperBound, initLoad) {
+        // having the below 2 base CSS selectors is especially helpful in case we don't get an expr value for an AGI such that the previous colour won't still be there
+        let loadState = AIVObj.exprLoadState;
+        let baseCSSObj = AIVObj.cy.style()
+            .selector('node[id ^= "Protein_At"]')
+                .css({
+                    'background-color': AIVObj.nodeDefaultColor,
+                })
+            .selector('node[?searchGeneData]')
+                .css({
+                    'background-color': AIVObj.searchNodeColor,
+                });
+        if (mode === "absolute"){
+            baseCSSObj
+                .selector('node[?absExpMn]')
+                .css({
+                    'background-color' : `mapData(absExpMn, ${lowerBound}, ${upperBound}, yellow, red)`,
+                });
+            if (initLoad){
+                // Below line: cache the canvas ctx and also use it as a truthy value if user chooses to turn the expr overlay switch on and off repeatedly
+                loadState[mode] = {
+                    cache : createExprGradient(lowerBound, Math.round(upperBound), "yellow", "red", "abs", AIVObj),
+                    upperBd : upperBound,
+                    lowerBd : lowerBound,
+                };
+                console.log('what is this?', loadState[mode]);
+                document.getElementById("exprGradientCanvas").getContext("2d").drawImage(loadState[mode].cache.canvas, 0, 0);
+            }
+        }
+        else if (mode === "relative"){
+
+        }
+        return baseCSSObj;
+    }
+
+    function createExprGradient(lowerBound, upperBound, lowerColor, upperColor, mode){
+        let canvasTemp = document.createElement("canvas");
+        canvasTemp.width = 65;
+        canvasTemp.height = 300;
+        let ctx = canvasTemp.getContext("2d");
+        ctx.font="bold 10pt Verdana";
+        let grd = ctx.createLinearGradient(0, 0, 0, 250);
+        grd.addColorStop(0, upperColor);
+        grd.addColorStop(1, lowerColor);
+        ctx.fillStyle = grd;
+        ctx.fillRect(10, 10, 55, 250);
+        ctx.fillStyle = "#cdcdcd";
+        ctx.fillRect(10, 270, 55, 300);
+        ctx.fillStyle = "black";
+        ctx.fillText(upperBound, 10, 25);
+        ctx.fillText(mode, 18, 130);
+        ctx.fillText("exp", 18, 145);
+        ctx.fillText(lowerBound, 10, 260);
+        ctx.fillText("N/A", 17, 290);
+        return ctx;
+    }
+
+    /**
+     * @function checkBIOGRIDServerStatus - Check BIOGRID webservice status
+     */
     function checkBIOGRIDServerStatus(){
         $.ajax({
             url: "https://cors-anywhere.herokuapp.com/www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/query/species:human?firstResult=0&maxResults=1", //TODO: change to our proxy
@@ -244,7 +431,7 @@
             .then(()=>{
                 document.getElementById("spinnerBioGrid").style.display = 'none';
                 $("<img src='images/activeServer.png'/>").insertAfter("#BioGridSpan");
-                document.getElementById("queryBioGrid").parentNode.classList.remove('can-be-disabled');
+                document.getElementById("queryBioGrid").parentNode.classList.remove('not-allowed');
                 document.getElementById("queryBioGrid").disabled = false;
             })
             .catch(()=>{
@@ -253,7 +440,9 @@
             });
     }
 
-    /** @function checkServerStatus - Check PSICQUIC INTACT status*/
+    /**
+     * @function checkServerStatus - Check PSICQUIC INTACT status
+     */
     function checkINTACTServerStatus(){
         $.ajax({
             url: "https://cors-anywhere.herokuapp.com/tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/arf7", //TODO: change to our proxy
@@ -262,7 +451,7 @@
             .then(()=>{
                 document.getElementById("spinnerIntAct").style.display = 'none';
                 $("<img src='images/activeServer.png'/>").insertAfter("#IntActSpan");
-                document.getElementById("queryIntAct").parentNode.classList.remove('can-be-disabled');
+                document.getElementById("queryIntAct").parentNode.classList.remove('not-allowed');
                 document.getElementById("queryIntAct").disabled = false;
             })
             .catch(()=>{
@@ -271,17 +460,19 @@
             });
     }
 
-    /** @function enableInteractionsCheckbox - make recursive checkbox only work when BAR PPI is selected */
+    /**
+     * @function enableInteractionsCheckbox - make recursive checkbox only work when BAR PPI is selected
+     */
     function enableInteractionsCheckbox(){
         let barPPICheckbox = document.getElementById('queryBAR');
         barPPICheckbox.addEventListener('change', function(){
             var recursiveCheckbox = document.getElementById("recursive");
             if (barPPICheckbox.checked) {
                 recursiveCheckbox.disabled = false;
-                recursiveCheckbox.parentNode.classList.remove('can-be-disabled');
+                recursiveCheckbox.parentNode.classList.remove('not-allowed');
             }
             else {
-                recursiveCheckbox.parentNode.classList.add('can-be-disabled');
+                recursiveCheckbox.parentNode.classList.add('not-allowed');
                 recursiveCheckbox.disabled = true;
                 recursiveCheckbox.checked = false;
             }
@@ -623,6 +814,7 @@
     function changeLayoutCyHouseCleaning(AIVObjReference, coseOrNot){
         $('#cerebralBackground').remove(); //remove the canvas underlay from localization layout
         AIVObjReference.cy.removeListener('zoom pan', window.cerebralNamespace.zoomPanCerebralEListener); // remove the canvas resizing event listener when the user selected cerebral layout
+        AIVObjReference.cy.removeListener('zoom pan', window.cerebralNamespace.resizeCerebralElistener); // remove the canvas resizing event listener when the browser resizes
         AIVObjReference.cy.reset(); //resets pan and zoom positions
         if (!coseOrNot){
             AIVObjReference.removeLocalizationCompoundNodes();
@@ -759,7 +951,6 @@
             position: {
                 my: 'bottom center',
                 at: 'top center',
-                target: $('#copy-to-clipboard')
             }
         });
     }

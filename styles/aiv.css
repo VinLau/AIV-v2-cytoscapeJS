@@ -36,7 +36,7 @@
 	color: red;
 }
 
-#genes.input-error::-ms-input-placeholder  { /* edge */
+#genes.input-error::-ms-input-placeholder  { /* MS edge */
 	color: red;
 }
 
@@ -128,11 +128,6 @@
 /*Hide the spinner now*/
 #loading.loaded {
 	display: none;
-}
-
-/*Make by default, the disabled checkboxes in gene form grey*/
-.can-be-disabled {
-	color: #ccc;
 }
 
 /* begin slider checkbox CSS, credits to https://codepen.io/Qvcool/pen/bdzVYW */
@@ -495,7 +490,7 @@
 }
 
 /* styling the expression overlay dropdowns */
-#dropdown-source, #dropdown-tissues{
+#dropdownSource, #dropdownTissues{
 	max-width: 20rem;
 }
 
@@ -523,7 +518,7 @@
 	height: -webkit-calc(100vh - 80px);
 	height: -moz-calc(100vh - 80px);
 	width: 100%;
-	z-index: 999;
+	z-index: 4;
 }
 
 /* qtip CSS*/
@@ -575,5 +570,12 @@
 	background-color: #ddd;
 }
 /* end of qtip CSS*/
+
+/* expression gradient CSS */
+#exprGradientCanvas{
+	position: absolute;
+	z-index: -1;
+}
+/* end expression gradient CSS */
 
 /* end cytoscape CSS */
