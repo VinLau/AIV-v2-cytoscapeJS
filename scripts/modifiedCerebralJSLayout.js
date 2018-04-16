@@ -172,7 +172,7 @@ window.cerebralNamespace.options = { // NOTE: changed from global variable to na
                             if (k === 11) { //i.e. nucleus
                                 return {
                                     x: Math.round((Math.random() * width) + 5),
-                                    y: Math.round((Math.random() * height) + heightAcum - 10) //do not overlay over DNA nodes
+                                    y: Math.round((Math.random() * height) + heightAcum - 25) //do not overlay over DNA nodes
                                 };
                             }
 

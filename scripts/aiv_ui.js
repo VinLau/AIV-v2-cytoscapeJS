@@ -35,10 +35,12 @@
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
         getXMLSourcesModifyDropdown();
-        getXMLTissuesFromConditionAJAX();
+        getXMLTissuesFromConditionAJAX(AIVref);
         tissueDropdownChangeSelectColor(AIVref);
         expressionQtip();
         expressionOverlayEListener(AIVref);
+        thresholdSwitchEListener(AIVref);
+        exprThresholdKeyEListener(AIVref);
         setTableFilter(AIVref);
         setCSVExport();
         setPNGExport(AIVref);
@@ -200,7 +202,7 @@
      * @function getXMLTissuesFromConditionAJAX - When a user clicks on an experimental condition outside of the
      * 'Select Condition' we will then populate and enable the tissue dropdown and overlay expression checkbox
      */
-    function getXMLTissuesFromConditionAJAX(){
+    function getXMLTissuesFromConditionAJAX(AIVObj){
         document.getElementById('dropdownSource').addEventListener('change', function(event){
             let secondDropdown = $('#dropdownTissues');
             if (event.target.value === "Select Source"){
@@ -225,6 +227,9 @@
                     document.getElementById("exprnOverlayChkAndLabel").classList.remove('not-allowed');
                     document.getElementById("exprnOverlayChkbox").disabled = false;
                     $('#exprnOverlayChkAndLabel').qtip('disable', true);
+                    AIVObj.exprLoadState = {absolute: false, relative: false};
+                    if (document.getElementById('exprnOverlayChkbox').checked) {                    overlayExpression(AIVObj, true);
+                    } //only run cb when expr overlay turned on
                 });
         });
     }
@@ -238,10 +243,9 @@
         document.getElementById('dropdownTissues').addEventListener('change', function(event){
             let dropdown = event.target;
             dropdown.style.backgroundColor = dropdown[dropdown.selectedIndex].style.backgroundColor;
-            if (document.getElementById('exprnOverlayChkbox').checked){
-                // reset expr state variable and overlay the app/redraw gradient
-                AIVObj.exprLoadState = {absolute: false, relative: false};
-                overlayExpression(AIVObj);
+            AIVObj.exprLoadState = {absolute: false, relative: false};
+            if (document.getElementById('exprnOverlayChkbox').checked) {
+                overlayExpression(AIVObj, true);
             }
         });
     }
@@ -260,26 +264,54 @@
     }
 
     function expressionOverlayEListener(AIVObj){
-        document.getElementById('exprnOverlayChkbox').addEventListener('change', function(){
-            overlayExpression(AIVObj);
+        document.getElementById('exprnOverlayChkbox').addEventListener('change', function(event){
+            let exprThrJq = $('#exprThresholdChkbox');
+            if (exprThrJq.is(':checked')){
+                console.log("I am here?");
+                exprThrJq.prop('checked', false);
+                overlayExpression(AIVObj, "resetThresholdOnly");
+            }
+            else {
+                overlayExpression(AIVObj, false);
+            }
+            if (!event.target.checked){
+                document.getElementById("exprGradientCanvas").getContext("2d").clearRect(0, 0, 65, 300);
+                retnExprCSSLoadGradient(AIVObj).update(); // update node CSS to baseline stylesheet
+            }
         });
     }
 
     function thresholdSwitchEListener(AIVObj) {
         document.getElementById('exprThresholdChkbox').addEventListener('change', function(){
-
+            console.log('exprThresholdChkbox e listener');
+            overlayExpression(AIVObj, "resetThresholdOnly");
         });
     }
 
-    function overlayExpression (AIVObj){
-        if (!document.getElementById('exprnOverlayChkbox').checked){
-            document.getElementById("exprGradientCanvas").getContext("2d").clearRect(0, 0, 65, 300);
-            retnExprCSSLoadGradient(AIVObj).update(); // update to baseline stylesheet
-            if (document.getElementById('exprThresholdChkbox').checked){
-                document.getElementById('exprThresholdChkbox').click();
+    function exprThresholdKeyEListener(AIVObj) {
+        let timeout = null; // initialize timer closure variable for listening when user stops typing
+        document.getElementById('exprThreshold').addEventListener('keypress', function (event) {
+            if (!document.getElementById('exprnOverlayChkbox').checked) {return;} //only run cb when expr overlay turned on
+            if (event.key === "-") {event.preventDefault(); return;} // prevent negative numbers
+            clearTimeout(timeout);
+            timeout = setTimeout(function(){ // rerun the expr overlay typing stopped for 0.5s
+                overlayExpression(AIVObj, "resetThresholdOnly");
+            }, 500);
+        });
+        document.getElementById('exprThreshold').addEventListener('paste', function (event) {
+            if (!document.getElementById('exprnOverlayChkbox').checked) {return;} //only run cb when expr overlay turned on
+            let clipboardData = event.clipboardData || window.clipboardData;
+            let pastedData = clipboardData.getData('Text');
+            if (pastedData.toString().match(/^\d+$/)){
+                overlayExpression(AIVObj, "resetThresholdOnly");
+                return;
             }
-            return; //only process for when checked
-        }
+            event.preventDefault(); //prevent pasting in weird non numbers
+        });
+    }
+
+    function overlayExpression (AIVObj, options){
+        let inputMode = $('input[name=expression_mode]:checked').val();
         let firstDropdown = document.getElementById('dropdownSource');
         let secondDropdown = document.getElementById('dropdownTissues');
         let geneList = [];
@@ -289,7 +321,6 @@
                 geneList.push(nodeID);
             }
         });
-        let inputMode = $('input[name=expression_mode]:checked').val();
         let postObject = {
             geneIDs: geneList,
             species: "arabidopsis",
@@ -303,12 +334,18 @@
         let expLdState = AIVObj.exprLoadState;
         console.log("load state", expLdState);
         if (inputMode === "absolute"){
-            if (!expLdState.absolute){
-                createExpressionAJAX(postObject, inputMode, AIVObj);
+            if (expLdState.absolute && options === "resetThresholdOnly"){ //i.e. no need to submit an AJAX call, just readjust the thresholds with user defined value
+                console.log('resetThresholdOnly conditional');
+                retnExprCSSLoadGradient(AIVObj, inputMode, expLdState.absolute.lowerBd, expLdState.absolute.upperBd, true).update();
             }
-            else {
+            else if (expLdState.absolute) { // i.e. simple toggle on and off caching canvas conditional
+                console.log('toggle conditional');
                 document.getElementById("exprGradientCanvas").getContext("2d").drawImage(expLdState.absolute.cache.canvas, 0, 0);
-                retnExprCSSLoadGradient(AIVObj, "absolute", expLdState.absolute.lowerBd , expLdState.absolute.upperBd, false).update();
+                retnExprCSSLoadGradient(AIVObj, inputMode, expLdState.absolute.lowerBd , expLdState.absolute.upperBd, false).update();
+            }
+            else if (!expLdState.absolute){ // i.e. initial load of the expression data
+                console.log('initial load conditional');
+                createExpressionAJAX(postObject, inputMode, AIVObj);
             }
         }
         else if (inputMode === "relative"){
@@ -330,42 +367,44 @@
             dataType: 'json'
         })
             .then((res)=>{
-                if (mode === "absolute") {
-                    absoluteModeOverlay(res, AIVObj);
-                }
+                parseExprData(res, AIVObj, mode);
             })
             .catch((err)=>{
 
             });
 
-        function absoluteModeOverlay(resData, AIVRef){
+        function parseExprData(resData, AIVRef, absOrRel){
             let maxThreshold = 0;
-            let userDefinedLimit = document.getElementById('exprThresholdChkbox').checked;
+            let minThreshold;
             for (let geneExpKey of Object.keys(resData)){
                 let geneExp = resData[geneExpKey];
                 let expressionVal = geneExp.mean;
                 if (expressionVal <= 0 ){continue;} // don't need any more parsing if we don't have a nonzero value!
                 AIVRef.cy.$id(`Protein_${geneExpKey}`)
                     .data({
-                    absExpMn : expressionVal,
-                    absExpSD : geneExp.sd
+                        absExpMn : expressionVal,
+                        absExpSd : geneExp.sd
                     });
-                if (!userDefinedLimit){
-                    if (expressionVal > maxThreshold){
-                        maxThreshold = geneExp.mean; // Itereate N times to find max expression level
-                    }
+                if (expressionVal > maxThreshold){
+                        maxThreshold = expressionVal; // Iterate N times to find max expression level
                 }
             }
-            if (userDefinedLimit) {
-                maxThreshold = Number(document.getElementById('exprThreshold').value);
+            console.log(maxThreshold, "max");
+            if (absOrRel === "absolute"){
+                minThreshold = 0;
             }
-            retnExprCSSLoadGradient(AIVRef, "absolute", 0, maxThreshold, true).update();
+            else if (absOrRel === "relative"){
+                minThreshold = true; // todo change
+            }
+            retnExprCSSLoadGradient(AIVRef, absOrRel, minThreshold, maxThreshold, true).update();
         }
     }
 
     function retnExprCSSLoadGradient (AIVObj, mode, lowerBound, upperBound, initLoad) {
         // having the below 2 base CSS selectors is especially helpful in case we don't get an expr value for an AGI such that the previous colour won't still be there
         let loadState = AIVObj.exprLoadState;
+        let userDefinedLimit = document.getElementById('exprThresholdChkbox').checked;
+        let thresHold = Number(document.getElementById('exprThreshold').value) || 0;
         let baseCSSObj = AIVObj.cy.style()
             .selector('node[id ^= "Protein_At"]')
                 .css({
@@ -375,25 +414,33 @@
                 .css({
                     'background-color': AIVObj.searchNodeColor,
                 });
+        let softUpperBound;
+        if (userDefinedLimit && thresHold > 0) {
+            softUpperBound = thresHold;
+        }
+        else { //i.e. if user did not define a threshold
+            softUpperBound = upperBound;
+        }
+        console.log('softupperbound', softUpperBound);
         if (mode === "absolute"){
             baseCSSObj
                 .selector('node[?absExpMn]')
                 .css({
-                    'background-color' : `mapData(absExpMn, ${lowerBound}, ${upperBound}, yellow, red)`,
+                    'background-color' : `mapData(absExpMn, ${lowerBound}, ${softUpperBound}, yellow, red)`,
                 });
-            if (initLoad){
-                // Below line: cache the canvas ctx and also use it as a truthy value if user chooses to turn the expr overlay switch on and off repeatedly
-                loadState[mode] = {
-                    cache : createExprGradient(lowerBound, Math.round(upperBound), "yellow", "red", "abs", AIVObj),
-                    upperBd : upperBound,
-                    lowerBd : lowerBound,
-                };
-                console.log('what is this?', loadState[mode]);
-                document.getElementById("exprGradientCanvas").getContext("2d").drawImage(loadState[mode].cache.canvas, 0, 0);
-            }
         }
         else if (mode === "relative"){
 
+        }
+        if (initLoad){
+            // Below line: cache the canvas ctx and also use it as a truthy value if user chooses to turn the expr overlay switch on and off repeatedly so we don't need to redraw (perf boost)
+            loadState[mode] = {
+                cache : createExprGradient(lowerBound, Math.round(softUpperBound), "yellow", "red", "abs", AIVObj),
+                upperBd : upperBound,
+                lowerBd : lowerBound,
+            };
+            console.log('what is this?', loadState[mode]);
+            document.getElementById("exprGradientCanvas").getContext("2d").drawImage(loadState[mode].cache.canvas, 0, 0);
         }
         return baseCSSObj;
     }

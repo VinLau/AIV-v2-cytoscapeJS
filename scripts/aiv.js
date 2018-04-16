@@ -147,7 +147,12 @@
                     AIV.exprLoadState = {absolute: false, relative: false};
                     AIV.coseParentNodesOnCyCore = false;
                     AIV.locCompoundNodes = [];
-				}
+
+                    // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr radient, reinstate it manually
+                    if(document.getElementById('exprGradientCanvas') !== null){
+                        $('#cy').append('<canvas id="exprGradientCanvas" width="55" height="300"></canvas>');
+                    }
+                }
 				AIV.initializeCy();
 
 				AIV.loadData();
@@ -740,6 +745,7 @@
         this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
             let protein = event.target;
 			let agiName = protein.data("name");
+			let exprOverlayChkbox = document.getElementById('exprnOverlayChkbox');
             protein.qtip(
                 {
                     overwrite: false, //make sure tooltip won't be overriden once created
@@ -765,6 +771,10 @@
 											if (AIV.SUBA4LoadState){
 												HTML += `<p>${AIV.displaySUBA4qTipData(protein)}</p>`;
 											}
+											if (AIV.exprLoadState.absolute && exprOverlayChkbox.checked){
+											    HTML += `<p>Mean Expr: ${protein.data('absExpMn')}</p>
+                                                         <p>SD Expr:   ${protein.data('absExpSd')}</p>`;
+                                            }
 											return HTML;
                                         }
 								},
@@ -1829,21 +1839,44 @@
 		// console.log(ABIsArr);
 		this.createGeneSummariesAjaxPromise(ABIsArr)
 			.then(res => {
-                AIV.geneAnnoLoadState = true;
+                this.geneAnnoLoadState = true;
 				for(let gene of Object.keys(res)){
 					let desc = res[gene].brief_description;
 					let synonyms = res[gene].synonyms;
 					$(`.${gene}-annotate`).text(`${res[gene].brief_description}`);
-					AIV.geneAnnoFetched[gene] = {
+					this.geneAnnoFetched[gene] = {
 						desc : desc,
                         synonyms : synonyms
 					};
+					let firstSyn = synonyms[0];
+                    let selector = this.cy.$(`#Protein_${gene}`);
+                    if (firstSyn !== null){
+                        selector.data('annotatedName', firstSyn + "\n" + selector.data('name'));
+					}
+					else{
+                        selector.data('annotatedName', selector.data('name'));
+                    }
 				}
                 this.cy.filter("node[id ^= 'Effector']").forEach(function(effector){
                     $(`.${effector.data('name')}-annotate`).text("null");
                 });
+                this.returnGeneNameCSS().update();
             })
 			.catch(err => (console.log("err in gene summary fetching", err)));
+	};
+
+    /**
+	 * @function returnGeneNameCSS - return a style object such to change the labels
+     * @return {Object} - cytoscape css object
+     */
+	AIV.returnGeneNameCSS = function(){
+		return (this.cy.style()
+					.selector('node[id ^= "Protein_At"]')
+					.css({
+						'text-wrap': 'wrap',
+						'label' : 'data(annotatedName)',
+					})
+		);
 	};
 
     /**
