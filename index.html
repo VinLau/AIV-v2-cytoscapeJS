@@ -226,12 +226,12 @@
                             </label>
                         </form>
                         <section class="slider-checkbox">
-                            <input id="exprThresholdChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
-                            <label class="label-checkbox" for="exprThresholdChkbox">
+                            <input id="exprLimitChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
+                            <label class="label-checkbox" for="exprLimitChkbox">
                                 Expr Limit
                             </label>
                         </section>
-                        <input id="exprThreshold" type="number" min="1">
+                        <input id="exprThreshold" type="number" min="1" placeholder="raw expr">
                     </div>
 
                     <div class="flex-container-export">
@@ -247,7 +247,7 @@
             <!-- Page content -->
             <div>
                 <div id="cy">
-                    <canvas id="exprGradientCanvas" width="55" height="300"></canvas>
+                    <canvas id="exprGradientCanvas" width="70" height="300"></canvas>
                 </div>
                 <div id="loading">
                 </div>
@@ -258,7 +258,7 @@
         <!-- Modals -->
 
         <!-- Form -->
-        <div id="formModal" class="modal fade">
+        <div id="formModal" class="modal fade" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -335,7 +335,7 @@
         </div> <!-- Form -->
 
         <!-- Legend -->
-        <div id="LegendModal" class="modal fade">
+        <div id="LegendModal" class="modal fade" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -347,14 +347,12 @@
                     <div class="modal-body">
                         <img src="images/legendAIV.png" alt="Legend">
                     </div>
-                    <div class="modal-footer">
-                    </div>
                 </div>
             </div>
         </div> <!-- Legend -->
 
         <!-- PNG Export -->
-        <div id="PNGModal" class="modal fade centered-modal">
+        <div id="PNGModal" class="modal fade centered-modal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -371,7 +369,7 @@
         </div>
 
         <!-- JSON Export -->
-        <div id="JSONModal" class="modal fade centered-modal">
+        <div id="JSONModal" class="modal fade centered-modal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -397,7 +395,7 @@
         </div>
 
         <!-- CSV Export -->
-        <div id="CSVModal" class="modal fade centered-modal">
+        <div id="CSVModal" class="modal fade centered-modal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">

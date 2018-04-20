@@ -148,10 +148,8 @@
                     AIV.coseParentNodesOnCyCore = false;
                     AIV.locCompoundNodes = [];
 
-                    // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr radient, reinstate it manually
-                    if(document.getElementById('exprGradientCanvas') !== null){
-                        $('#cy').append('<canvas id="exprGradientCanvas" width="55" height="300"></canvas>');
-                    }
+                    // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
+					$('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
                 }
 				AIV.initializeCy();
 
@@ -774,6 +772,10 @@
 											if (AIV.exprLoadState.absolute && exprOverlayChkbox.checked){
 											    HTML += `<p>Mean Expr: ${protein.data('absExpMn')}</p>
                                                          <p>SD Expr:   ${protein.data('absExpSd')}</p>`;
+                                            }
+                                            if (AIV.exprLoadState.relative && exprOverlayChkbox.checked){
+                                                HTML += `<p>Log2 Expr: ${protein.data('absExpLog2')}</p>
+                                                         <p>Fold Expr: ${protein.data('absExpFold')}</p>`;
                                             }
 											return HTML;
                                         }
@@ -1535,7 +1537,7 @@
 	 * @returns {string} - url for the HTTP request
      */
     AIV.createGETMapManURL = function () {
-		var mapmanURL = "https://bar.utoronto.ca/~asher/bar_mapman.php?request=[";
+		var mapmanURL = "https://bar.utoronto.ca/~asher/vincent/bar_mapman.php?request=[";
         this.parseProteinNodes((nodeID) => mapmanURL +=`"${nodeID}",`);
         mapmanURL = mapmanURL.slice(0,-1); //remove last ','
         mapmanURL += "]";
@@ -1873,7 +1875,6 @@
 		return (this.cy.style()
 					.selector('node[id ^= "Protein_At"]')
 					.css({
-						'text-wrap': 'wrap',
 						'label' : 'data(annotatedName)',
 					})
 		);
