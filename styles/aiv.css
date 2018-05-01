@@ -576,6 +576,10 @@
 	position: absolute;
 	z-index: -1;
 }
+
+#exprThreshold{
+	width: 70px;
+}
 /* end expression gradient CSS */
 
 /* end cytoscape CSS */

@@ -292,10 +292,10 @@
             let exprThr = document.getElementById('exprThreshold');
             exprThr.value = "";
             if ($(this).val() === "absolute"){
-                exprThr.placeholder = "raw expr";
+                exprThr.placeholder = "raw#";
             }
             else {
-                exprThr.placeholder = "log2 ratio";
+                exprThr.placeholder = "log2";
             }
             if (document.getElementById('exprnOverlayChkbox').checked) {
                 overlayExpression(AIVObj, true);
@@ -395,7 +395,7 @@
             let maxThreshold = 0;
             for (let geneExpKey of Object.keys(resData)){
                 let geneExp = resData[geneExpKey];
-                let expressionVal = geneExp.mean || geneExp.log_2_value;
+                let expressionVal = geneExp.mean || Math.abs(geneExp.log_2_value);
                 if (absMode){
                     AIVRef.cy.$id(`Protein_${geneExpKey}`)
                         .data({

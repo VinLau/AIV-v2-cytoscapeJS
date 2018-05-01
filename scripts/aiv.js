@@ -180,10 +180,12 @@
 	 */
 	AIV.getCySpreadLayout = function() {
 		let layout = {};
-		layout.name = 'spread';
-		layout.minDist = 25;
+		layout.name = 'cose';
+		// layout.minDist = 25;
+        layout.nodeDimensionsIncludeLabels = true;
+		layout.nodeRepulsion = 25000;
 		// layout.padding = 1;
-        layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
+        // layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
         layout.stop = function(){ //this callback gets ran when layout is finished
             AIV.defaultZoom = AIV.cy.zoom();
             AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
@@ -295,49 +297,53 @@
                     'font-size' : 18,
                     'font-family' : "Verdana, Geneva, sans-serif",
                 })
-			.selector('#cytoskeletonPCT') //for compound nodes
+			.selector('#cytoskeleton') //for compound nodes
 				.style({
 					'background-color': '#e8e5e5',
 				})
-			.selector('#cytosolPCT') //for compound nodes
+			.selector('#cytosol') //for compound nodes
                 .style({
                     'background-color': '#ffe7ff',
                 })
-			.selector('#endoplasmicReticulumPCT') //for compound nodes
+			.selector('[id="endoplasmic reticulum"]') //for compound nodes
                 .style({
                     'background-color': '#ff8690',
                 })
-			.selector('#extracellularPCT') //for compound nodes
+			.selector('#extracellular') //for compound nodes
                 .style({
                     'background-color': '#ffffdb',
                 })
-			.selector('#golgiPCT') //for compound nodes
+			.selector('#golgi') //for compound nodes
                 .style({
                     'background-color': '#ffff8f',
                 })
-			.selector('#mitochondrionPCT') //for compound nodes
+			.selector('#mitochondrion') //for compound nodes
                 .style({
                     'background-color': '#dfffff',
                 })
-			.selector('#nucleusPCT') //for compound nodes
+			.selector('#nucleus') //for compound nodes
                 .style({
                     'background-color': '#4f81ff',
                 })
-			.selector('#peroxisomePCT') //for compound nodes
+			.selector('#peroxisome') //for compound nodes
                 .style({
                     'background-color': '#ce69ce',
                 })
-			.selector('#plasmaMembranePCT') //for compound nodes
+			.selector('[id="plasma membrane"]') //for compound nodes
                 .style({
                     'background-color': '#ffd350',
                 })
-			.selector('#plastidPCT') //for compound nodes
+			.selector('#plastid') //for compound nodes
                 .style({
                     'background-color': '#8bff96',
                 })
-			.selector('#vacuolePCT') //for compound nodes
+			.selector('#vacuole') //for compound nodes
                 .style({
                     'background-color': '#ffff70',
+                })
+			.selector('#unknown') //for compound nodes
+                .style({
+                    'background-color': '#fff',
                 })
         );
 	};
@@ -430,15 +436,14 @@
 
     /**
 	 * @function addCompoundNode - generic function to add compound nodes to the cy core
-     * @param idOfParent - id of compound node, 'id'
-     * @param nameOfParent - name of the compound node that will be the label
+     * @param idOfParent - id of compound node, 'id', example "nucleus"
      */
-	AIV.addCompoundNode = function(idOfParent, nameOfParent){
+	AIV.addCompoundNode = function(idOfParent){
 		AIV.cy.add({
 			group: "nodes",
 			data: {
 				id : idOfParent,
-				name: nameOfParent,
+				name: idOfParent,
                 compoundNode: true, //data property used instead of a class because we cannot select nodes by NOT having a class
 			},
 		});
@@ -450,8 +455,7 @@
     AIV.addLocalizationCompoundNodes = function(){
         for (let i = 0; i < this.locCompoundNodes.length; i++) {
             // console.log(this.locCompoundNodes[i]);
-            let locationBeautified = this.beautifiedLocalization(this.locCompoundNodes[i]);
-            this.addCompoundNode(this.locCompoundNodes[i], locationBeautified);
+            this.addCompoundNode(this.locCompoundNodes[i]);
         }
         AIV.coseParentNodesOnCyCore = true; // we have added compound nodes, change the state variable
     };
@@ -470,18 +474,18 @@
      * @function removeAndAddNodesForCompoundNodes - Unfortuantely cytoscapejs cannot add compound nodes on the fly so we have to remove old nodes and add them back on with a parent property, hence this function
      */
     AIV.removeAndAddNodesForCompoundNodes = function(){
-        // console.log("what is this? kek", this.cy.elements('node[ id ^= "Protein_"]').size());
+        // console.log("removeAndAddNodesForCompoundNodes 1", this.cy.elements('node[ id ^= "Protein_"]').size());
         let oldEdges = this.cy.elements('edge');
         oldEdges.remove();
-        let oldNodes = this.cy.elements('node[ id ^= "Protein_"], node[ id ^= "Effector"]');
+        let oldNodes = this.cy.elements('node[ id ^= "Protein_"], node[ id ^= "Effector_"]');
 		oldNodes.remove();
 
         let newNodes = [];
 
-        // console.log("what is this? lol", oldNodes.size());
+        // console.log("removeAndAddNodesForCompoundNodes 2", oldNodes.size());
         oldNodes.forEach(function(oldNode){
         	let newData = Object.assign({}, oldNode.data()); // let us make a copy of the previous object not directly mutate it. Hopefully the JS garbage collector will clear the memory "https://stackoverflow.com/questions/37352850/cytoscape-js-delete-node-from-memory"
-        	newData.parent = oldNode.data("localizationMajority");
+        	newData.parent = oldNode.data("localization");
         	newNodes.push({
 				group: "nodes",
 				data: newData,
@@ -758,10 +762,14 @@
                     						let HTML = "";
                     						if (AIV.geneAnnoLoadState){
                     							let gene = AIV.geneAnnoFetched[agiName];
-                    							HTML += `<p>Annotation: ${gene.desc}</p>`;
-                    							if (gene.synonyms.length > 0) {
-                    								HTML += `<p>Synoynms: ${gene.synonyms.join(', ')}</p>`;
-												}
+                    							if (typeof gene !== "undefined"){
+                    								if (typeof gene.desc !== "undefined"){
+                                                        HTML += `<p>Annotation: ${gene.desc}</p>`;
+                                                    }
+                                                    if (gene.synonyms[0] !== null) {
+                                                        HTML += `<p>Synoynms: ${gene.synonyms.join(', ')}</p>`;
+                                                    }
+                                                }
 											}
 											if (AIV.mapManLoadState){
                     							HTML += `<p>${AIV.showMapMan(protein)}</p>`;
@@ -835,20 +843,14 @@
      */
     AIV.displaySUBA4qTipData = function(protein) {
         if (this.SUBA4LoadState === false){ return ""; }
-        var baseString = "";
-        if (protein.data('localizationData').cytoskeletonPCT){ baseString += `<p> Cytoskeleton loc. : ${(protein.data('localizationData').cytoskeletonPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').cytosolPCT){ baseString += `<p> Cytosol loc. : ${(protein.data('localizationData').cytosolPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').endoplasmicReticulumPCT){ baseString += `<p> Endo. Reticulum loc. : ${(protein.data('localizationData').endoplasmicReticulumPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').extracellularPCT){ baseString += `<p> Extracellular Matrix loc. : ${(protein.data('localizationData').extracellularPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').golgiPCT){ baseString += `<p> Golgi loc. : ${(protein.data('localizationData').golgiPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').mitochondrionPCT){ baseString += `<p> Mitochondrion loc. : ${(protein.data('localizationData').mitochondrionPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').nucleusPCT){ baseString += `<p> Nucleus loc. : ${(protein.data('localizationData').nucleusPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').plasmaMembranePCT){ baseString += `<p> Plasma Membrane loc. : ${(protein.data('localizationData').plasmaMembranePCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').peroxisomePCT){ baseString += `<p> Peroxisome loc. : ${(protein.data('localizationData').peroxisomePCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').plastidPCT){ baseString += `<p> Plastid loc. : ${(protein.data('localizationData').plastidPCT*100).toFixed(2)}% </p>`;}
-        if (protein.data('localizationData').vacuolePCT){ baseString += `<p> Vacuole loc. : ${(protein.data('localizationData').vacuolePCT*100).toFixed(2)}% </p>`;}
-
-        // console.log(baseString);
+        let baseString = "";
+        let locDataRaw = protein.data('localizationData');
+        for (let locDataKey of Object.keys(locDataRaw)){
+        	let locScore = locDataRaw[locDataKey];
+        	if (locDataRaw[locDataKey]) {
+        		baseString += `<p>${locDataKey} : ${(locScore * 100).toFixed(2)}%</p>`;
+			}
+		}
         return baseString;
     };
 
@@ -1254,7 +1256,7 @@
 	};
 
     /**
-	 * @function beautifiedLocalization - using jQuery, add the state variable that contains the html table string to the DOM
+	 * @function addInteractionRowsToDOM - using jQuery, add the state variable that contains the html table string to the DOM
      */
     AIV.addInteractionRowsToDOM = function(){
         $('#csvTable').find("tbody").append(this.tempHtmlTableStr);
@@ -1292,67 +1294,57 @@
 	AIV.addLocalizationDataToNodes = function(SUBADATA) {
 		AIV.cy.startBatch();
 
-		SUBADATA.forEach(function(geneSUBAData){
-			var denoTotal = 0;
-
-			if (typeof geneSUBAData.data !== "undefined"){ //For nodes without any localization data
+        Object.keys(SUBADATA).forEach(function(geneAGIName){
+            let nodeID = geneAGIName; //AT1G04170 to At1g04170
+            let geneSUBAData = SUBADATA[geneAGIName];
+			let denoTotal = 0;
+			let nonZeroLocArr = []; // store non-zero locs for parsing, i.e. '["nucleus", "cytosol"]'
+			if (Object.keys(geneSUBAData.data).length){ //For nodes with any localization data
                 // for loop creates a denominator score for each gene, so we can count pie chart data
                 for (let cellularLocation of Object.keys(geneSUBAData.data)) {
-                    // console.log(geneSUBAData.id, cellularLocation, geneSUBAData.data[cellularLocation]);
-                    if (! isNaN(geneSUBAData.data[cellularLocation])){ //if property value is a number...
-                        denoTotal += geneSUBAData.data[cellularLocation]; //add to denominator
+					let locData = geneSUBAData.data[cellularLocation];
+                    if (! isNaN(locData)){ //if property value is a number...
+                        denoTotal += locData; //add to denominator
                         // console.log("TRUE!");
+						nonZeroLocArr.push(cellularLocation);
                     }
                 }
-			}
-            // console.log(geneSUBAData.id, "total :", denoTotal);
+            // console.log(nodeID, "total :", denoTotal);
 
-			var nodeID = "A" + geneSUBAData.id.substring(1).toLowerCase(); //AT1G04170 to At1g04170
-            if (typeof geneSUBAData.data !== "undefined"){
                 AIV.cy.$('node[name = "' + nodeID + '"]')
 					.data({
                         predictedSUBA :  ( geneSUBAData.includes_predicted === "yes" ),
                         experimentalSUBA : ( geneSUBAData.includes_experimental === "yes" ),
-						localizationData: {
-                            cytoskeletonPCT : countLocScore ( geneSUBAData.data.cytoskeleton, denoTotal ),
-                            cytosolPCT : countLocScore ( geneSUBAData.data.cytosol, denoTotal ),
-                            endoplasmicReticulumPCT : countLocScore ( geneSUBAData.data['endoplasmic reticulum'], denoTotal ),
-                            extracellularPCT : countLocScore ( geneSUBAData.data.extracellular, denoTotal ),
-                            golgiPCT : countLocScore ( geneSUBAData.data.golgi, denoTotal ),
-                            mitochondrionPCT : countLocScore ( geneSUBAData.data.mitochondrion, denoTotal ),
-                            nucleusPCT : countLocScore ( geneSUBAData.data.nucleus, denoTotal ),
-                            peroxisomePCT : countLocScore ( geneSUBAData.data.peroxisome, denoTotal ),
-                            plasmaMembranePCT : countLocScore ( geneSUBAData.data['plasma membrane'], denoTotal ),
-                            plastidPCT : countLocScore ( geneSUBAData.data.plastid, denoTotal ),
-                            vacuolePCT : countLocScore ( geneSUBAData.data.vacuole, denoTotal ),
-						},
+						localizationData: retNonZeroLocs( geneSUBAData.data, nonZeroLocArr, denoTotal),
 					});
+            }
+            else { //For nodes without any localization data
+                AIV.cy.$('node[name = "' + nodeID + '"]')
+                    .data({
+                        predictedSUBA : false,
+                        experimentalSUBA : false,
+                        localizationData: {},
+						localization: "unknown"
+                    });
             }
 
 		});
 
 		AIV.cy.endBatch();
 
-        /**
-		* @function countLocScore - helper function to return percentages (note that it will be .98 rather than 98) and typecheck
-		*
-		* @param {number} localizationScore - as the absolute score we receive from the response JSON
-		* @param {number} deno - as the calculated total denominator from all the various scores of different locations
-		*/
-		function countLocScore (localizationScore, deno){
-			if (localizationScore === undefined){
-				return 0;
-			}
-			else {
-				return (localizationScore/deno);
-			}
+		function retNonZeroLocs(subaLocData, arrayOfLocs, locDenominator){
+            let retObj = {};
+			arrayOfLocs.forEach(function(locName){
+            	retObj[locName] = subaLocData[locName] / locDenominator;
+			});
+			return retObj;
 		}
     };
 
 	/**
 	 * @namespace {object} AIV
 	 * @function createSVGPIeDonutCartStr -
-	 * This function will take in all the 'PCT' data properties that a node has (for example, nucleusPCT)
+	 * This function will take in all the location data properties that a node has (for example, 'nucleus')
 	 * to be used to create a SVG donut string which will be set as the background image. I intentionally
 	 * made this function based on the AIV.nodeSize property such that it can be more scalable (literally
 	 * and figuratively).
@@ -1362,8 +1354,9 @@
 	 * Credits to: https://medium.com/@heyoka/scratch-made-svg-donut-pie-charts-in-html5-2c587e935d72
 	 */
 	AIV.createSVGPieDonutCartStr = function(AGIGene) {
-		var AGIGeneLocData = AGIGene.data().localizationData ;
-		var cyNodeSize = Number(AGIGene.style('height').slice(0, -2)); //Get the size of the node, change from '35px' {string} to 35 {number}
+		let nodeData = AGIGene.data();
+		var AGIGeneLocData = nodeData.localizationData ;
+		let cyNodeSize = nodeData.searchGeneData ? this.searchNodeSize : this.nodeSize ;
 		var SVGwidthheight = cyNodeSize + 10;
 		var donutCxCy = SVGwidthheight/2;
         var radius, strokeWidth;
@@ -1394,16 +1387,17 @@
         pctAndColorArray.sort((itemOne, itemTwo) => itemTwo.pct - itemOne.pct);
 
         // Set a localization data property in the node (highest percent is assumed to be the localization)
-		if (pctAndColorArray.length === 0){
-            AGIGene.data('localization', "Unknown");
+		if (pctAndColorArray.length === 0){ // i.e. if the localizationData Obj {} is empty
+            if (this.locCompoundNodes.indexOf("unknown") === -1 ){
+                this.locCompoundNodes.push("unknown"); // append to our state variable which stores unique majority localizations, used to later make compound nodes
+            }
         }
-        else { //remove 'PCT'
+        else {
 			AGIGene.data({
-                localization : this.beautifiedLocalization(pctAndColorArray[0].loc),
-                localizationMajority : pctAndColorArray[0].loc, //have this data for making compound nodes
+                localization : pctAndColorArray[0].loc,
 			});
             if (this.locCompoundNodes.indexOf(pctAndColorArray[0].loc) === -1 ){
-				this.locCompoundNodes.push(pctAndColorArray[0].loc); // append to our state variables which (majority) localizations nodes have, useful for compound nodes
+				this.locCompoundNodes.push(pctAndColorArray[0].loc); // append to our state variable which stores unique majority localizations, used to later make compound nodes
 			}
         }
 
@@ -1427,33 +1421,20 @@
 
         // Helper function to determine/return which colour to return in the array of objects above
         function returnLocColor (localizationString) {
-			if (localizationString === "cytoskeletonPCT"){ return '#575454';}
-			else if (localizationString === "cytosolPCT"){ return '#e0498a';}
-            else if (localizationString === "endoplasmicReticulumPCT"){ return '#d1111b';}
-            else if (localizationString === "extracellularPCT"){ return '#ffd672';}
-            else if (localizationString === "golgiPCT"){ return '#a5a417';}
-            else if (localizationString === "mitochondrionPCT"){ return '#41abf9';}
-            else if (localizationString === "nucleusPCT"){ return '#0032ff';}
-            else if (localizationString === "peroxisomePCT"){ return '#650065';}
-            else if (localizationString === "plasmaMembranePCT"){ return '#edaa27';}
-            else if (localizationString === "plastidPCT"){ return '#13971e';}
-            else if (localizationString === "vacuolePCT"){ return '#ecea3a';}
+			if (localizationString === "cytoskeleton"){ return '#575454';}
+			else if (localizationString === "cytosol"){ return '#e0498a';}
+            else if (localizationString === "endoplasmic reticulum"){ return '#d1111b';}
+            else if (localizationString === "extracellular"){ return '#ffd672';}
+            else if (localizationString === "golgi"){ return '#a5a417';}
+            else if (localizationString === "mitochondrion"){ return '#41abf9';}
+            else if (localizationString === "nucleus"){ return '#0032ff';}
+            else if (localizationString === "peroxisome"){ return '#650065';}
+            else if (localizationString === "plasma membrane"){ return '#edaa27';}
+            else if (localizationString === "plastid"){ return '#13971e';}
+            else if (localizationString === "vacuole"){ return '#ecea3a';}
         }
 
 	};
-
-    /**
-	 * @namespace {object} AIV
-	 * @function beautifiedLocalization - helper function that beautifes strings, especially from localizations to more reader friendly text
-     * @param {string} dirtyString - take in 'plasmaMembranePCT'
-     * @returns {string} - beautufied string with format such as Plasma Membrane
-     */
-	AIV.beautifiedLocalization = function (dirtyString) {
-        var beauty = dirtyString.substring(0, dirtyString.length-3); // remove PCT
-        beauty = beauty.replace(/([A-Z])/g, ' $1').trim(); // add spaces after capitals
-        beauty = beauty.charAt(0).toUpperCase() + beauty.slice(1); //capitalize first letter
-        return beauty;
-    };
 
     /**
 	 * @namespace {object} AIV
@@ -1485,13 +1466,14 @@
         this.parseProteinNodes(function(node){
             let ulString = "<ul>";
             let locData = node.data('localizationData');
+            console.log('FIX this, this loops too much!');
             let arrayOfLocsSorted = Object.keys(locData).sort(function(a,b){
                 return - (locData[a] - locData[b]);
             });
             for (let i = 0; i < arrayOfLocsSorted.length; i++) {
                 let locPercent = locData[arrayOfLocsSorted[i]];
                 if (locPercent > 0){
-                    ulString += `<li> ${AIV.beautifiedLocalization(arrayOfLocsSorted[i])}: ${(locPercent*100).toFixed(2)}%  </li>`;
+                    ulString += `<li> ${arrayOfLocsSorted[i]}: ${(locPercent*100).toFixed(2)}%  </li>`;
                 }
             }
             ulString += "</ul>";
@@ -1626,7 +1608,19 @@
         this.cy.endBatch();
     };
 
-
+    /**
+     * @namespace {object} AIV
+     * @function effectorsLocHouseCleaning - purpose of this function is to fill in the localization data for effectors as they do not undergo the same parsing as protein nodes. Specifically they belong to the extracellular matrix (ECM), so if one exists on the app, modify the state variable correctly
+     */
+    AIV.effectorsLocHouseCleaning = function(){
+        let effectorSelector = this.cy.filter("node[id ^= 'Effector']");
+        if (effectorSelector.length > 0){
+            this.locCompoundNodes.push("extracellular");
+            effectorSelector.forEach(function(effector){ //put effectors in ECM
+                effector.data('localization' , 'extracellular');
+            });
+        }
+    };
 
 	/**
 	 * @namespace {object} AIV
@@ -1653,7 +1647,7 @@
 		Promise.all(promisesArr)
 			.then(function(promiseRes) {
 				// console.log("Response:", promiseRes);
-
+                console.log("initial lag?");
                 // Add Query node (user inputed in HTML form)
                 for (let i = 0; i < AIV.genesList.length; i++) {
 					AIV.addNode(AIV.genesList[i], 'Protein', true);
@@ -1671,6 +1665,7 @@
 
                 // Update styling and add qTips as nodes have now been added to the cy core
 
+				console.log("am i lagging here?");
                 AIV.addInteractionRowsToDOM();
                 //Below lines are to push to a temp array to make a POST for gene summaries
                 let nodeAbiNames = [];
@@ -1683,11 +1678,14 @@
                 AIV.addNumberOfPDIsToNodeLabel();
                 AIV.addProteinNodeQtips();
                 AIV.addPPIEdgeQtips();
+                console.log("am i lagging over here?");
                 AIV.addEffectorNodeQtips();
                 AIV.cy.style(AIV.getCyStyle()).update();
                 AIV.setDNANodesPosition();
                 AIV.resizeEListener();
+                console.log("start layout!");
                 AIV.cy.layout(AIV.getCySpreadLayout()).run();
+                console.log('done');
 
                 document.getElementById('loading').classList.add('loaded'); //hide loading spinner
             	$('#loading').children().remove(); //delete the loading spinner divs
@@ -1706,20 +1704,13 @@
                 });
             })
             .then(function(SUBAJSON){
-                // console.log(SUBAJSON);
-                // console.log("AIV", AIV);
                 AIV.SUBA4LoadState = true;
                 AIV.addLocalizationDataToNodes(SUBAJSON);
 
                 //Loop through ATG protein nodes and add a SVG string property for bg-image css
                 AIV.cy.startBatch();
                 AIV.parseProteinNodes(AIV.createSVGPieDonutCartStr.bind(AIV), true);
-                AIV.cy.filter("node[id ^= 'Effector']").forEach(function(effector){ //put effectors in ECM
-                    effector.data({
-                        localization : 'Extracellular',
-                        localizationMajority : 'extracellularPCT',
-					});
-                });
+                AIV.effectorsLocHouseCleaning();
                 AIV.cy.endBatch();
                 AIV.returnBGImageSVGasCSS().update();
 

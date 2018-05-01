@@ -17,10 +17,6 @@
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
                 integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
-        <!-- Side bar -->
-        <!-- Acknowledgement: https://blackrockdigital.github.io/startbootstrap-simple-sidebar/ -->
-        <link rel="stylesheet" href="styles/simple-sidebar.css">
-
         <!-- Stylesheet for AIV 2.0 -->
         <link rel="stylesheet" href="styles/aiv.css">
 
@@ -71,7 +67,7 @@
         <nav class="navbar navbar-default">
             <div class="container-fluid">
                 <div class="navbar-header">
-                    <a href="//bar.utoronto.ca">
+                    <a href="//bar.utoronto.ca" target="_blank">
                         <img src="//bar.utoronto.ca/BAR/images/BAR.png" id="logo" class="img-responsive center-block">
                     </a>
                 </div>
@@ -79,12 +75,12 @@
                 <div class="flex-container-main">
                     <div class="flex-container-title">
                         <div class="flex-container-title-aiv">
-                            <h3>Arabidopsis</h3>
-                            <h3>Interactions </h3>
-                            <h3>Viewer &nbsp &nbsp 2.0</h3>
+                            <h2>AIV</h2>
                         </div>
-                        <h4 id="showFormModal">Query</h4>
-                        <h4 id="showLegendModal">Legend</h4>
+                        <div class="flex-container-PPPI-filter">
+                            <h4 id="showFormModal">Query</h4>
+                            <h4 id="showLegendModal">Legend</h4>
+                        </div>
                     </div>
 
                     <div class="flex-container-layout-buttons">
@@ -225,13 +221,15 @@
                                 Rel
                             </label>
                         </form>
-                        <section class="slider-checkbox">
-                            <input id="exprLimitChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
-                            <label class="label-checkbox" for="exprLimitChkbox">
-                                Expr Limit
-                            </label>
-                        </section>
-                        <input id="exprThreshold" type="number" min="1" placeholder="raw expr">
+                        <div class="flex-container-main">
+                            <section class="slider-checkbox">
+                                <input id="exprLimitChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
+                                <label class="label-checkbox" for="exprLimitChkbox">
+                                    Limit Expr
+                                </label>
+                            </section>
+                            <input id="exprThreshold" type="number" min="1" placeholder="raw#">
+                        </div>
                     </div>
 
                     <div class="flex-container-export">
