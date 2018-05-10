@@ -10,7 +10,8 @@ setTimeout(function(){
         "At2g24790\n" +
         "At2g28200\n" +
         "At1g73360\n" +
-        "At2g28202\n"
+        "At2g28202\n" +
+        "At3g54340\n"
     );
     $('#submit').click();
 }, 500);

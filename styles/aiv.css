@@ -552,7 +552,7 @@
 
 .pdi-table-scroll-pane table {
 	border-collapse: collapse;
-	table-layout: fixed;
+	table-layout: auto;
 	font-size: 1rem;
 }
 
@@ -566,9 +566,14 @@
 	font-weight: bold;
 }
 
-.pdi-table-scroll-pane tr:nth-child(even) {
-	background-color: #ddd;
+.predicted-pdi-cell {
+	background-color: #ececec;
 }
+
+.experimental-pdi-cell {
+	background-color: #aaaaaa;
+}
+
 /* end of qtip CSS*/
 
 /* expression gradient CSS */

@@ -24,6 +24,8 @@
      * @property {number} DNANodeSize - Important for adjusting the donut sizes
 	 * @property {number} searchNodeSize - Size for search genes
 	 * @property {string} nodeDefaultColor - hexcode for regular nodes by default (no expression data)
+	 * @property {string} searchNodeColor - hexcode for search genes background
+	 * @propery {object} locColorAssignments - the corresponding hexcodes for the localizations in the object keys
 	 * @property {Array.<string>} locCompoundNodes - this node will hopefully be filled with the parent nodes for localizations that exist on the app currently
      * @propery {boolean} coseParentNodesOnCyCore - state variable that stores whether compound nodes have been loaded onto the cy core app
      * @property {number} defaultZoom - contains a number for how much graph has been zoomed (after a layout has been ran)
@@ -43,6 +45,19 @@
 	AIV.searchNodeSize = 65;
 	AIV.nodeDefaultColor = '#cdcdcd';
 	AIV.searchNodeColor = '#ffffff';
+    AIV.locColorAssignments = {
+        cytoskeleton : "#575454",
+        cytosol      : "#e0498a",
+        "endoplasmic reticulum" : "#d1111b",
+        extracellular: "#ffd672",
+        golgi        : "#a5a417",
+        mitochondrion: "#41abf9",
+        nucleus      : "#0032ff",
+        peroxisome   : "#650065",
+        "plasma membrane" : "#edaa27",
+        plastid      : "#13971e",
+        vacuole      : "#ecea3a",
+    };
     AIV.locCompoundNodes = [];
     AIV.coseParentNodesOnCyCore  = false;
     AIV.defaultZoom = 1;
@@ -185,7 +200,7 @@
         layout.nodeDimensionsIncludeLabels = true;
 		layout.nodeRepulsion = 25000;
 		// layout.padding = 1;
-        // layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
+        layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
         layout.stop = function(){ //this callback gets ran when layout is finished
             AIV.defaultZoom = AIV.cy.zoom();
             AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
@@ -399,7 +414,7 @@
 		correlation_coefficient = Math.abs(parseFloat(correlation_coefficient)); // Make the value positive
 		if (index === '2') {
 			return '#557e00';
-		} else if (published) { //published PPIs not published PDIs
+		} else if (published) { //published PPIs but not published PDIs
 			return '#99cc00';
 		} else if (interolog_confidence < 0){
 			return '#041959';
@@ -497,8 +512,8 @@
 	};
 
     /**
-	 * Take in an object (interaction) data and add it to the 'global' state
-	 *
+	 * @namespace {object} AIV
+     * @function addDNANodesToAIVObj - Take in an object (interaction) data and add it to the 'global' state
      * @param {object} DNAObjectData - as the interaction data as it comes in the GET request i.e.
 	 *                                 {source: .., target:.., index: 2, ..}
      */
@@ -515,7 +530,6 @@
 
         // console.log("addDNANodes", DNAObjectData, "chrNum");
 	    if (AIV.chromosomesAdded.hasOwnProperty(chrNum)){
-            // console.log("chromosome property already added");
             AIV.chromosomesAdded[chrNum].push(DNAObjectData);
 	    }
         else { // Adding chromosome to DOM as it does not exist on app yet
@@ -653,47 +667,57 @@
 	 * @returns {string} - a nicely parsed HTML table
 	 */
 	AIV.createPDItable = function (arrayPDIdata) {
-		// console.log(arrayPDIdata);
-		var PDIsInChr = {};
-		var targets = [];
-		var pubmedRefHashTable = {};
-        var htmlTABLE = "<div class='pdi-table-scroll-pane'><table><tbody><tr><th></th>";
+		console.log(arrayPDIdata);
+		let queryPDIsInChr = {};
+		let targets = [];
+		let pubmedRefHashTable = {};
+		let pValueHashTable = {};
+		let htmlTABLE = "<div class='pdi-table-scroll-pane'><table><tbody><tr><th></th>";
         arrayPDIdata.forEach(function(PDI){ //populate local data to be used in another loop
 			// console.log("looping through each element of PDI array", PDI);
-			if (!PDIsInChr.hasOwnProperty(PDI.source)) {
-                PDIsInChr[PDI.source] = []; //create property with name of query/source gene
+			if (!queryPDIsInChr.hasOwnProperty(PDI.source)) {
+                queryPDIsInChr[PDI.source] = []; //create property with name of query/source gene
 			}
-			PDIsInChr[PDI.source].push(PDI.target);
+			queryPDIsInChr[PDI.source].push(PDI.target);
 			if (targets.indexOf(PDI.target) === -1) {//To not repeat PDI for two queries with same PDI
                 targets.push(PDI.target);
             }
             pubmedRefHashTable[`${PDI.source}_${PDI.target}`] = PDI.reference;
-		});
-        // console.log(pubmedRefHashTable, "pubmed ref hashtable");
-        for (let protein of Object.keys(PDIsInChr)) { //add query proteins to the header of table
-			htmlTABLE += `<th>${protein}<br>(${PDIsInChr[protein].length} PDIs)</th>`;
+            pValueHashTable[`${PDI.source}_${PDI.target}`] = PDI.interolog_confidence;
+        });
+        for (let protein of Object.keys(queryPDIsInChr)) { //add query proteins to the header of table
+			htmlTABLE += `<th>${protein}<br>(${queryPDIsInChr[protein].length} PDIs)</th>`;
 		}
         htmlTABLE += "</tr>";
 		targets.forEach(function(targetDNAGene){ //process remaining rows for each target DNA gene
 			htmlTABLE += `<tr><td>${targetDNAGene}</td>`;
-            for (let protein of Object.keys(PDIsInChr)) {
-                if (PDIsInChr[protein].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
+            for (let queryGene of Object.keys(queryPDIsInChr)) { //recall the keys are the source (i.e. query genes)
+                if (queryPDIsInChr[queryGene].indexOf(targetDNAGene) !== -1) { //indexOf returns -1 if not found
 					let cellContent = "<td>";
-					AIV.sanitizeReferenceIDs(pubmedRefHashTable[protein + '_' + targetDNAGene]).forEach(function(ref){
-                        cellContent += AIV.returnReferenceLink(ref, targetDNAGene).replace(/('_blank'>).*/, "$1") +
-							'<i class="fas fa-external-link-alt fa-lg"></i>' +
+					let fontawesome = '';
+					if (pValueHashTable[queryGene + '_' + targetDNAGene] === 0){ //i.e. experimental PDI
+					   cellContent = "<td class='experimental-pdi-cell'>";
+					   fontawesome = 'flask';
+                    }
+					else if (pValueHashTable[queryGene + '_' + targetDNAGene] > 0){ // i.e. predicted PDI
+                        cellContent = "<td class='predicted-pdi-cell'>";
+                        fontawesome = 'terminal';
+					}
+					AIV.sanitizeReferenceIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function(ref){
+                        cellContent += AIV.returnReferenceLink(ref, targetDNAGene).replace(/('_blank'>).*/, "$1") + /* replace is to get rid of innerHTML text returned */
+							`<i class="fas fa-${fontawesome} fa-lg"></i>` +
 							'</a>';
 					});
                     htmlTABLE += cellContent + '</td>';
                 }
 				else {
-                	htmlTABLE += '<td><i class="fas fa-times fa-lg" style="color: red;"></i></td>';
+                	htmlTABLE += '<td></td>';
 				}
             }
 			htmlTABLE += "</tr>";
 		});
 		htmlTABLE += "</tbody></table></div>";
-		// console.log("finished createPDITable function execution", PDIsInChr);
+		// console.log("finished createPDITable function execution", queryPDIsInChr);
         return htmlTABLE;
     };
 
@@ -782,8 +806,8 @@
                                                          <p>SD Expr:   ${protein.data('absExpSd')}</p>`;
                                             }
                                             if (AIV.exprLoadState.relative && exprOverlayChkbox.checked){
-                                                HTML += `<p>Log2 Expr: ${protein.data('absExpLog2')}</p>
-                                                         <p>Fold Expr: ${protein.data('absExpFold')}</p>`;
+                                                HTML += `<p>Log2 Expr: ${protein.data('relExpLog2')}</p>
+                                                         <p>Fold Expr: ${protein.data('relExpFold')}</p>`;
                                             }
 											return HTML;
                                         }
@@ -844,11 +868,11 @@
     AIV.displaySUBA4qTipData = function(protein) {
         if (this.SUBA4LoadState === false){ return ""; }
         let baseString = "";
-        let locDataRaw = protein.data('localizationData');
-        for (let locDataKey of Object.keys(locDataRaw)){
-        	let locScore = locDataRaw[locDataKey];
-        	if (locDataRaw[locDataKey]) {
-        		baseString += `<p>${locDataKey} : ${(locScore * 100).toFixed(2)}%</p>`;
+        let locData = protein.data('localizationData');
+        for (let i = 0; i < locData.length ;i++){
+            let locPercent = Object.values(locData[i])[0];
+        	if (locPercent > 0) {
+        		baseString += `<p>${Object.keys(locData[i])[0]}: ${(locPercent*100).toFixed(1)}%</p>`;
 			}
 		}
         return baseString;
@@ -1018,8 +1042,7 @@
 		for (let geneQuery of Object.keys(data)) {
 
 			let dataSubset = data[geneQuery]; //'[]' expression to access an object property
-
-			// console.log(dataSubset);
+            console.log(dataSubset);
 
 			// Add Nodes for each query. We skip the last one because that is the recursive flag
 			for (let i = 0; i < dataSubset.length - 1; i++) {
@@ -1030,17 +1053,19 @@
 				let width = '5'; // Default edge width
 				let edgeData = dataSubset[i]; // Data from the PHP API comes in the form of an array of PPIs/PDIs hence this variable name
 				let dbSrc = "BAR";
+				
+                let {index, source, target, reference, published, interolog_confidence, correlation_coefficient, mi} = edgeData;
 
 				// Source, note that source is NEVER DNA
-				if (edgeData.source.match(/^At/i)) {
+				if (source.match(/^At/i)) {
 					typeSource = 'Protein';
 				} else {
 					typeSource = 'Effector';
 				}
 
 				// Target
-				if (edgeData.target.match(/^At/i)) {
-					if (edgeData.index === '2') {
+				if (target.match(/^At/i)) {
+					if (index === '2') {
 						typeTarget = 'DNA';
 					} else {
 						typeTarget = 'Protein';
@@ -1050,43 +1075,45 @@
 				}
 
 				//Build publication array for dropdown later
-                if (publicationsPPIArr.indexOf(edgeData.reference) === -1){
+                if (publicationsPPIArr.indexOf(reference) === -1){
 					if (typeTarget === 'Protein' || typeTarget === 'Effector'){
-                        publicationsPPIArr.push(edgeData.reference);
+                        publicationsPPIArr.push(reference);
                     }
                 }
 
-				edgeData.interolog_confidence = Number(edgeData.interolog_confidence); //Mutating string into number as the JSON gives "-1000" instead of -1000
+				interolog_confidence = Number(interolog_confidence); //Mutating string into number as the JSON gives "-1000" instead of -1000
 
-                edgeData.correlation_coefficient = Number(edgeData.correlation_coefficient); //Mutating string into number as the JSON gives "-0.2" instead of -0.2
+                correlation_coefficient = Number(correlation_coefficient); //Mutating string into number as the JSON gives "-0.2" instead of -0.2
 
 				// Get color
-				edgeColour = this.getEdgeColor(edgeData.correlation_coefficient, edgeData.published, edgeData.index, edgeData.interolog_confidence);
+				edgeColour = this.getEdgeColor(correlation_coefficient, published, index, interolog_confidence);
 
 				// Get Line Style
-				style = ((edgeData.published) ? "solid" : "dashed"); //TODO: talk with Nick/Asher to use interolog confidence or publsihed flag
+				style = ((published) ? "solid" : "dashed"); //TODO: talk with Nick/Asher to use interolog confidence or publsihed flag
 
 				// Get Line Width
-				width = this.getWidth(edgeData.interolog_confidence);
+				width = this.getWidth(interolog_confidence);
 
 				if (typeTarget === "Protein" || typeTarget === "Effector") {
-                    if ( AIV.cy.getElementById(`${typeSource}_${edgeData.source}`).empty()) { //only add source node if not already on app, recall our ids follow the format Protein_At2g10000
-                        this.addNode(edgeData.source, typeSource);
+                    if ( AIV.cy.getElementById(`${typeSource}_${source}`).empty()) { //only add source node if not already on app, recall our ids follow the format Protein_At2g10000
+                        this.addNode(source, typeSource);
                     }
-                    if ( AIV.cy.getElementById(`${typeTarget}_${edgeData.target}`).empty()) {
-                        this.addNode(edgeData.target, typeTarget);
+                    if ( AIV.cy.getElementById(`${typeTarget}_${target}`).empty()) {
+                        this.addNode(target, typeTarget);
                     }
 				} else { //i.e. typeTarget === "DNA"
 				    this.addDNANodesToAIVObj(edgeData); //pass the DNA in the JSON format we GET on
                 }
 
-				if (edgeData.index !== '2') { //i.e. PPI edge
-					this.addEdges(edgeData.source, typeSource, edgeData.target, typeTarget, edgeColour, style, width, edgeData.reference, edgeData.published, edgeData.interolog_confidence, dbSrc, edgeData.correlation_coefficient, edgeData.mi);
-					this.addTableRow("protein-protein", dbSrc, edgeData.source, edgeData.target, edgeData.interolog_confidence, edgeData.correlation_coefficient, edgeData.reference, edgeData.mi);
+				if (index !== '2') { //i.e. PPI edge
+					this.addEdges(source, typeSource, target, typeTarget, edgeColour, style, width, reference, published, interolog_confidence, dbSrc, correlation_coefficient, mi);
+					this.addTableRow("protein-protein", dbSrc, source, target, interolog_confidence, correlation_coefficient, reference, mi);
 				}
-				else if ( edgeData.index === '2' && (this.cy.getElementById(`${typeSource}_${edgeData.source}_DNA_Chr${edgeData.target.charAt(2)}`).length === 0) ) { //Check if PDI edge (query gene & chr) is already added, if not added
-                    this.addEdges(edgeData.source, typeSource, `Chr${edgeData.target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, edgeData.reference, edgeData.published, edgeData.interolog_confidence, dbSrc, edgeData.correlation_coefficient, edgeData.mi);
-                    this.addTableRow("protein-DNA", dbSrc, edgeData.source, edgeData.target, edgeData.interolog_confidence, edgeData.correlation_coefficient, edgeData.reference, edgeData.mi);
+				else if ( index === '2') { // PDI edge
+					if (this.cy.getElementById(`${typeSource}_${source}_DNA_Chr${target.charAt(2)}`).length === 0){ // If we don't already have an edge from this gene to a chromosome
+                        this.addEdges(source, typeSource, `Chr${target.charAt(2)}`, typeTarget /*DNA*/, edgeColour, style, width, reference, published, interolog_confidence, dbSrc, correlation_coefficient, mi);
+					}
+                    this.addTableRow("protein-DNA", dbSrc, source, target, interolog_confidence, correlation_coefficient, reference, mi);
 				}
 			}
 		} //end of adding nodes and edges
@@ -1297,26 +1324,18 @@
         Object.keys(SUBADATA).forEach(function(geneAGIName){
             let nodeID = geneAGIName; //AT1G04170 to At1g04170
             let geneSUBAData = SUBADATA[geneAGIName];
-			let denoTotal = 0;
-			let nonZeroLocArr = []; // store non-zero locs for parsing, i.e. '["nucleus", "cytosol"]'
 			if (Object.keys(geneSUBAData.data).length){ //For nodes with any localization data
-                // for loop creates a denominator score for each gene, so we can count pie chart data
-                for (let cellularLocation of Object.keys(geneSUBAData.data)) {
-					let locData = geneSUBAData.data[cellularLocation];
-                    if (! isNaN(locData)){ //if property value is a number...
-                        denoTotal += locData; //add to denominator
-                        // console.log("TRUE!");
-						nonZeroLocArr.push(cellularLocation);
-                    }
-                }
-            // console.log(nodeID, "total :", denoTotal);
-
+				let majorityLoc = Object.keys(geneSUBAData.data[0])[0];
                 AIV.cy.$('node[name = "' + nodeID + '"]')
 					.data({
                         predictedSUBA :  ( geneSUBAData.includes_predicted === "yes" ),
                         experimentalSUBA : ( geneSUBAData.includes_experimental === "yes" ),
-						localizationData: retNonZeroLocs( geneSUBAData.data, nonZeroLocArr, denoTotal),
-					});
+						localizationData: calcLocPcts( geneSUBAData.data),
+                        localization : majorityLoc, //assign localization to highest loc score
+                    });
+                if (AIV.locCompoundNodes.indexOf(majorityLoc) === -1 ){
+                    AIV.locCompoundNodes.push(majorityLoc); // append to our state variable which stores unique majority localizations, used to later make compound nodes
+                }
             }
             else { //For nodes without any localization data
                 AIV.cy.$('node[name = "' + nodeID + '"]')
@@ -1326,16 +1345,21 @@
                         localizationData: {},
 						localization: "unknown"
                     });
+                if (AIV.locCompoundNodes.indexOf("unknown") === -1 ){
+                    AIV.locCompoundNodes.push("unknown"); // append to our state variable which stores unique majority localizations, used to later make compound nodes
+                }
             }
 
 		});
 
 		AIV.cy.endBatch();
 
-		function retNonZeroLocs(subaLocData, arrayOfLocs, locDenominator){
-            let retObj = {};
-			arrayOfLocs.forEach(function(locName){
-            	retObj[locName] = subaLocData[locName] / locDenominator;
+		function calcLocPcts(subaLocData){
+            let retObj = [];
+			let deno = 0;
+			subaLocData.forEach(locScore => deno += Object.values(locScore)[0]); // use [0] because only one property is in the obj i.e. [{"nucleus": 20},{"cytosol": 10}]
+			subaLocData.forEach(function(locScore){
+				retObj.push({[Object.keys(locScore)[0]] : Object.values(locScore)[0]/deno});
 			});
 			return retObj;
 		}
@@ -1355,13 +1379,13 @@
 	 */
 	AIV.createSVGPieDonutCartStr = function(AGIGene) {
 		let nodeData = AGIGene.data();
-		var AGIGeneLocData = nodeData.localizationData ;
+		let AGIGeneLocData = nodeData.localizationData ;
 		let cyNodeSize = nodeData.searchGeneData ? this.searchNodeSize : this.nodeSize ;
-		var SVGwidthheight = cyNodeSize + 10;
-		var donutCxCy = SVGwidthheight/2;
-        var radius, strokeWidth;
+		let SVGwidthheight = cyNodeSize + 10;
+		let donutCxCy = SVGwidthheight/2;
+		let radius, strokeWidth;
 		radius = strokeWidth = cyNodeSize/2;
-		var SVGstr = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg>';
+		let SVGstr = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg>';
 		SVGstr += `<svg width="${SVGwidthheight}" height="${SVGwidthheight}" class="donut" xmlns="http://www.w3.org/2000/svg">`;
 		SVGstr += `<circle class="donut-hole" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent"></circle>`;
 
@@ -1374,32 +1398,17 @@
         var scaling = radius/15.91549430918952;
 		var pctAndColorArray = [];
 
-        for (let localizationProp of Object.keys(AGIGeneLocData)){
-            pctAndColorArray.push({
-                pct : (AGIGeneLocData[localizationProp] * 100), //convert to % for easier parsing later
-                loc : localizationProp,
-                color : returnLocColor(localizationProp)
+		if (AGIGeneLocData.length > 0){ // need check as nodes without loc data with crash app
+            AGIGeneLocData.forEach(function(locPercentage){
+                pctAndColorArray.push({
+                    pct : (Object.values(locPercentage)[0] * 100), //convert to % for easier parsing later
+                    color : AIV.locColorAssignments[Object.keys(locPercentage)[0]]
+                });
             });
 		}
 
-        // Custom sort based on the value of the 'pct' property defined above, order greatest to least
-		// Result => we are able to show pie chart values from greatest to least starting from 12 oclock
-        pctAndColorArray.sort((itemOne, itemTwo) => itemTwo.pct - itemOne.pct);
-
-        // Set a localization data property in the node (highest percent is assumed to be the localization)
-		if (pctAndColorArray.length === 0){ // i.e. if the localizationData Obj {} is empty
-            if (this.locCompoundNodes.indexOf("unknown") === -1 ){
-                this.locCompoundNodes.push("unknown"); // append to our state variable which stores unique majority localizations, used to later make compound nodes
-            }
-        }
-        else {
-			AGIGene.data({
-                localization : pctAndColorArray[0].loc,
-			});
-            if (this.locCompoundNodes.indexOf(pctAndColorArray[0].loc) === -1 ){
-				this.locCompoundNodes.push(pctAndColorArray[0].loc); // append to our state variable which stores unique majority localizations, used to later make compound nodes
-			}
-        }
+        // Now have pre-sorted pctAndColorArray based on the value of the 'pct' property, order greatest to least
+		// Result: Show pie chart values from greatest to least starting from 12 oclock
 
         var initialOffset = 25 * scaling; // Bypass default donut parts start at 3 o'clock instead of 12
 		var allSegsLength = 0;
@@ -1418,21 +1427,6 @@
         SVGstr += '</svg>';
         SVGstr = 'data:image/svg+xml;utf8,' + encodeURIComponent(SVGstr); // Modify for CSS via cytoscape
         AGIGene.data('svgDonut', SVGstr); // Last, properly mutate the node with our made SVG string
-
-        // Helper function to determine/return which colour to return in the array of objects above
-        function returnLocColor (localizationString) {
-			if (localizationString === "cytoskeleton"){ return '#575454';}
-			else if (localizationString === "cytosol"){ return '#e0498a';}
-            else if (localizationString === "endoplasmic reticulum"){ return '#d1111b';}
-            else if (localizationString === "extracellular"){ return '#ffd672';}
-            else if (localizationString === "golgi"){ return '#a5a417';}
-            else if (localizationString === "mitochondrion"){ return '#41abf9';}
-            else if (localizationString === "nucleus"){ return '#0032ff';}
-            else if (localizationString === "peroxisome"){ return '#650065';}
-            else if (localizationString === "plasma membrane"){ return '#edaa27';}
-            else if (localizationString === "plastid"){ return '#13971e';}
-            else if (localizationString === "vacuole"){ return '#ecea3a';}
-        }
 
 	};
 
@@ -1466,14 +1460,10 @@
         this.parseProteinNodes(function(node){
             let ulString = "<ul>";
             let locData = node.data('localizationData');
-            console.log('FIX this, this loops too much!');
-            let arrayOfLocsSorted = Object.keys(locData).sort(function(a,b){
-                return - (locData[a] - locData[b]);
-            });
-            for (let i = 0; i < arrayOfLocsSorted.length; i++) {
-                let locPercent = locData[arrayOfLocsSorted[i]];
+            for (let i = 0; i < locData.length; i++) {
+                let locPercent = Object.values(locData[i])[0];
                 if (locPercent > 0){
-                    ulString += `<li> ${arrayOfLocsSorted[i]}: ${(locPercent*100).toFixed(2)}%  </li>`;
+                    ulString += `<li> ${Object.keys(locData[i])[0]}: ${(locPercent*100).toFixed(1)}% </li>`;
                 }
             }
             ulString += "</ul>";
@@ -1484,7 +1474,7 @@
 		}, true);
 
         this.cy.filter("node[id ^= 'Effector']").forEach(function(effector){
-            $(`.${effector.data('name')}-ppi-loc`).text("Cytosol(assumed)");
+            $(`.${effector.data('name')}-ppi-loc`).text("extracellular(assumed)");
         });
     };
 
@@ -1610,11 +1600,11 @@
 
     /**
      * @namespace {object} AIV
-     * @function effectorsLocHouseCleaning - purpose of this function is to fill in the localization data for effectors as they do not undergo the same parsing as protein nodes. Specifically they belong to the extracellular matrix (ECM), so if one exists on the app, modify the state variable correctly
+     * @function effectorsLocHouseCleaning - purpose of this function is to fill in the localization data for effectors as they do not undergo the same parsing as protein nodes. Specifically they belong to the extracellular matrix (ECM), so if one exists on the app, modify the compound state variable correctly if not added already
      */
     AIV.effectorsLocHouseCleaning = function(){
         let effectorSelector = this.cy.filter("node[id ^= 'Effector']");
-        if (effectorSelector.length > 0){
+        if (effectorSelector.length > 0 && this.locCompoundNodes.indexOf('extracellular') === -1 ){
             this.locCompoundNodes.push("extracellular");
             effectorSelector.forEach(function(effector){ //put effectors in ECM
                 effector.data('localization' , 'extracellular');
@@ -1668,12 +1658,12 @@
 				console.log("am i lagging here?");
                 AIV.addInteractionRowsToDOM();
                 //Below lines are to push to a temp array to make a POST for gene summaries
-                let nodeAbiNames = [];
-                AIV.parseProteinNodes((nodeID) => nodeAbiNames.push(nodeID));
+                let nodeAgiNames = [];
+                AIV.parseProteinNodes((nodeID) => nodeAgiNames.push(nodeID));
                 for (let chr of Object.keys(AIV.chromosomesAdded)) {
-                    nodeAbiNames = nodeAbiNames.concat(AIV.chromosomesAdded[chr].map( prop => prop.target));
+                    nodeAgiNames = nodeAgiNames.concat(AIV.chromosomesAdded[chr].map( prop => prop.target));
                 }
-                AIV.fetchGeneAnnoForTable(nodeAbiNames);
+                AIV.fetchGeneAnnoForTable(nodeAgiNames);
                 AIV.addChrNodeQtips();
                 AIV.addNumberOfPDIsToNodeLabel();
                 AIV.addProteinNodeQtips();
@@ -1744,47 +1734,36 @@
 	 * @function createBARAJaxPromise - programatically figures out how to build the BAR URL get request
      * @returns {Promise.<{res: object, ajaxCallType: string}>|*}
      */
-	AIV.createBARAjaxPromise = function() {
+    AIV.createBARAjaxPromise = function() {
         // AGI IDs
-        let req = '?request=[';
+        let postObj = {};
+        postObj.loci = "";
         for (var i = 0; i < this.genesList.length; i++) {
-            req += '{"agi":"' + this.genesList[i] + '"}';
-            if (i < this.genesList.length - 1) {
-                req += ',';
-            }
+            postObj.loci += this.genesList[i] + ",";
         }
-        req += "]";
+        postObj.loci = postObj.loci.slice(0, -1);
 
         //Recursive
-        if ($('#recursive').is(':checked')) {
-            req += "&recursive=true";
-        } else {
-            req += "&recursive=false";
-        }
+        postObj.recursive = $('#recursive').is(':checked').toString();
 
         // Published
-        if ($('#published').is(':checked')) {
-            req += "&published=true";
-        } else {
-            req += "&published=false";
-        }
+        postObj.published = $('#published').is(':checked').toString();
 
         // DNA
-        if ($('#queryDna').is(':checked')) {
-            req += "&querydna=true";
-        } else {
-            req += "&querydna=false";
-        }
+        postObj.querydna = $('#queryDna').is(':checked').toString();
+        console.log(postObj);
 
-        var serviceURL = 'http://bar.utoronto.ca/~vlau/interactions/cgi-bin/get_interactions_dapseq.php' + req; //TODO: Change this 'hard' url to base root /cgi-bin
+        let serviceURL = 'http://bar.utoronto.ca/~asher/vincent/get_interactions_dapseq.py';
 
-		return $.ajax({
+        return $.ajax({
             url: serviceURL,
-            type: 'GET',
-            dataType: 'json'
+            type: 'POST',
+            data: JSON.stringify(postObj),
+            contentType: "application/json",
+            dataType: "json"
         })
-			.then( res => ( {res: res, ajaxCallType: 'BAR'} )); //ajaxCallType for identifying when parsing Promise.all response array
-	};
+            .then( res => ( {res: res, ajaxCallType: 'BAR'} )); //ajaxCallType for identifying when parsing Promise.all response array
+    };
 
     /**
 	 * @function createINTACTAjaxPromise - Parse through the gene form and create a bunch of AJAX requests to the INTACT PSICQUIC webservice
@@ -1843,12 +1822,14 @@
 					};
 					let firstSyn = synonyms[0];
                     let selector = this.cy.$(`#Protein_${gene}`);
-                    if (firstSyn !== null){
-                        selector.data('annotatedName', firstSyn + "\n" + selector.data('name'));
+                    if (selector.length > 0){ // only get Protein_AGI that exist on app
+                        if (firstSyn !== null){
+                            selector.data('annotatedName', firstSyn + "\n" + selector.data('name'));
+                        }
+                        else {
+                            selector.data('annotatedName', selector.data('name'));
+                        }
 					}
-					else{
-                        selector.data('annotatedName', selector.data('name'));
-                    }
 				}
                 this.cy.filter("node[id ^= 'Effector']").forEach(function(effector){
                     $(`.${effector.data('name')}-annotate`).text("null");

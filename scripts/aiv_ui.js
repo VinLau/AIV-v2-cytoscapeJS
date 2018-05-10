@@ -395,7 +395,8 @@
             let maxThreshold = 0;
             for (let geneExpKey of Object.keys(resData)){
                 let geneExp = resData[geneExpKey];
-                let expressionVal = geneExp.mean || Math.abs(geneExp.log_2_value);
+                let expressionVal = geneExp.mean || geneExp.log_2_value;
+                let testMaxExprVal = Math.abs(expressionVal); //include this expression for negative log numbers
                 if (absMode){
                     AIVRef.cy.$id(`Protein_${geneExpKey}`)
                         .data({
@@ -406,12 +407,12 @@
                 else {
                     AIVRef.cy.$id(`Protein_${geneExpKey}`)
                         .data({
-                            absExpLog2 : expressionVal,
-                            absExpFold : geneExp.fold_change
+                            relExpLog2 : expressionVal,
+                            relExpFold : geneExp.fold_change
                         });
                 }
-                if (expressionVal > maxThreshold){
-                    maxThreshold = expressionVal; // Iterate N times to find max expression level
+                if (testMaxExprVal > maxThreshold){
+                    maxThreshold = testMaxExprVal; // Iterate N times to find max expression level
                 }
             }
             let minThreshold = absMode ? 0 : -Math.abs(maxThreshold);
@@ -421,9 +422,9 @@
     }
 
     function retnExprCSSLoadGradient (AIVObj, mode, lowerBound, upperBound, initLoad) {
-        let lowerColor;
+        let lowerColor, middleColor;
         let decimalPlaces = 0;
-        let upperColor = "red";
+        let upperColor = "rgb(255, 0, 0)";
         let loadState = AIVObj.exprLoadState;
         let userSetLimit= document.getElementById('exprLimitChkbox').checked;
         let userThreshold = Number(document.getElementById('exprThreshold').value) || 0;
@@ -442,7 +443,7 @@
         let softLowerBound = userSetLimit && userThreshold > 0 ? -Math.abs(userThreshold) : lowerBound;
         console.log('softupperbound', softUpperBound, 'softlowerbound', softLowerBound);
         if (mode === "absolute"){
-            lowerColor = "yellow";
+            lowerColor = "rgb(255, 255, 0)";
             baseCSSObj
                 .selector('node[?absExpMn]')
                 .css({
@@ -451,17 +452,21 @@
         }
         else if (mode === "relative"){
             decimalPlaces = 2;
-            lowerColor = 'green';
+            lowerColor = 'rgb(0, 0, 255)';
+            middleColor = 'rgb(255, 255, 0)';
+            AIVObj.parseProteinNodes(function(protein){
+               protein.data('relExpColor', retRelExpColor(softUpperBound, softLowerBound, protein.data('relExpLog2')));
+            }, true);
             baseCSSObj
-                .selector('node[?absExpLog2]')
+                .selector('node[?relExpLog2]')
                 .css({
-                    'background-color' : `mapData(absExpLog2, ${softLowerBound}, ${softUpperBound}, ${lowerColor}, ${upperColor})`,
+                    'background-color' : "data(relExpColor)",
                 });
         }
         if (initLoad){
             // Below line: cache the canvas ctx and also use it as a truthy value if user chooses to turn the expr overlay switch on and off repeatedly so we don't need to redraw (perf boost)
             loadState[mode] = {
-                cache : createExprGradient(softLowerBound.toFixed(decimalPlaces), softUpperBound.toFixed(decimalPlaces), lowerColor, upperColor, mode.substring(0, 3), AIVObj),
+                cache : createExprGradient(softLowerBound.toFixed(decimalPlaces), softUpperBound.toFixed(decimalPlaces), lowerColor, upperColor, mode.substring(0, 3), middleColor),
                 upperBd : upperBound,
                 lowerBd : lowerBound,
             };
@@ -471,7 +476,28 @@
         return baseCSSObj;
     }
 
-    function createExprGradient(lowerBound, upperBound, lowerColor, upperColor, mode){
+    function retRelExpColor (softUpperBd, softLowerBd, relGeneLogExpr){
+        if (relGeneLogExpr >= 0){ // yellow to red, up-expression
+            let green = 255 * ( 1 - relGeneLogExpr/softUpperBd);
+            if (green < 0) { //prevent rgb from going > 255 for when limit exceeded, i.e. user sets threshold
+                green = 255;
+            }
+            return `rgb(255, ${green} ,0)`;
+        }
+        else { // yellow to blue, down-expression
+            let redYellow = 255 * (1 - relGeneLogExpr/softLowerBd);
+            if (redYellow < 0){ //prevent rgb from going < 0 for when limit exceeded, i.e. user sets threshold
+                redYellow = 0;
+            }
+            let blue = 255 * relGeneLogExpr/softLowerBd;
+            if (blue > 255){
+                blue = 255;
+            }
+            return `rgb(${redYellow}, ${redYellow}, ${blue})`;
+        }
+    }
+
+    function createExprGradient(lowerBound, upperBound, lowerColor, upperColor, mode, intermediateColor){
         let canvasTemp = document.createElement("canvas");
         canvasTemp.width = 70;
         canvasTemp.height = 300;
@@ -479,6 +505,9 @@
         ctx.font="bold 10pt Verdana";
         let grd = ctx.createLinearGradient(0, 0, 0, 250);
         grd.addColorStop(0, upperColor);
+        if (mode === "rel"){
+            grd.addColorStop(0.5, intermediateColor);
+        }
         grd.addColorStop(1, lowerColor);
         ctx.fillStyle = grd;
         ctx.fillRect(10, 10, 60, 250);
