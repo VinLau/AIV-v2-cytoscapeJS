@@ -395,7 +395,7 @@
             let maxThreshold = 0;
             for (let geneExpKey of Object.keys(resData)){
                 let geneExp = resData[geneExpKey];
-                let expressionVal = geneExp.mean || geneExp.log_2_value;
+                let expressionVal = geneExp.mean || geneExp.log_2_value || 0; //for abs, '0' in the JSON becomes 'undefined'
                 let testMaxExprVal = Math.abs(expressionVal); //include this expression for negative log numbers
                 if (absMode){
                     AIVRef.cy.$id(`Protein_${geneExpKey}`)
@@ -445,20 +445,22 @@
         if (mode === "absolute"){
             lowerColor = "rgb(255, 255, 0)";
             baseCSSObj
-                .selector('node[?absExpMn]')
+                .selector('node[absExpMn > 0]') //exclude nodes with nonzero expression
                 .css({
                     'background-color' : `mapData(absExpMn, ${softLowerBound}, ${softUpperBound}, ${lowerColor}, ${upperColor})`,
                 });
         }
         else if (mode === "relative"){
+            console.log('error here?');
             decimalPlaces = 2;
             lowerColor = 'rgb(0, 0, 255)';
             middleColor = 'rgb(255, 255, 0)';
             AIVObj.parseProteinNodes(function(protein){
-               protein.data('relExpColor', retRelExpColor(softUpperBound, softLowerBound, protein.data('relExpLog2')));
+                console.log(protein.data('name'));
+                protein.data('relExpColor', retRelExpColor(softUpperBound, softLowerBound, protein.data('relExpLog2')));
             }, true);
             baseCSSObj
-                .selector('node[?relExpLog2]')
+                .selector('node[relExpLog2 != 0]') //exclude nodes with nonzero expression
                 .css({
                     'background-color' : "data(relExpColor)",
                 });
@@ -477,23 +479,29 @@
     }
 
     function retRelExpColor (softUpperBd, softLowerBd, relGeneLogExpr){
-        if (relGeneLogExpr >= 0){ // yellow to red, up-expression
-            let green = 255 * ( 1 - relGeneLogExpr/softUpperBd);
+        console.log(relGeneLogExpr, "gene expr", softLowerBd, "lowerbd", softUpperBd, "upperbd");
+        if (relGeneLogExpr === 0) { // no expression, i.e. "N/A"/grey, probably don't need this as we have a non-zero CSS selector
+            return 'rgb(205, 205, 205)';
+        }
+        else if (relGeneLogExpr > 0){ // yellow to red, up-expression
+            let green = 255 * ( 1 - Math.abs(relGeneLogExpr/softUpperBd));
             if (green < 0) { //prevent rgb from going > 255 for when limit exceeded, i.e. user sets threshold
                 green = 255;
             }
+            console.log(green, 'green');
             return `rgb(255, ${green} ,0)`;
         }
         else { // yellow to blue, down-expression
-            let redYellow = 255 * (1 - relGeneLogExpr/softLowerBd);
-            if (redYellow < 0){ //prevent rgb from going < 0 for when limit exceeded, i.e. user sets threshold
-                redYellow = 0;
+            let ratio = Math.abs(relGeneLogExpr/softLowerBd);
+            let redGreen = 255 * (1 - ratio);
+            if (redGreen < 0){ //prevent rgb from going < 0 for when limit exceeded, i.e. user sets threshold
+                redGreen = 0;
             }
-            let blue = 255 * relGeneLogExpr/softLowerBd;
+            let blue = 255 * ratio;
             if (blue > 255){
                 blue = 255;
             }
-            return `rgb(${redYellow}, ${redYellow}, ${blue})`;
+            return `rgb(${redGreen}, ${redGreen}, ${blue})`;
         }
     }
 
@@ -754,14 +762,12 @@
             let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
 
             [].forEach.call(uncheckedBoxes, function(node){ //nodelist hack for unsupported browsers
-                console.log(node.value);
                 // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
                 let selector = `edge[reference = '${node.value}']`;
                 let edges = AIVObj.cy.$(selector);
                 edges.connectedNodes('node[!searchGeneData][id ^="Protein"], node[!searchGeneData][id ^="Effector"]').forEach(function(ele){
                     if (ele.connectedEdges(selector).size() === ele.degree()) {
                         ele.addClass('filterByReference');
-                        console.log("HIDDEN!");
                     }
                 });
                 edges.addClass('filterByReference'); // hide the edge now

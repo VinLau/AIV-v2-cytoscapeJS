@@ -74,6 +74,8 @@
 
 /* end form css */
 
+/* modal css */
+
 /* These two CSS selectors are for centering larger modals such as the JSON and PNG export*/
 .centered-modal.in {
 	display: flex
@@ -83,20 +85,31 @@
 	margin: auto;
 }
 
+.modal { /* overide bootstrap css for a little more background on modals */
+	position: fixed;
+	top: 1vh !important;
+}
+
+#PNGModal, #JSONModal, #CSVModal {
+	max-height: 100vh;
+}
+
 #PNGModal > .modal-dialog { /*To make it so the modal fills whole page*/
 	width: 98vw;
 }
 
-#PNGModal .modal-header {
-	padding: 10px;
+#PNGModal .modal-header,
+#JSONModal .modal-header,
+#CSVModal .modal-header { /* manual override to make the header smaller so we get more real estate for modal body */
+	padding: 5px;
+}
+
+#PNGModal .modal-body {
+	height: 93vh;
 }
 
 #JSONModal > .modal-dialog {
 	width: 75vw;
-}
-
-#JSONModal .modal-content {
-	max-height: 100vh;
 }
 
 #JSONModal .modal-body {
@@ -105,13 +118,15 @@
 }
 
 #CSVModal > .modal-dialog {
-	width: 90vw;
+	width: 98vw;
 }
 
 #CSVModal .modal-body {
-	height: 80vh;
+	height: 85vh;
 	overflow: auto;
 }
+
+/* end modal css */
 
 /* loading spinner before cytoscape app is loaded*/
 #loading {
@@ -556,7 +571,9 @@
 	font-size: 1rem;
 }
 
-.pdi-table-scroll-pane table, th, td {
+.pdi-table-scroll-pane table,
+.pdi-table-scroll-pane th,
+.pdi-table-scroll-pane td {
 	border: 1px solid #777777;
 	text-align: center;
 	width: 100%;
@@ -586,5 +603,31 @@
 	width: 70px;
 }
 /* end expression gradient CSS */
+
+/* table CSV CSS */
+#csvTable ul { /* make ul dots not fall outside of td element */
+	list-style-position: inside;
+}
+
+#csvTable table,
+#csvTable th,
+#csvTable td {
+	border: 1px solid #777777;
+	text-align: center;
+}
+
+.small-csv-column {
+	max-width: 8vw;
+}
+
+.med-csv-column {
+	max-width: 15vw;
+}
+
+.lg-csv-column { /* not max-width because we have to force the width for these columns */
+	width: 20vw;
+}
+
+/* end table CSV CSS */
 
 /* end cytoscape CSS */

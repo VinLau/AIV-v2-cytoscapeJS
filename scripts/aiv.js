@@ -6,7 +6,7 @@
  * @copyright see MIT license on GitHub
  * @description please note that I seldom intentionally used data properties to nodes instead of classes as we cannot ( to my knowledge), select nodes by NOT having a class
  */
-(function(window, $, cytoscape, undefined) {
+(function(window, $, _, cytoscape, undefined) {
 	'use strict';
 
     /** @namespace {object} AIV */
@@ -703,8 +703,8 @@
                         cellContent = "<td class='predicted-pdi-cell'>";
                         fontawesome = 'terminal';
 					}
-					AIV.sanitizeReferenceIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function(ref){
-                        cellContent += AIV.returnReferenceLink(ref, targetDNAGene).replace(/('_blank'>).*/, "$1") + /* replace is to get rid of innerHTML text returned */
+					AIV.memoizedSanRefIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function(ref){
+                        cellContent += AIV.memoizedRetRefLink(ref, targetDNAGene).replace(/('_blank'>).*/, "$1") + /* replace innerHTML text returned */
 							`<i class="fas fa-${fontawesome} fa-lg"></i>` +
 							'</a>';
 					});
@@ -728,7 +728,8 @@
 	 * Moreover the text is created from another function which will nicely return a HTML table
 	 */
 	AIV.addChrNodeQtips = function () {
-        var that = this;
+        let that = this;
+        let memoizedPDITable = _.memoize(that.createPDItable);
         for (let chr of Object.keys(this.chromosomesAdded)){
             // console.log(this.chromosomesAdded[chr], `chr${chr}`);
             this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function(event){
@@ -743,7 +744,7 @@
                                 		text :`Chromosome ${chr}`,
 										button: 'Close' //close button
 									},
-                                text: that.createPDItable(that.chromosomesAdded[chr])
+                                text: memoizedPDITable(that.chromosomesAdded[chr])
                             },
                         style    : { classes : 'qtip-light qtip-dna'},
                         show:
@@ -925,8 +926,8 @@
 
         var refLinks = `<p>Database: ${dbSource}</p>`;
         if (reference) { //non-falsy value (we may have changed it to false in the addEdges() call)
-            AIV.sanitizeReferenceIDs( reference ).forEach(function(ref){
-                refLinks += '<p> Ref: ' + AIV.returnReferenceLink(ref, source) + '</p>';
+            AIV.memoizedSanRefIDs( reference ).forEach(function(ref){
+                refLinks += '<p> Ref: ' + AIV.memoizedRetRefLink(ref, target) + '</p>';
             });
         }
 
@@ -958,7 +959,7 @@
 									button: "Close"
                             	},
 							text : that.createPPIEdgeText( edgeData.source, edgeData.target, edgeData.reference, edgeData.interologConfidence, edgeData.databaseOrigin ) +
-							(edgeData.interologConfidence >= 1 ? `<p>Interolog Confidence: ${edgeData.interologConfidence}</p>` : "") + //ternary operator is to return the interolog confidence value not the SPPI rank
+							(edgeData.interologConfidence >= 1 ? `<p>Interolog Confidence: ${edgeData.interologConfidence}</p>` : "") + //ternary operator return the interolog confidence value only not the SPPI rank
 							`<p>Correlation Coefficient: ${edgeData.pearsonR} </p>` +
 							(edgeData.miAnnotated.length > 0 ? `<p>MI Term(s): ${edgeData.miAnnotated.join(', ')} </p>` : ""),
                         },
@@ -977,38 +978,45 @@
 
     /**
 	 * @namespace {object} AIV
-     * @function sanitizeReferenceIDs - Process the pubmed IDs and DOIs that come in from the GET request. This will return an array of links (as strings). We have to check for empty strings before returning.
+     * @function sanitizeReferenceIDs - Process the pubmed IDs and DOIs that come in from the interactions request. This will return an array of links (as strings). We have to check for empty strings before returning.
      *
      * @param {string} JSONReferenceString - as a string of links delimited by newlines "\n"
      */
     AIV.sanitizeReferenceIDs = function(JSONReferenceString) {
-        var returnArray = JSONReferenceString.split("\n");
+        let returnArray = JSONReferenceString.split("\n");
         returnArray = returnArray.filter(item => item !== '');
         // console.log("sanitized ,", returnArray);
         return returnArray;
     };
 
     /**
+     * @namespace {object} AIV
+     * @function memoizedSanRefIDs - memoized version of the sanitizeReferenceIDs pure function for performance
+     * @param {Function} AIV.returnReferenceLink - sanitizeReferenceIDs function defintiion
+     */
+    AIV.memoizedSanRefIDs = _.memoize(AIV.sanitizeReferenceIDs);
+
+    /**
 	 * @namespace {object} AIV
 	 * @function returnReferenceLink -
      * This function expects to receive a string which either 'references' a
      * 1) PubMedID (PubMed)
-     * 2) MINDID (Membrane based Interacome Network) ** We use ABIIdentifier for this as MIND search query does not go by Id.. **
+     * 2) MINDID (Membrane based Interacome Network) ** We use AGIIdentifier for this as MIND search query does not go by Id.. **
      * 3) AI-1 ID (Arabidopsis interactome project)
      * 4) DOI reference hotlink
      * 5) BINDID (Biomolecular Interaction Network Database, NOTE: Not live as of Nov 2017)
      *
      * @param {string} referenceStr - as the link given to the function that could be any the of above or none
-     * @param {string} ABIIdentifier - is used for the biodb link
+     * @param {string} AGIIdentifier - is used for the biodb link
 	 * @return {string} - a link from the above list
      */
-    AIV.returnReferenceLink = function(referenceStr, ABIIdentifier) {
-    	var regexGroup; //this variable necessary to extract parts from the reference string param
+    AIV.returnReferenceLink = function(referenceStr, AGIIdentifier) {
+    	let regexGroup; //this variable necessary to extract parts from the reference string param
     	if ( (regexGroup = referenceStr.match(/^PubMed[:]?(\d+)$/i)) ) { //assign and evaluate if true immediately
             return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PMID ${regexGroup[1]}</a>`;
         }
 		else if ( (regexGroup = referenceStr.match(/^Mind(\d+)$/i)) ){
-            return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${ABIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}</a>`;
+            return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${AGIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}</a>`;
 		}
 		else if ( (regexGroup = referenceStr.match(/^AI-1.*$/i)) ){
 			return `<a href="http://interactome.dfci.harvard.edu/A_thaliana/index.php" target="_blank">  (A. th. Interactome) ${referenceStr} </a>`;
@@ -1020,6 +1028,13 @@
 			return `<a href="https://academic.oup.com/nar/article/29/1/242/1116175" target="_blank">BIND ID ${referenceStr}</a>`;
 		}
 	};
+
+    /**
+	 * @namespace {object} AIV
+	 * @function memoizedRetRefLink - memoized version of the returnReferenceLink pure function for performance
+     * @param {Function} AIV.returnReferenceLink - returnReferenceLink function defintiion
+     */
+    AIV.memoizedRetRefLink = _.memoize(AIV.returnReferenceLink);
 
 	/**
 	 * @namespace {object} AIV
@@ -1044,8 +1059,8 @@
 			let dataSubset = data[geneQuery]; //'[]' expression to access an object property
             console.log(dataSubset);
 
-			// Add Nodes for each query. We skip the last one because that is the recursive flag
-			for (let i = 0; i < dataSubset.length - 1; i++) {
+			// Add Nodes for each query
+			for (let i = 0; i < dataSubset.length; i++) {
 				let typeSource = '';
 				let typeTarget = '';
 				let edgeColour = '#000000';	 // Default color of Black
@@ -1081,15 +1096,11 @@
                     }
                 }
 
-				interolog_confidence = Number(interolog_confidence); //Mutating string into number as the JSON gives "-1000" instead of -1000
-
-                correlation_coefficient = Number(correlation_coefficient); //Mutating string into number as the JSON gives "-0.2" instead of -0.2
-
 				// Get color
 				edgeColour = this.getEdgeColor(correlation_coefficient, published, index, interolog_confidence);
 
 				// Get Line Style
-				style = ((published) ? "solid" : "dashed"); //TODO: talk with Nick/Asher to use interolog confidence or publsihed flag
+				style = ((published) ? "solid" : "dashed");
 
 				// Get Line Width
 				width = this.getWidth(interolog_confidence);
@@ -1135,11 +1146,15 @@
         let inputsLabelsHTML = "";
         tempArrPubs.forEach(function(ref){
         	if (! document.getElementById(`${ref}-checkbox`)){ // check if DOM node exists before appending
+				let bindIDText = "";
+				if (ref.match(/^\d+$/)){
+                    bindIDText = "BIND ID ";
+				}
                 inputsLabelsHTML +=
                     `
 					<label for="${ref}-checkbox">
 						<input type="checkbox" id="${ref}-checkbox" class="ref-checkbox" value="${ref}" checked>
-						${ref}
+						${bindIDText + ref}
 					</label>
 					`;
 			}
@@ -1248,8 +1263,8 @@
         if (intType === "protein-DNA"){ ppiOrPdi = "pdi";}
 
         let referencesCleaned = "";
-        this.sanitizeReferenceIDs(ref).forEach(function(ref){
-            referencesCleaned += `<p> ${AIV.returnReferenceLink(ref, sourceGene)} </p>`;
+        this.memoizedSanRefIDs(ref).forEach(function(ref){
+            referencesCleaned += `<p> ${AIV.memoizedRetRefLink(ref, targetGene)} </p>`;
         });
 
         let miFormattedHTML = "";
@@ -1267,18 +1282,18 @@
 
         this.tempHtmlTableStr +=
 			`<tr>
-				<td>${intType}</td>
-				<td>${dbSource}</td>
-				<td>${sourceGene}</td>
-				<td>${targetGene}</td>
-				<td class="${sourceGene}-annotate">Fetching Data</td>
-				<td class="${targetGene}-annotate">Fetching Data</td>
-				<td>${interoConf === 0 ? "N/A" : interoConf }</td>
-				<td>${pearsonCC}</td>
-				<td>${referencesCleaned.match(/.*undefined.*/) ? "None" : referencesCleaned}</td>
-				<td>${miFormattedHTML ? miFormattedHTML : "None"}</td>
-				<td class="${sourceGene}-loc">Fetching Data</td>
-				<td class="${targetGene}-${ppiOrPdi}-loc">${ppiOrPdi === "pdi" ? "Nucleus(assumed)" : "Fetching Data"}</td>
+				<td class="small-csv-column">${intType}</td>
+				<td class="small-csv-column">${dbSource}</td>
+				<td class="small-csv-column">${sourceGene}</td>
+				<td class="small-csv-column">${targetGene}</td>
+				<td class="${sourceGene}-annotate small-csv-column">Fetching Data</td>
+				<td class="${targetGene}-annotate small-csv-column">Fetching Data</td>
+				<td class="small-csv-column">${interoConf === 0 ? "N/A" : interoConf }</td>
+				<td class="small-csv-column">${pearsonCC}</td>
+				<td class="med-csv-column">${referencesCleaned.match(/.*undefined.*/) ? "None" : referencesCleaned}</td>
+				<td class="med-csv-column">${miFormattedHTML ? miFormattedHTML : "None"}</td>
+				<td class="${sourceGene}-loc lg-csv-column">Fetching Data</td>
+				<td class="${targetGene}-${ppiOrPdi}-loc lg-csv-column">${ppiOrPdi === "pdi" ? "Nucleus(assumed)" : "Fetching Data"}</td>
 			</tr>`;
 	};
 
@@ -1561,12 +1576,12 @@
 		 * @param {object} geneNode - as a node object reference
 		 */
 		function modifySVGString(geneNode) {
-            var newSVGString = decodeURIComponent(geneNode.data('svgDonut')).replace("</svg>", ""); //strip </svg> closing tag
+            let newSVGString = decodeURIComponent(geneNode.data('svgDonut')).replace("</svg>", ""); //strip </svg> closing tag
 			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
 			// console.log(newSVGString);
-			var MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
-			var xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
-			var fontSize = geneNode.data('searchGeneData') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
+			let MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
+			let xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
+			let fontSize = geneNode.data('searchGeneData') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
 
             newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana" visibility="visible">${MapManCode}</text></svg>`;
 			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
@@ -1663,7 +1678,8 @@
                 for (let chr of Object.keys(AIV.chromosomesAdded)) {
                     nodeAgiNames = nodeAgiNames.concat(AIV.chromosomesAdded[chr].map( prop => prop.target));
                 }
-                AIV.fetchGeneAnnoForTable(nodeAgiNames);
+                let uniqueNodeAgiNames = Array.from(new Set(nodeAgiNames)); // remove duplicates to make quicker requests
+                AIV.fetchGeneAnnoForTable(uniqueNodeAgiNames);
                 AIV.addChrNodeQtips();
                 AIV.addNumberOfPDIsToNodeLabel();
                 AIV.addProteinNodeQtips();
@@ -1684,9 +1700,8 @@
 
             })
             .then(function(){
-                var AJAXLocalizationURL = "https://bar.utoronto.ca/~vlau/testing_suba4.php";
                 return $.ajax({
-                    url: AJAXLocalizationURL, // TODO: Change this URL to webservices one once uploaded
+                    url: "https://bar.utoronto.ca/~vlau/testing_suba4.php",
                     type: "POST",
 					data: JSON.stringify( AIV.returnLocalizationPOSTJSON() ),
                     contentType : 'application/json',
@@ -1744,16 +1759,16 @@
         postObj.loci = postObj.loci.slice(0, -1);
 
         //Recursive
-        postObj.recursive = $('#recursive').is(':checked').toString();
+        postObj.recursive = $('#recursive').is(':checked');
 
         // Published
-        postObj.published = $('#published').is(':checked').toString();
+        postObj.published = $('#published').is(':checked');
 
         // DNA
-        postObj.querydna = $('#queryDna').is(':checked').toString();
+        postObj.querydna = $('#queryDna').is(':checked');
         console.log(postObj);
 
-        let serviceURL = 'http://bar.utoronto.ca/~asher/vincent/get_interactions_dapseq.py';
+        let serviceURL = 'http://bar.utoronto.ca/~asher/vincent/get_interactions_dapseq.php';
 
         return $.ajax({
             url: serviceURL,
@@ -1859,7 +1874,7 @@
      */
     AIV.createGeneSummariesAjaxPromise = function(ABIs) {
 		return $.ajax({
-			url: "https://bar.utoronto.ca/~vlau/gene_summaries_POST.php",
+			url: "http://bar.utoronto.ca/~vlau/gene_summaries_POST.php",
 			type: "POST",
 			data: JSON.stringify(ABIs),
 			contentType: "application/json",
@@ -1872,4 +1887,4 @@
 		// Initialize AIV
 		AIV.initialize();
     });
-})(window, jQuery, cytoscape);
+})(window, jQuery, _, cytoscape);
