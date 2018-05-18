@@ -15,7 +15,6 @@
     /**
 	 * @namespace {object} AIV - Important hash tables to store state data and styling global data
      * @property {object} chromosomesAdded - Object property for 'state' of how many PDI chromosomes exist
-	 * @property {object} geneAnnoFetched - A hash of the AGI annotations in the app so far
 	 * @property {boolean} mapManLoadState - Boolean property representing if mapMan AJAX call was successful
 	 * @property {boolean} SUBA4LoadState - Boolean property representing if SUBA4 AJAX call was successful
 	 * @property {object} exprLoadState - State of the expression values the user has loaded for the current query genes
@@ -34,8 +33,6 @@
 	 * @property {object} miTerms - a dictionary of frequently occuring (needs to be curated manually as EMBL doesn't have an API) MI terms that come from our dapseq ppi webservice
      */
     AIV.chromosomesAdded = {};
-    AIV.geneAnnoFetched = {};
-    AIV.geneAnnoLoadState = false;
 	AIV.mapManLoadState = false;
 	AIV.SUBA4LoadState = false;
 	AIV.exprLoadState = {absolute: false, relative: false};
@@ -137,36 +134,17 @@
 
                 $('#formModal').modal('hide'); // hide modal
 
-                genes = AIV.formatABI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
+                genes = AIV.formatAGI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
 
 				AIV.genesList = genes.split("\n");
 
 				// Clear existing data
 				if (typeof AIV.cy !== 'undefined') {
-					//destroy cytoscape app instance
-					AIV.cy.destroy();
-
-					//remove existing interactions table except headers
-                    $("#csvTable").find("tr:gt(0)").remove();
-                    $(".inf").remove();
-
-                    //reset the reference filters for the next query
-					$("#ref-checkboxes").empty();
-
-                    //reset existing built-in state data from previous query
-					AIV.tempHtmlTableStr = "";
-                    AIV.chromosomesAdded = {};
-                    AIV.geneAnnoLoadState = false;
-                    AIV.mapManLoadState = false;
-                    AIV.SUBA4LoadState = false;
-                    AIV.exprLoadState = {absolute: false, relative: false};
-                    AIV.coseParentNodesOnCyCore = false;
-                    AIV.locCompoundNodes = [];
-
-                    // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
-					$('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
+					AIV.cy.destroy(); //destroy cytoscape app instance
+                    AIV.resetUI();
+					AIV.resetState();
                 }
-				AIV.initializeCy();
+				AIV.initializeCy(false);
 
 				AIV.loadData();
 			} else {
@@ -177,16 +155,46 @@
 	};
 
     /**
-	 * @namespace {object} AIV
-     * @function formatABI - helper function that takes in a capitalized ABI into the one we use i.e. AT3G10000 to At3g10000
-     * @param {string} ABI
-     * @returns {string} - formmated ABI, i.e. At3g10000
+     * @namespace {object} AIV
+     * @function resetState - Reset existing built-in state data from previous query
      */
-    AIV.formatABI = function (ABI){
-        ABI = ABI.replace(/T/g,'t');
-        ABI = ABI.replace(/G/g, 'g');
-        ABI = ABI.replace(/a/g, 'A');
-        return ABI;
+	AIV.resetState = function() {
+        this.tempHtmlTableStr = "";
+        this.chromosomesAdded = {};
+        this.mapManLoadState = false;
+        this.SUBA4LoadState = false;
+        this.exprLoadState = {absolute: false, relative: false};
+        this.coseParentNodesOnCyCore = false;
+        this.locCompoundNodes = [];
+    };
+
+    /**
+     * @namespace {object} AIV
+     * @function resetUI - Reset UI features that are run once a query was executed
+     */
+    AIV.resetUI = function() {
+        // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
+        $('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
+
+        //remove existing interactions table except headers
+        $("#csvTable").find("tr:gt(0)").remove();
+        $(".inf").remove();
+
+        //reset the reference filters for the next query
+        $("#ref-checkboxes").empty();
+    };
+
+    /**
+	 * @namespace {object} AIV
+     * @function formatAGI - helper function that takes in a capitalized AGI into the one we use i.e. AT3G10000 to At3g10000
+     * @param {string} AGI
+     * @returns {string} - formmated AGI, i.e. At3g10000
+     */
+    AIV.formatAGI = function (AGI){
+        AGI = AGI.replace(/T/g,'t');
+        AGI = AGI.replace(/G/g, 'g');
+        AGI = AGI.replace(/a/g, 'A');
+        return AGI;
     };
 
 	/**
@@ -250,7 +258,7 @@
                     'border-width' : '1px',
                     'border-color' : '#979797'
                 })
-			.selector('node[?searchGeneData]') //If same properties as above, override them with these values for search genes
+			.selector('node[?queryGene]') //If same properties as above, override them with these values for search genes
 				.style({
                     'font-size': 14,
 					'z-index': 100,
@@ -367,8 +375,9 @@
 	/**
 	 * @namespace {object} AIV
      * @function initializeCy - initialize Cytoscape with some default settings
+     * @param {boolean} upload - boolean to determine how to initialize stylesheet based on if user is entering their own JSON
 	 */
-	AIV.initializeCy = function() {
+	AIV.initializeCy = function(upload) {
 		this.cy = cytoscape({
   			container: document.getElementById('cy'),
 
@@ -376,7 +385,7 @@
 
             autounselectify: true,
 
-  			style: this.getCyStyle(),
+  			style: upload ? [] : this.getCyStyle(),
 
 			layout: {name: 'null'} //the init layout has 0 nodes so it doesn't matter what the layout is
 		});
@@ -445,7 +454,7 @@
 
 		// Add the node
 		this.cy.add([
-			{ group: "nodes", data: {id: node_id, name: node, searchGeneData : searchGene}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
+			{ group: "nodes", data: {id: node_id, name: node, queryGene : searchGene}} //nodes now have a property 'id' denoted as Protein_At5g20920 (if user inputed 'At5g20920' in the textarea)
 		]);
     };
 
@@ -785,23 +794,10 @@
 									text :
                                         function(event, api) {
                     						let HTML = "";
-                    						if (AIV.geneAnnoLoadState){
-                    							let gene = AIV.geneAnnoFetched[agiName];
-                    							if (typeof gene !== "undefined"){
-                    								if (typeof gene.desc !== "undefined"){
-                                                        HTML += `<p>Annotation: ${gene.desc}</p>`;
-                                                    }
-                                                    if (gene.synonyms[0] !== null) {
-                                                        HTML += `<p>Synoynms: ${gene.synonyms.join(', ')}</p>`;
-                                                    }
-                                                }
-											}
-											if (AIV.mapManLoadState){
-                    							HTML += `<p>${AIV.showMapMan(protein)}</p>`;
-											}
-											if (AIV.SUBA4LoadState){
-												HTML += `<p>${AIV.displaySUBA4qTipData(protein)}</p>`;
-											}
+                                            HTML += AIV.showDesc(protein);
+                                            HTML += AIV.showSynonyms(protein);
+                                            HTML += `<p>${AIV.showMapMan(protein)}</p>`;
+                                            HTML += `<p>${AIV.displaySUBA4qTipData(protein)}</p>`;
 											if (AIV.exprLoadState.absolute && exprOverlayChkbox.checked){
 											    HTML += `<p>Mean Expr: ${protein.data('absExpMn')}</p>
                                                          <p>SD Expr:   ${protein.data('absExpSd')}</p>`;
@@ -830,10 +826,10 @@
     /**
 	 * @function parseProteinNodes - parse through every protein (non-effector) node that exists in the DOM and perform the callback function on each node
      * @param {function} cb -  callback function
-	 * @param {boolean} [needNodeRef=false] - optional boolean to determine if callback should be performed on nodename or node object reference
+	 * @param {boolean} [needNodeRef=false] - optional boolean to determine if callback should be performed on node object reference
      */
     AIV.parseProteinNodes = function(cb, needNodeRef=false){
-        this.cy.filter("node[name ^= 'At']").forEach(function(node){
+        this.cy.filter("node[id ^= 'Protein_At']").forEach(function(node){
             let nodeID = node.data('name');
             if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
 				if (needNodeRef){
@@ -847,14 +843,37 @@
 	};
 
     /**
+     * @function showALias - helper function to decide whether or not to show desc on protein qTip
+     * @param {object} protein - reference to the particular protein which we are adding a qTip
+     * @returns {string} - a nicely formmated HTML string
+     */
+    AIV.showDesc = function(protein) {
+        let desc = protein.data('desc');
+        if (!desc){ return ""; } //exit if undefined
+        return `<p>Annotation: ${desc}</p>`;
+    };
+
+    /**
+     * @function showSynonyms - helper function to decide whether or not to show alias on protein qTip
+     * @param {object} protein - reference to the particular protein which we are adding a qTip
+     * @returns {string} - a nicely formmated HTML string
+     */
+    AIV.showSynonyms = function(protein) {
+        let syns = protein.data('synonyms');
+        if (!syns){ return ""; } //exit if undefined
+        return `<p>Synoynms: ${syns}</p>`;
+    };
+
+    /**
 	 * @function showMapMan - helper function to decide whether or not to show MapMan on protein qTip
 	 * @param {object} protein - reference to the particular protein which we are adding a qTip
 	 * @returns {string} - a nicely formmated HTML string of its mapman codes
      */
     AIV.showMapMan = function(protein) {
-		if (this.mapManLoadState === false){ return ""; }
-		var baseString = "";
-        for (let i = 1; i < ( protein.data('numOfMapMans') + 1 ) ; i++) {
+		let mapManNums = protein.data('numOfMapMans');
+        if (!mapManNums){ return ""; } //exit if undefined
+		let baseString = "";
+        for (let i = 1; i < ( mapManNums + 1 ) ; i++) {
             baseString += `<p> MapMan Code ${i} : ` + protein.data('MapManCode' + i) + '</p>' + `<p> MapMan Annotation ${i} : ` + protein.data('MapManName' + i) + '</p>';
         }
         // console.log(baseString);
@@ -867,9 +886,9 @@
 	 * @returns {string} - a nicely formmated HTML string of a node's localizations in PCT form
      */
     AIV.displaySUBA4qTipData = function(protein) {
-        if (this.SUBA4LoadState === false){ return ""; }
-        let baseString = "";
         let locData = protein.data('localizationData');
+        if (!locData) {return "";} //exit if undefined
+        let baseString = "";
         for (let i = 0; i < locData.length ;i++){
             let locPercent = Object.values(locData[i])[0];
         	if (locPercent > 0) {
@@ -1317,7 +1336,7 @@
 			};
         this.parseProteinNodes(nodeID => reqJSON.AGI_IDs.push( nodeID ));
 
-        reqJSON.include_predicted = ($('#predSUBA').is(':checked')); //true or false
+        reqJSON.include_predicted = ($('#exprPredLocChkbox').is(':checked')); //true or false
 
         return reqJSON;
     };
@@ -1357,7 +1376,7 @@
                     .data({
                         predictedSUBA : false,
                         experimentalSUBA : false,
-                        localizationData: {},
+                        localizationData: [],
 						localization: "unknown"
                     });
                 if (AIV.locCompoundNodes.indexOf("unknown") === -1 ){
@@ -1395,7 +1414,7 @@
 	AIV.createSVGPieDonutCartStr = function(AGIGene) {
 		let nodeData = AGIGene.data();
 		let AGIGeneLocData = nodeData.localizationData ;
-		let cyNodeSize = nodeData.searchGeneData ? this.searchNodeSize : this.nodeSize ;
+		let cyNodeSize = nodeData.queryGene ? this.searchNodeSize : this.nodeSize ;
 		let SVGwidthheight = cyNodeSize + 10;
 		let donutCxCy = SVGwidthheight/2;
 		let radius, strokeWidth;
@@ -1541,22 +1560,28 @@
      */
     AIV.processMapMan = function (MapManJSON) {
 		// console.log(MapManJSON);
-        // Iterate through each result item and inside however many annotations it has...
-		MapManJSON.forEach(function(geneMapMan) {
-            var particularGene = AIV.cy.$('node[name = "' + geneMapMan.request.agi + '"]');
-            particularGene.data("numOfMapMans", geneMapMan.result.length); //for use in the qTip
-            geneMapMan.result.forEach(function (resultItem, index) {
-            	var MapManCodeN = 'MapManCode' +  (index + 1); //i.e. MapManCode1
-            	var MapManNameN = 'MapManName' +  (index + 1); //i.e. MapManName1
-                particularGene.data({ //Add this data to object to be called via the qTip
-                    [MapManCodeN] : chopMapMan(resultItem.code),
-                	[MapManNameN] : chopMapMan(resultItem.name)
-                });
+        if (!this.mapManLoadState) { //if MapMan data not yet fully parsed after API call, i.e. initial load
+            MapManJSON.forEach(function(geneMapMan) { // Iterate through each result item and inside however many annotations it has
+                var particularGene = AIV.cy.$('node[id = "Protein_' + geneMapMan.request.agi + '"]');
+                particularGene.data("numOfMapMans", geneMapMan.result.length); //for use in the qTip
+                geneMapMan.result.forEach(function (resultItem, index) {
+                    var MapManCodeN = 'MapManCode' +  (index + 1); //i.e. MapManCode1
+                    var MapManNameN = 'MapManName' +  (index + 1); //i.e. MapManName1
+                    particularGene.data({ //Add this data to object to be called via the qTip
+                        [MapManCodeN] : chopMapMan(resultItem.code),
+                        [MapManNameN] : chopMapMan(resultItem.name)
+                    });
 
-                //Now call SVG modifying function for the first iteration, Nick agreed to only show the first MapMan on the Donut
-                if (index === 0) { modifySVGString(particularGene); }
+                    //Now call SVG modifying function for the first iteration, Nick agreed to only show the first MapMan on the Donut
+                    if (index === 0) { modifySVGString(particularGene); }
+                });
             });
-        });
+        }
+        else {
+           this.parseProteinNodes(function(proteinNode){
+               modifySVGString(proteinNode);
+           }, true);
+        }
 
         /**
 		 * @function chopMapman - decides whether or not to chop off MapMan Code/Name based on its detail/length (decided with discussion with Nick)
@@ -1569,21 +1594,22 @@
 			return nameOrCode; //By default return unmodified string if it is not too detailed
 		}
 
-
 		/**
 		 * @namespace {object} AIV
 		 * @function modifySVGString - Expect a node as an object reference and modify its svgDonut string by adding a text tag
 		 * @param {object} geneNode - as a node object reference
 		 */
 		function modifySVGString(geneNode) {
+		    let mapManCode1 = geneNode.data('MapManCode1');
+            if (typeof mapManCode1 === "undefined") {return;}
+            let mapManCodeShort = mapManCode1.replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
             let newSVGString = decodeURIComponent(geneNode.data('svgDonut')).replace("</svg>", ""); //strip </svg> closing tag
 			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
 			// console.log(newSVGString);
-			let MapManCode = geneNode.data('MapManCode1').replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
-			let xPosition = MapManCode.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
-			let fontSize = geneNode.data('searchGeneData') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
+			let xPosition = mapManCodeShort.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
+			let fontSize = geneNode.data('queryGene') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
 
-            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana" visibility="visible">${MapManCode}</text></svg>`;
+            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana" visibility="visible">${mapManCodeShort}</text></svg>`;
 			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
 
 			geneNode.data('svgDonut', newSVGString);
@@ -1633,8 +1659,6 @@
 	 * @returns {boolean} - True if the data is laoded
 	 */
 	AIV.loadData = function() {
-		let success = false; // results
-
         // Dynamically build an array of promises for the Promise.all call later
 		var promisesArr = [];
 
@@ -1699,51 +1723,63 @@
             .catch(function(err){
 
             })
-            .then(function(){
-                return $.ajax({
-                    url: "https://bar.utoronto.ca/~vlau/testing_suba4.php",
-                    type: "POST",
-					data: JSON.stringify( AIV.returnLocalizationPOSTJSON() ),
-                    contentType : 'application/json',
-                    dataType: 'json'
-                });
-            })
+            .then(AIV.returnSVGandMapManThenChain);
+
+	};
+
+    /**
+     * @function returnSVGandMapManThenChain - Return a promise chain that makes two ajax calls to our SUBA4 localziation API and the MapMan API to draw the SVG piechart background-images. This chain contains some logic with the load state. This logic is for when the user selects the switch for 'predicted' localization data. Note that this implementation will make re-calls to the SUBA4 API when the user hits the switch (as opposed to saving the predicted and experimental data to memory).
+     * @return {Promise.<TResult>}
+     */
+	AIV.returnSVGandMapManThenChain = function () {
+        return $.ajax({
+            url: "https://bar.utoronto.ca/~vlau/testing_suba4.php",
+            type: "POST",
+            data: JSON.stringify( AIV.returnLocalizationPOSTJSON() ),
+            contentType : 'application/json',
+            dataType: 'json'
+        })
             .then(function(SUBAJSON){
-                AIV.SUBA4LoadState = true;
                 AIV.addLocalizationDataToNodes(SUBAJSON);
 
                 //Loop through ATG protein nodes and add a SVG string property for bg-image css
                 AIV.cy.startBatch();
                 AIV.parseProteinNodes(AIV.createSVGPieDonutCartStr.bind(AIV), true);
-                AIV.effectorsLocHouseCleaning();
                 AIV.cy.endBatch();
-                AIV.returnBGImageSVGasCSS().update();
+                if (!AIV.SUBA4LoadState){
+                    AIV.effectorsLocHouseCleaning();
+                    AIV.returnBGImageSVGasCSS().update();
+                }
 
                 //Update the HTML table with our SUBA data
-				AIV.transferLocDataToTable();
+                AIV.transferLocDataToTable();
+                AIV.SUBA4LoadState = true;
             })
             .catch(function(err){
 
             })
-			.then(function(){ // chain this AJAX call to the above as the mapman relies on the drawing of the SVG pie donuts, i.e. wait for above sync code to finish
-				return $.ajax({
-					url: AIV.createGETMapManURL(),
-					type: 'GET',
-					dataType: 'json'
-				});
-			})
-			.then(function(resMapManJSON){
+            .then(function(){ // chain this AJAX call to the above as the mapman relies on the drawing of the SVG pie donuts, i.e. wait for above sync code to finish
+                if (!AIV.mapManLoadState) { //don't make another ajax call if we already have MapMan data in our nodes (this logic is for our checkbox)
+                    return $.ajax({
+                        url: AIV.createGETMapManURL(),
+                        type: 'GET',
+                        dataType: 'json'
+                    });
+                }
+            })
+            .catch(function(err){
+
+            })
+            .then(function(resMapManJSON){
                 AIV.cy.startBatch();
                 AIV.processMapMan(resMapManJSON);
                 AIV.cy.endBatch();
                 AIV.mapManLoadState = true;
-			})
-			.catch(function(err){
+            })
+            .catch(function(err){
 
-			});
-
-		return success;
-	};
+            });
+    };
 
     /**
 	 * @function createBARAJaxPromise - programatically figures out how to build the BAR URL get request
@@ -1826,23 +1862,25 @@
 		// console.log(ABIsArr);
 		this.createGeneSummariesAjaxPromise(ABIsArr)
 			.then(res => {
-                this.geneAnnoLoadState = true;
 				for(let gene of Object.keys(res)){
-					let desc = res[gene].brief_description;
+					let desc = res[gene].brief_description || "";
 					let synonyms = res[gene].synonyms;
 					$(`.${gene}-annotate`).text(`${res[gene].brief_description}`);
-					this.geneAnnoFetched[gene] = {
-						desc : desc,
-                        synonyms : synonyms
-					};
 					let firstSyn = synonyms[0];
                     let selector = this.cy.$(`#Protein_${gene}`);
                     if (selector.length > 0){ // only get Protein_AGI that exist on app
                         if (firstSyn !== null){
-                            selector.data('annotatedName', firstSyn + "\n" + selector.data('name'));
+                            selector.data({
+                                'annotatedName' : firstSyn + "\n" + selector.data('name'),
+                                'desc'          : desc,
+                                'synonyms'      : synonyms,
+                            });
                         }
                         else {
-                            selector.data('annotatedName', selector.data('name'));
+                            selector.data({
+                                'annotatedName' : selector.data('name'),
+                                'desc'          : desc,
+                            });
                         }
 					}
 				}

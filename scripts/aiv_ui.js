@@ -32,12 +32,13 @@
         showFormOnLoad();
         addResetEListener();
         showModals();
+        uploadJSON(AIVref);
         checkINTACTServerStatus();
         checkBIOGRIDServerStatus();
+        rerunLocalizationSVG(AIVref);
         getXMLSourcesModifyDropdown();
         getXMLTissuesFromConditionAJAX(AIVref);
         tissueDropdownChangeSelectColor(AIVref);
-        expressionQtip();
         expressionOverlayEListener(AIVref);
         thresholdSwitchEListener(AIVref);
         exprThresholdInputEListener(AIVref);
@@ -81,7 +82,6 @@
             resetForm();
             document.getElementById('queryBAR').click();
             document.getElementById('queryDna').click();
-            document.getElementById('predSUBA').click();
         });
     }
 
@@ -103,18 +103,71 @@
         }
     }
 
+    /** @function uploadJSON - upload a cytoscape JSON compatible file to our web app
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
+    function uploadJSON(AIVObj) {
+        let file = document.getElementById('uploadJSON');
+        file.addEventListener('change', function(event){
+            if (file.files.length !== 0) {
+                console.log(file.files[0]);
+                if (file.files[0].type === "application/json"){
+                    let reader = new FileReader();
+                    reader.onload = function(event) {
+                        let jsonObj = JSON.parse(event.target.result);
+                        console.log(jsonObj);
+                        if (typeof AIVObj.cy !== "undefined"){
+                            AIVObj.cy.destroy();
+                        }
+                        AIVObj.initializeCy(true); //initialize cytoscape
+                        AIVObj.resetState();
+                        AIVObj.resetUI();
+                        AIVObj.cy.json(jsonObj);
+                        buildRefsFromCyData(AIVObj);
+                        AIVObj.addChrNodeQtips();
+                        AIVObj.addProteinNodeQtips();
+                        AIVObj.addPPIEdgeQtips();
+                        AIVObj.addEffectorNodeQtips();
+                    };
+                    reader.readAsText(file.files[0]);
+                }
+            }
+        });
+
+        /**
+         * @function buildRefsFromCyData - Helper function to build Ref dropdown from JSON export by going inside the cytoscape app data (specifically the edges)
+         * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+         */
+        function buildRefsFromCyData(AIVObj){
+            let arrOfPubs = [];
+            AIVObj.cy.filter('edge[?reference]').forEach(function(edge){
+                arrOfPubs.push(edge.data('reference'));
+            });
+            let arrOfPubsUnique = arrOfPubs.filter(function(item, index, selfArr){ // delete duplicates
+                return index === selfArr.indexOf(item);
+            });
+            AIVObj.buildRefDropdown(arrOfPubsUnique);
+        }
+    }
+
     /** @function addResetEListener - modal functionality*/
     function showModals(){
         // Show Legend
-        $('#showLegendModal').click(function(e) {
-            e.preventDefault();
+        document.getElementById('showLegendModal').addEventListener('click', function(event) {
+            event.preventDefault();
             $('#LegendModal').modal('show');
         });
 
         // Show Legend
-        $('#showFormModal').click(function(e) {
-            e.preventDefault();
+        document.getElementById('showFormModal').addEventListener('click', function(event) {
+            event.preventDefault();
             $('#formModal').modal('show');
+        });
+
+        // Show Upload
+        document.getElementById('showUploadModal').addEventListener('click', function(event){
+            event.preventDefault();
+            $('#uploadModal').modal('show');
         });
     }
 
@@ -177,6 +230,12 @@
             }
 
             event.preventDefault();
+        });
+    }
+
+    function rerunLocalizationSVG(AIVOBJ){
+        document.getElementById('exprPredLocChkbox').addEventListener('change', function(event){
+            AIVOBJ.returnSVGandMapManThenChain();
         });
     }
 
@@ -247,19 +306,6 @@
             AIVObj.exprLoadState = {absolute: false, relative: false};
             if (document.getElementById('exprnOverlayChkbox').checked) {
                 overlayExpression(AIVObj, false);
-            }
-        });
-    }
-
-    function expressionQtip () {
-        $('#exprnOverlayChkAndLabel[title]').qtip({
-            style: {classes: 'qtip-light'},
-            position: {
-                my: 'top center',
-                at: 'bottom center'
-            },
-            hide: {
-                event: 'unfocus mouseleave'
             }
         });
     }
@@ -434,7 +480,7 @@
                 .css({
                     'background-color': AIVObj.nodeDefaultColor,
                 })
-            .selector('node[?searchGeneData]')
+            .selector('node[?queryGene]')
                 .css({
                     'background-color': AIVObj.searchNodeColor,
                 });
@@ -693,7 +739,7 @@
     function filterNonQueryGenes(AIVObj) {
         document.getElementById('filterNonQueryCheckbox').addEventListener('change', function(event){
             AIVObj.cy.startBatch();
-            AIVObj.cy.$('node[!searchGeneData][id ^= "Protein"]').toggleClass('filteredChildNodes');
+            AIVObj.cy.$('node[!queryGene][id ^= "Protein"]').toggleClass('filteredChildNodes');
             AIVObj.cy.$('node[id ^= "Effector"]').toggleClass('filteredChildNodes');
             AIVObj.cy.endBatch();
         });
@@ -713,7 +759,7 @@
         let filterValue = document.getElementById('EPPICorrThreshold').value;
         let selector = `edge[pearsonR <= ${filterValue}][?published][target ^= 'Protein']`;
         let edges = AIVObjReference.cy.$(selector);
-        edges.connectedNodes('node[!searchGeneData][id ^="Protein"]').forEach(function(ele){
+        edges.connectedNodes('node[!queryGene][id ^="Protein"]').forEach(function(ele){
             // console.log(ele.data(), "data, degree", ele.degree());
             if (ele.connectedEdges(selector).size() === ele.degree()){
                 ele.addClass('pearsonfilterEPPI');
@@ -765,7 +811,7 @@
                 // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
                 let selector = `edge[reference = '${node.value}']`;
                 let edges = AIVObj.cy.$(selector);
-                edges.connectedNodes('node[!searchGeneData][id ^="Protein"], node[!searchGeneData][id ^="Effector"]').forEach(function(ele){
+                edges.connectedNodes('node[!queryGene][id ^="Protein"], node[!queryGene][id ^="Effector"]').forEach(function(ele){
                     if (ele.connectedEdges(selector).size() === ele.degree()) {
                         ele.addClass('filterByReference');
                     }
@@ -834,7 +880,7 @@
         let filterInterlogConf = Number(document.getElementById('PPPIConfThreshold').value);
         let selector = `edge[pearsonR <= ${filterRValue}][!published][target ^= 'Protein'], edge[interologConfidence >= 1][interologConfidence <= ${filterInterlogConf}][!published][target ^= 'Protein']`;
         let edges = AIVObjReference.cy.$(selector); // OR selector
-        edges.connectedNodes('node[!searchGeneData][id ^="Protein"]').forEach(function(ele){
+        edges.connectedNodes('node[!queryGene][id ^="Protein"]').forEach(function(ele){
             // console.log(ele.data(), "data, degree", ele.degree());
             if (ele.connectedEdges(selector).size() === ele.degree()){
                 ele.addClass('pearsonAndInterologfilterPPPI');
@@ -1062,6 +1108,17 @@
             position: {
                 my: 'bottom center',
                 at: 'top center',
+            }
+        });
+
+        $('#exprnOverlayChkAndLabel[title]').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'top center',
+                at: 'bottom center'
+            },
+            hide: {
+                event: 'unfocus mouseleave'
             }
         });
     }

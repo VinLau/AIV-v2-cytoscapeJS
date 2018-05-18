@@ -63,7 +63,7 @@
 
         <!-- To simplify coding TODO: Remove this during launch -->
         <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
-        <script src="./scripts/automateInput.js"></script>
+        <!--<script src="./scripts/automateInput.js"></script>-->
 
     </head>
 
@@ -83,6 +83,7 @@
                         </div>
                         <div class="flex-container-PPPI-filter">
                             <h4 id="showFormModal">Query</h4>
+                            <h4 id="showUploadModal">Upload</h4>
                             <h4 id="showLegendModal">Legend</h4>
                         </div>
                     </div>
@@ -148,6 +149,12 @@
                             <input id="hideDonut" type="checkbox" class="submit-reset">
                             <label class="label-checkbox" for="hideDonut">
                                 Hide Localization Data
+                            </label>
+                        </section>
+                        <section class="slider-checkbox">
+                            <input id="exprPredLocChkbox" type="checkbox" class="submit-reset" checked>
+                            <label class="label-checkbox" for="exprPredLocChkbox">
+                                Incl. Predicted Localizations
                             </label>
                         </section>
                     </div>
@@ -294,10 +301,6 @@
                                     <label><input id="published" type="checkbox" class="form-chkbox" value="">Show only interactions from published data sets</label>
                                 </div>
 
-                                <div class="checkbox">
-                                    <label><input id="predSUBA" type="checkbox" class="form-chkbox" value="" checked>Include predicted data for localization scores</label>
-                                </div>
-
                                 <p>Select databases to query:</p>
 
                                 <div class="checkbox">
@@ -335,6 +338,23 @@
                 </div>
             </div>
         </div> <!-- Form -->
+
+        <!-- Upload -->
+        <div id="uploadModal" class="modal fade" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="flex-container-header">
+                            <h4>Upload Cytoscape JSON</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <input type="file" id="uploadJSON" accept="application/json">
+                    </div>
+                </div>
+            </div>
+        </div> <!-- Upload -->
 
         <!-- Legend -->
         <div id="LegendModal" class="modal fade" tabindex="-1">
