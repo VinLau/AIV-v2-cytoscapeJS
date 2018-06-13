@@ -1,21 +1,24 @@
 /**
- * @fileOverview AIV2, Arabidopsis Interactions Viewer Two User Interface Options. Supplementary JS file that powers most of the front-end options (filtering nodes, changing server statuses) of AIV 2.0.
+ * @fileOverview AIV2, Arabidopsis Interactions Viewer Two User Interface Options. Supplementary JS file that powers most of the front-end options (filtering nodes, expression overlays) of AIV 2.0.
  * @version 2.0, Jan2018
  * @author Vincent Lau <vincente.lau@mail.utoronto.ca>
  */
 
-(function(window, $, cytoscape, undefined) {
+(function(window, $, cytoscape, ClipboardJS, alertify, undefined) {
     'use strict';
 
     //DOM ready;
     $(function() {
         if (typeof window.aivNamespace.AIV !== 'undefined') { // only run if we have initialized cytoscape app
             let AIV = window.aivNamespace.AIV;
+            // below functions should bind to AIV is they're more app-level features
+            AIV.mapManDropDown = mapManDropDown;
             runUIFunctions(AIV);
         }
         else { // if not loaded, try again after 1 second
             setTimeout(function(){
                 let AIV = window.aivNamespace.AIV;
+                AIV.mapManDropDown = mapManDropDown;
                 runUIFunctions(AIV);
             }, 1000);
         }
@@ -59,12 +62,13 @@
         spreadLayoutEventListener(AIVref);
         coseCompoundLayoutEventListener(AIVref);
         zoomInEventListener(AIVref);
-        resetEventListener(AIVref);
+        resetPanZoomEventListener(AIVref);
         zoomOutEventListener(AIVref);
         panLeft(AIVref);
         panRight(AIVref);
         panUp(AIVref);
         panDown(AIVref);
+        highlightNodes(AIVref);
         hideUnhideMapMan(AIVref);
         hideUnhideDonuts(AIVref);
         qTipsUI();
@@ -103,33 +107,71 @@
         }
     }
 
-    /** @function uploadJSON - upload a cytoscape JSON compatible file to our web app
+    /** @function uploadJSON - upload functionality - allow upload of cytoscape JSON compatible file to our web app, also highlight the sample code block
      * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
      */
     function uploadJSON(AIVObj) {
+        hljs.highlightBlock(document.getElementById('sampleJSON'));
         let file = document.getElementById('uploadJSON');
         file.addEventListener('change', function(event){
             if (file.files.length !== 0) {
-                console.log(file.files[0]);
                 if (file.files[0].type === "application/json"){
                     let reader = new FileReader();
                     reader.onload = function(event) {
-                        let jsonObj = JSON.parse(event.target.result);
-                        console.log(jsonObj);
-                        if (typeof AIVObj.cy !== "undefined"){
-                            AIVObj.cy.destroy();
+                        try {
+                            let jsonObj = JSON.parse(event.target.result);
+                            try {
+                                console.log(jsonObj);
+                                if (typeof AIVObj.cy !== "undefined"){
+                                    AIVObj.cy.destroy();
+                                    AIVObj.resetUI();
+                                    AIVObj.resetState();
+                                }
+                                AIVObj.initializeCy(true); //initialize cytoscape
+                                //set zooms and pans
+                                AIVObj.defaultZoom = jsonObj.zoom;
+                                AIVObj.defaultPan = jsonObj.pan;
+                                //set compound nodes for cose-compound layout
+                                jsonObj.elements.nodes.forEach(function(node){
+                                    let majorityLoc = node.data.localization;
+                                    if (AIVObj.locCompoundNodes.indexOf(majorityLoc) === -1 ){
+                                        AIVObj.locCompoundNodes.push(majorityLoc); // append to our state variable which stores unique majority localizations, used to later make compound nodes
+                                    }
+                                });
+                                AIVObj.cy.json(jsonObj);
+                                AIVObj.effectorsLocHouseCleaning();
+                                buildRefsFromCyData(AIVObj);
+                                if (typeof jsonObj.AIV2JSON === 'undefined'){ //test if user inputed their own interaction data or it was an AIV2 JSON
+                                    AIVObj.cy.layout(AIVObj.getCySpreadLayout()).run();
+                                    AIVObj.cy.style(AIVObj.getCyStyle()).update();
+                                    AIVObj.returnSVGandMapManThenChain();
+                                    let userNodeAgiNames = [];
+                                    AIVObj.parseProteinNodes((nodeID) => userNodeAgiNames.push(nodeID));
+                                    AIVObj.fetchGeneAnnoForTable(userNodeAgiNames);
+                                }
+                                else { // only need these things for an AIV2 JSON upload
+                                    AIVObj.addChrNodeQtips();
+                                    AIVObj.addPPIEdgeQtips();
+                                }
+                                AIVObj.addProteinNodeQtips();
+                                AIVObj.addEffectorNodeQtips();
+                            }
+                            catch (err){
+                                alertify.logPosition("top right");
+                                alertify.error("Valid JSON but error parsing some properties, check formatting and reupload!");
+                            }
                         }
-                        AIVObj.initializeCy(true); //initialize cytoscape
-                        AIVObj.resetState();
-                        AIVObj.resetUI();
-                        AIVObj.cy.json(jsonObj);
-                        buildRefsFromCyData(AIVObj);
-                        AIVObj.addChrNodeQtips();
-                        AIVObj.addProteinNodeQtips();
-                        AIVObj.addPPIEdgeQtips();
-                        AIVObj.addEffectorNodeQtips();
+                        catch (err) {
+                            alertify.logPosition("top right");
+                            alertify.error("Invalid JSON error");
+                            if (err instanceof SyntaxError){
+                                alertify.error("JSON likely not in proper JSON notation! Fix and reupload!");
+                            }
+                        }
+                        $('#uploadModal').modal('hide'); // hide modal
                     };
                     reader.readAsText(file.files[0]);
+                    file.value = ""; //'hack' that resets the value of input so in case user reuploads the same file name - to enable 'change' event listener
                 }
             }
         });
@@ -338,10 +380,10 @@
             let exprThr = document.getElementById('exprThreshold');
             exprThr.value = "";
             if ($(this).val() === "absolute"){
-                exprThr.placeholder = "raw#";
+                exprThr.placeholder = "Limit expression val";
             }
             else {
-                exprThr.placeholder = "log2";
+                exprThr.placeholder = "Limit Log 2 ratio";
             }
             if (document.getElementById('exprnOverlayChkbox').checked) {
                 overlayExpression(AIVObj, true);
@@ -486,9 +528,9 @@
                 });
         console.log("return expr gradient canvas wants limit yes or no?", userSetLimit);
         let softUpperBound = userSetLimit && userThreshold > 0 ? userThreshold : upperBound;
-        let softLowerBound = userSetLimit && userThreshold > 0 ? -Math.abs(userThreshold) : lowerBound;
-        console.log('softupperbound', softUpperBound, 'softlowerbound', softLowerBound);
+        let softLowerBound;
         if (mode === "absolute"){
+            softLowerBound = 0;
             lowerColor = "rgb(255, 255, 0)";
             baseCSSObj
                 .selector('node[absExpMn > 0]') //exclude nodes with nonzero expression
@@ -497,7 +539,7 @@
                 });
         }
         else if (mode === "relative"){
-            console.log('error here?');
+            softLowerBound = userSetLimit && userThreshold > 0 ? -Math.abs(userThreshold) : lowerBound;
             decimalPlaces = 2;
             lowerColor = 'rgb(0, 0, 255)';
             middleColor = 'rgb(255, 255, 0)';
@@ -511,6 +553,7 @@
                     'background-color' : "data(relExpColor)",
                 });
         }
+        console.log('softupperbound', softUpperBound, 'softlowerbound', softLowerBound);
         if (initLoad){
             // Below line: cache the canvas ctx and also use it as a truthy value if user chooses to turn the expr overlay switch on and off repeatedly so we don't need to redraw (perf boost)
             loadState[mode] = {
@@ -709,26 +752,15 @@
      * @param {object} AIVObj - reference to the AIV namespace object
      */
     function setJSONexport(AIVObj){
+        new ClipboardJS('#copy-to-clipboard', { //Copy to Clipboard functionality
+            container: document.getElementById('#JSONModal')
+        });
         document.getElementById('showJSONModal').addEventListener('click', function(event){
             $('#JSONModal').modal('show');
-            var JSONStringified = JSON.stringify( AIVObj.cy.json(), null, '    ' );
-            document.getElementById('json-export').innerText = JSONStringified;
+            let cyJSON = AIVObj.cy.json();
+            cyJSON.AIV2JSON = true; // custom property that this JSON originated from this app... will be exploited later for an if clause when uploading
+            document.getElementById('json-export').innerText = JSON.stringify( cyJSON, null, '    ' );
             hljs.highlightBlock(document.getElementById('json-export'));
-            //JSON Copy to Clipboard
-            document.getElementById('copy-to-clipboard').addEventListener('click', function(event){
-                //make a hidden input to select text from for copying
-                let tempInput = document.createElement('textarea');
-                tempInput.textContent = JSONStringified;
-                document.body.appendChild(tempInput);
-                let selection = document.getSelection();
-                let range = document.createRange();
-                range.selectNode(tempInput);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                document.execCommand("Copy");
-                selection.removeAllRanges();
-                tempInput.style.display = 'none';
-            });
         });
     }
 
@@ -1014,7 +1046,7 @@
     function coseCompoundLayoutEventListener(AIVObj) {
         document.getElementById('coseCompoundLayout').addEventListener('click', function(event){
             changeLayoutCyHouseCleaning(AIVObj, true);
-            if (AIVObj.SUBA4LoadState && !AIVObj.coseParentNodesOnCyCore) { //only run if SUBA4 data loaded and if parent nodes are not already added
+            if (!AIVObj.coseParentNodesOnCyCore) { //only run if parent nodes are not already added //took out AIVObj.SUBA4LoadState && check
                 AIVObj.addLocalizationCompoundNodes();
                 AIVObj.removeAndAddNodesForCompoundNodes();
             }
@@ -1023,7 +1055,7 @@
     }
 
     /**
-     * @function resetEventListener - zoom in e listener
+     * @function resetPanZoomEventListener - zoom in e listener
      * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
      */
     function zoomInEventListener(AIVObj){
@@ -1049,10 +1081,10 @@
     }
 
     /**
-     * @function resetEventListener - reset zoom and pan
+     * @function resetPanZoomEventListener - reset zoom and pan
      * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
      */
-    function resetEventListener(AIVObj){
+    function resetPanZoomEventListener(AIVObj){
         document.getElementById('zoomReset').addEventListener('click', function(event){
             AIVObj.cy.zoom(AIVObj.defaultZoom);
             AIVObj.cy.pan(AIVObj.defaultPan);
@@ -1100,6 +1132,49 @@
     }
 
     /**
+     * @function highlightNodes - Functionality for search bar to search for particular AGI protein nodes by adding a class to them; also has the clear functionality
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
+    function highlightNodes(AIVObj){
+        document.getElementById('highlightNodes').addEventListener('click', function(event) {
+            let genes = AIVObj.formatAGI($.trim(document.getElementById('highlightNodesAGIs').value.split(" ").join(""))); // format to exclude whitespaces between and outside of string
+            genes = "#Protein_" + genes.split(',').join(',#Protein_');
+            console.log(genes);
+            AIVObj.cy.$(genes).addClass('highlighted');
+        });
+        document.getElementById('cancelHighlight').addEventListener('click', function(event) {
+            AIVObj.cy.$('.highlighted').removeClass('highlighted');
+            document.getElementById('highlightNodesAGIs').value = "";
+        });
+    };
+
+    /**
+     * @function mapManDropDown -
+     * @param {object} AIVObj - reference to global namespace AIV object, with access to cytoscape methods
+     */
+    function mapManDropDown(AIVObj){
+        $('#mmDropdown').on({ //hack to prohibit the dropdown from closing when you click outside, credits to https://stackoverflow.com/questions/19740121/keep-bootstrap-dropdown-open-when-clicked-off/19797577#19797577
+            "shown.bs.dropdown": function() { this.closable = false; },
+            "click":             function() { this.closable = true; },
+            "hide.bs.dropdown":  function() { return this.closable; }
+        });
+
+        $('#bootstrapDropDownMM a').on( 'click', function( event ) {
+            let inputChild = $(event.target).children("input");
+            inputChild.prop('checked', !inputChild.is(':checked'));
+            hideMapManNodes($(event.target).data("value"));
+            return false;
+        });
+
+        function hideMapManNodes(mapManNum){
+            console.log(mapManNum);
+            AIVObj.cy.startBatch();
+            AIVObj.cy.$(`node[mapManOverlay = '${mapManNum}'][id ^= "Protein"]`).toggleClass('hideMapManNodes');
+            AIVObj.cy.endBatch();
+        };
+    }
+
+    /**
      * @function qTipsUI - bind qTips to HTML elements which have the title attribute
      */
     function qTipsUI(){
@@ -1123,4 +1198,4 @@
         });
     }
 
-})(window, jQuery, cytoscape);
+})(window, jQuery, cytoscape, ClipboardJS, alertify);

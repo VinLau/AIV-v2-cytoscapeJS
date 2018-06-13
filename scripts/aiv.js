@@ -31,6 +31,8 @@
      * @property {object} defaultPan - contains x and y properties for where the graph has been panned, useful for layouts
 	 * @property {object} miFilter - a list of unuseful mi terms that ideally would be filled out if a PPI/PDI does not have another meaningful name
 	 * @property {object} miTerms - a dictionary of frequently occuring (needs to be curated manually as EMBL doesn't have an API) MI terms that come from our dapseq ppi webservice
+	 * @property {object} mapManDefinitions - a dictionary of of MapMan terms (first number/hierarchical category)
+	 * @property {object} mapManOnDom - state variable dictionary that stores which MapMan BINs are in the app; used for when adding to the dropdown
      */
     AIV.chromosomesAdded = {};
 	AIV.mapManLoadState = false;
@@ -43,7 +45,7 @@
 	AIV.nodeDefaultColor = '#cdcdcd';
 	AIV.searchNodeColor = '#ffffff';
     AIV.locColorAssignments = {
-        cytoskeleton : "#575454",
+        cytoskeleton : "#572d21",
         cytosol      : "#e0498a",
         "endoplasmic reticulum" : "#d1111b",
         extracellular: "#ffd672",
@@ -98,6 +100,47 @@
 		"1178" : "sequence based prediction of binding of transcription factor to transcribed gene regulatory elements",
 		"2189" : "avexis"
 	};
+    AIV.mapManDefinitions =
+	{
+    	"0" : "Control",
+		"1" : "PS",
+		"2" : "Major CHO metabolism",
+		"3" : "Minor CHO metabolism",
+		"4" : "Glycolysis",
+		"5" : "Fermentation",
+		"6" : "Gluconeogensis",
+		"7" : "OPP",
+		"8" : "TCA/org. transformation",
+		"9" : "Mitochondrial electron transport",
+		"10": "Cell wall",
+		"11": "Lipid Metabolism",
+		"12": "N-metabolism",
+		"13": "Amino acid metabolism",
+		"14": "S-assimilation",
+		"15": "Metal handling",
+		"16": "Secondary metabolism",
+		"17": "Hormone metabolism",
+		"18": "Co-factor and vitamin metabolism",
+		"19": "Tetrapyrrole synthesis",
+		"20": "Stress",
+		"21": "Redox",
+		"22": "Polyamine metabolism",
+		"23": "Nucleotide metabolsim",
+		"24": "Biodegradation of xenobiotics",
+		"25": "C1-metabolism",
+		"26": "Misc.",
+		"27": "RNA",
+		"28": "DNA",
+		"29": "Protein",
+		"30": "Signalling",
+		"31": "Cell",
+		"32": "Micro RNA, natural antisense etc.",
+		"33": "Development",
+		"34": "Transport",
+		"35": "Not assigned",
+		"991": "Mineral nutrition"
+	};
+    AIV.mapManOnDom = {};
 
     /**
 	 * @namespace {object} AIV
@@ -166,6 +209,7 @@
         this.exprLoadState = {absolute: false, relative: false};
         this.coseParentNodesOnCyCore = false;
         this.locCompoundNodes = [];
+        this.mapManOnDom = {};
     };
 
     /**
@@ -173,8 +217,13 @@
      * @function resetUI - Reset UI features that are run once a query was executed
      */
     AIV.resetUI = function() {
+		// reset the buttons
+		$('.submit-reset').prop('checked', false);
+		$('#exprPredLocChkbox').prop('checked', true);
         // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
         $('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
+        // Remove prior mapman definitions for that app state
+        $('#bootstrapDropDownMM').empty();
 
         //remove existing interactions table except headers
         $("#csvTable").find("tr:gt(0)").remove();
@@ -270,6 +319,10 @@
 				.style({
 					'display' : 'none',
 				})
+			.selector('.hideMapManNodes') //add/(remove) this class to nodes to (un)display MapMan nodes with a specific MapMan number
+                .style({
+                    'display' : 'none',
+                })
 			.selector('.pearsonfilterEPPI') //to hide/unhide experimentally determined elements
                 .style({
                     'display' : 'none',
@@ -282,7 +335,7 @@
                 .style({
                     'display' : 'none',
                 })
-  			.selector('edge')
+  			.selector('edge[?edgeWidth]') // ?edgeWidth qualifier is to differentiate between user-uploaded edges
   				.style({
 					'curve-style': 'data(curveStyle)',
 					'haystack-radius': 0,
@@ -297,15 +350,15 @@
                 })
 			.selector('node[id ^= "DNA"]')
 				.style({
-                    'background-color': '#fed7ff',
+                    'background-color': '#D3D3D3',
                     'font-size': '1.1em',
                     "text-valign": "center",
                     "text-halign": "center",
 					"border-style": "solid",
-					"border-color": "#fff72d",
-					"border-width": "2px",
+					"border-color": "#000000",
+					"border-width": "5px",
 					'shape': 'square',
-					'z-index': 1000,
+					'z-index': 101,
 					'height': this.DNANodeSize,
 					'width': this.DNANodeSize,
 				})
@@ -368,6 +421,18 @@
                 .style({
                     'background-color': '#fff',
                 })
+			.selector('.highlighted')
+				.style({
+                    'border-color' : '#979797',
+                    "text-background-opacity": 1,
+                    "text-background-color": "yellow",
+                    "text-background-shape": "roundrectangle",
+                    "text-border-color": "#000",
+                    "text-border-width": 1,
+                    "text-border-opacity": 1,
+					"z-index": 102,
+					"font-size": 16
+				})
         );
 	};
 
@@ -421,12 +486,15 @@
      */
 	AIV.getEdgeColor = function(correlation_coefficient, published, index, interolog_confidence) {
 		correlation_coefficient = Math.abs(parseFloat(correlation_coefficient)); // Make the value positive
-		if (index === '2') {
-			return '#557e00';
+		if (index === '2') { //PDIs
+			if (interolog_confidence === 0){
+				return '#557e00'; // if e PDI, return dark green
+			}
+			else {
+				return '#333435'; // if p PDI, return greyish
+			}
 		} else if (published) { //published PPIs but not published PDIs
 			return '#99cc00';
-		} else if (interolog_confidence < 0){
-			return '#041959';
 		} else if (correlation_coefficient > 0.8) {
 			return '#ac070e';
 		} else if (correlation_coefficient > 0.7) {
@@ -435,10 +503,8 @@
 			return '#ea801d';
 		} else if (correlation_coefficient > 0.5) {
 			return '#f5d363';
-		} else if (correlation_coefficient <= 0.5) {
-			return '#acadb4';
 		} else {
-			return '#000000';
+			return '#acadb4';
 		}
 	};
 
@@ -563,7 +629,7 @@
                     {
                         id: "DNA_Chr" + chrNumber,
                         name: "Chr-" + chrName,
-                        localization: "Nucleus"
+                        localization: "nucleus"
                     },
                 classes: 'DNA'
             }
@@ -640,7 +706,7 @@
         for (let chr of Object.keys(this.chromosomesAdded)) {
         	let prevName = this.cy.getElementById(`DNA_Chr${chr}`).data('name');
 			this.cy.getElementById(`DNA_Chr${chr}`)
-				.data('name', `${prevName + "\n" + this.chromosomesAdded[chr].length} PDIs`);
+				.data('name', `${prevName + "\n" + this.chromosomesAdded[chr].length + "\n"} PDIs`);
         }
 	};
 
@@ -1115,11 +1181,14 @@
                     }
                 }
 
+                // Coerce scientific notation to fixed decimal point number
+                interolog_confidence = scientificToDecimal(interolog_confidence);
+
 				// Get color
 				edgeColour = this.getEdgeColor(correlation_coefficient, published, index, interolog_confidence);
 
 				// Get Line Style
-				style = ((published) ? "solid" : "dashed");
+				style = published ? "solid" : "dashed";
 
 				// Get Line Width
 				width = this.getWidth(interolog_confidence);
@@ -1149,6 +1218,33 @@
 		} //end of adding nodes and edges
 
 		this.buildRefDropdown(publicationsPPIArr);
+
+        /**
+         * @function scientificToDecimal - Helper function to turn scientific notation nums to integer form more nicely than using toFixed(), credits to https://gist.github.com/jiggzson/b5f489af9ad931e3d186
+         * @param num - number
+         * @return num - in integer form if num was originally in scientific notation
+         */
+        function scientificToDecimal(num) {
+            //if the number is in scientific notation remove it
+            if(/\d+\.?\d*e[\+\-]*\d+/i.test(num)) {
+                let zero = '0',
+                    parts = String(num).toLowerCase().split('e'), //split into coeff and exponent
+                    e = parts.pop(),//store the exponential part
+                    l = Math.abs(e), //get the number of zeros
+                    sign = e/l,
+                    coeff_array = parts[0].split('.');
+                if(sign === -1) {
+                    num = zero + '.' + new Array(l).join(zero) + coeff_array.join('');
+                }
+                else {
+                    let dec = coeff_array[1];
+                    if(dec) { l = l - dec.length }
+                    num = coeff_array.join('') + new Array(l+1).join(zero);
+                }
+            }
+
+            return num;
+        }
 	};
 
     /**
@@ -1326,7 +1422,7 @@
 	/**
 	 * @namespace {object} AIV
 	 * @function returnLocalizationPOSTJSON - Create and return SUBA URL string for AJAX call
-	 * @returns {string} - a string to build the URL
+	 * @returns {Object} - an object with the string of AGIs and the predicted localizations
 	 */
 	AIV.returnLocalizationPOSTJSON = function(){
 
@@ -1354,6 +1450,8 @@
 	 */
 	AIV.addLocalizationDataToNodes = function(SUBADATA) {
 		AIV.cy.startBatch();
+
+		AIV.locCompoundNodes = [];
 
         Object.keys(SUBADATA).forEach(function(geneAGIName){
             let nodeID = geneAGIName; //AT1G04170 to At1g04170
@@ -1543,7 +1641,7 @@
 	 * @returns {string} - url for the HTTP request
      */
     AIV.createGETMapManURL = function () {
-		var mapmanURL = "https://bar.utoronto.ca/~asher/vincent/bar_mapman.php?request=[";
+		let mapmanURL = "https://bar.utoronto.ca/~asher/vincent/bar_mapman.php?request=[";
         this.parseProteinNodes((nodeID) => mapmanURL +=`"${nodeID}",`);
         mapmanURL = mapmanURL.slice(0,-1); //remove last ','
         mapmanURL += "]";
@@ -1559,7 +1657,6 @@
      * @param {object} MapManJSON - the JSON response we receive from the MapMan API
      */
     AIV.processMapMan = function (MapManJSON) {
-		// console.log(MapManJSON);
         if (!this.mapManLoadState) { //if MapMan data not yet fully parsed after API call, i.e. initial load
             MapManJSON.forEach(function(geneMapMan) { // Iterate through each result item and inside however many annotations it has
                 var particularGene = AIV.cy.$('node[id = "Protein_' + geneMapMan.request.agi + '"]');
@@ -1572,14 +1669,49 @@
                         [MapManNameN] : chopMapMan(resultItem.name)
                     });
 
-                    //Now call SVG modifying function for the first iteration, Nick agreed to only show the first MapMan on the Donut
-                    if (index === 0) { modifySVGString(particularGene); }
+                    //Now call SVG modifying function for the first iteration, Nick agreed to only show the first MapMan on the Donut, also add this MapMan to our checklist/legend
+                    if (index === 0) {
+                        let mapManBIN = resultItem.code.split(".")[0]; // get MapMan BIN (leftmost number, i.e. get 29 from 29.12.3)
+						particularGene.data('mapManOverlay', mapManBIN);
+                    	modifySVGString(particularGene, mapManBIN);
+						if (!AIV.mapManOnDom.hasOwnProperty(mapManBIN)){
+                            AIV.mapManOnDom[mapManBIN] = 1;
+						}
+						else {
+							AIV.mapManOnDom[mapManBIN] = AIV.mapManOnDom[mapManBIN] + 1;
+						}
+                    }
                 });
             });
+            // Last, use the mapManOnDom state variable to add the list of checkboxes to our #bootstrapDropDownMM
+            // example li item <li><a href="#" class="small" data-value="27" tabIndex="-1"><input type="checkbox"/ checked="true"> MapMan 27 - RNA</a></li>
+			// credits: https://codepen.io/bseth99/pen/fboKH
+			let df = document.createDocumentFragment();
+			for (let mapManNumKey of Object.keys(AIV.mapManOnDom)){
+				let li = document.createElement('li');
+				let a = document.createElement('a');
+                AIV.helperSetAttributes(a, {
+                    "data-value" : mapManNumKey,
+                    "tabIndex"   : "-1",
+                    "href"       : "#"
+                });
+                a.className = "small";
+				let input = document.createElement('input');
+				AIV.helperSetAttributes(input, {
+					'type' : 'checkbox',
+					'checked' : 'true'
+				});
+				a.append(input);
+                a.insertAdjacentHTML("beforeend", ` ${mapManNumKey}-${AIV.mapManDefinitions[mapManNumKey]} (${AIV.mapManOnDom[mapManNumKey]})`);
+				li.append(a);
+				df.append(li);
+			}
+			document.getElementById('bootstrapDropDownMM').appendChild(df);
+            AIV.mapManDropDown(AIV);
         }
         else {
            this.parseProteinNodes(function(proteinNode){
-               modifySVGString(proteinNode);
+               modifySVGString(proteinNode, proteinNode.data('mapManOverlay'));
            }, true);
         }
 
@@ -1598,18 +1730,17 @@
 		 * @namespace {object} AIV
 		 * @function modifySVGString - Expect a node as an object reference and modify its svgDonut string by adding a text tag
 		 * @param {object} geneNode - as a node object reference
+		 * @param {string} mapManNum - the first MapMan number (leftmost)
 		 */
-		function modifySVGString(geneNode) {
-		    let mapManCode1 = geneNode.data('MapManCode1');
-            if (typeof mapManCode1 === "undefined") {return;}
-            let mapManCodeShort = mapManCode1.replace(/^(\d+)\..*$/i, "$1"); // only get leftmost number
+		function modifySVGString(geneNode, mapManNum) {
+            if (typeof mapManNum === "undefined") {return;}
             let newSVGString = decodeURIComponent(geneNode.data('svgDonut')).replace("</svg>", ""); //strip </svg> closing tag
 			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', "");
 			// console.log(newSVGString);
-			let xPosition = mapManCodeShort.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
+			let xPosition = mapManNum.length > 1 ? '32%' : '41%'; //i.e. check if single or double digit
 			let fontSize = geneNode.data('queryGene') ? 22 : 13; //Determine whether gene is bigger or not (i.e. search gene or not)
 
-            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana" visibility="visible">${mapManCodeShort}</text></svg>`;
+            newSVGString += `<text x='${xPosition}' y='59%' font-size='${fontSize}' font-family="Verdana" visibility="visible">${mapManNum}</text></svg>`;
 			newSVGString = 'data:image/svg+xml;utf8,' + encodeURIComponent(newSVGString);
 
 			geneNode.data('svgDonut', newSVGString);
@@ -1645,8 +1776,10 @@
      */
     AIV.effectorsLocHouseCleaning = function(){
         let effectorSelector = this.cy.filter("node[id ^= 'Effector']");
-        if (effectorSelector.length > 0 && this.locCompoundNodes.indexOf('extracellular') === -1 ){
-            this.locCompoundNodes.push("extracellular");
+        if (effectorSelector.length > 0){
+            if (this.locCompoundNodes.indexOf('extracellular') === -1){
+                this.locCompoundNodes.push("extracellular");
+            }
             effectorSelector.forEach(function(effector){ //put effectors in ECM
                 effector.data('localization' , 'extracellular');
             });
@@ -1746,8 +1879,8 @@
                 AIV.cy.startBatch();
                 AIV.parseProteinNodes(AIV.createSVGPieDonutCartStr.bind(AIV), true);
                 AIV.cy.endBatch();
+                AIV.effectorsLocHouseCleaning();
                 if (!AIV.SUBA4LoadState){
-                    AIV.effectorsLocHouseCleaning();
                     AIV.returnBGImageSVGasCSS().update();
                 }
 
@@ -1912,13 +2045,24 @@
      */
     AIV.createGeneSummariesAjaxPromise = function(ABIs) {
 		return $.ajax({
-			url: "http://bar.utoronto.ca/~vlau/gene_summaries_POST.php",
+			url: "http://bar.utoronto.ca/~asher/vincent/gene_summaries_POST.php",
 			type: "POST",
 			data: JSON.stringify(ABIs),
 			contentType: "application/json",
 			dataType: "json"
 		});
 	};
+
+    /**
+	 * @helper helperSetAttributes - helper function that sets multiple attributes in one line
+     * @param {Object} el - DOM node
+     * @param {Object} attrs - attribute object, eg {"src" : "www.google.ca", "data-value" : "kek"}
+     */
+    AIV.helperSetAttributes = function(el, attrs) {
+        for(let key in attrs) {
+            el.setAttribute(key, attrs[key]);
+        }
+    };
 
     // Ready to run
 	$(function() {

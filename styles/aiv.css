@@ -10,17 +10,25 @@
 	padding: 0;
 }
 
+/* icon CSS*/
+#showFormModal, #showUploadModal, #showLegendModal{
+	color: #99cc00;
+	cursor: pointer;
+}
+
+#showCSVModal, #showPNGModal, #showJSONModal{
+	color: #cd1d54;
+	cursor: pointer;
+}
+
+#cancelHighlight{
+	color: red;
+}
+/* end of icon CSS*/
+
 /*bootstrap overrides*/
 .navbar-brand, .navbar-nav, .navbar {
 	margin-bottom: 0;
-}
-
-.container-fluid {
-	padding: 0;
-}
-
-.navbar-header {
-	margin-top: calc((72px - 56px)/2);
 }
 
 /*end of bootstrap overrides*/
@@ -90,6 +98,10 @@
 	top: 1vh !important;
 }
 
+#LegendModal .modal-dialog{
+	width: 380px; /* size of legend image */
+}
+
 #PNGModal, #JSONModal, #CSVModal {
 	max-height: 100vh;
 }
@@ -125,6 +137,18 @@
 	height: 85vh;
 	overflow: auto;
 }
+
+/* upload  CSS*/
+#uploadJSON { /* this hack will make the 'no File chosen hidden' but not the button itself */
+	color: transparent;
+	padding: 3px;
+}
+
+#sampleJSON {
+	max-height: 50vh;
+	overflow: auto;
+}
+/* end upload  CSS*/
 
 /* end modal css */
 
@@ -334,6 +358,7 @@
 /*flex container for the nav bar excluding img*/
 .flex-container-main {
 	display: flex;
+	justify-content: space-around;
 	flex-flow: row wrap;
 }
 
@@ -353,25 +378,9 @@
 /* flex container for the title and form */
 .flex-container-title {
 	display: flex;
-	flex-flow: row wrap;
-	align-items: center;
-}
-
-.flex-container-title-aiv {
-	display: flex;
 	flex-flow: column wrap;
-	align-items: flex-start;
-	margin-right: 2rem;
-}
-
-.flex-container-title-aiv h3{
-	font-family: "Source Sans Pro", "Lucida Sans Typewriter", monospace;
-}
-
-.flex-container-title h4{
-	margin: 0 5px;
-	cursor: pointer;
-	text-shadow: 2px 2px 4px darkgray;
+	align-items: center;
+	font-size: 16px;
 }
 /* end flex container for the title and form */
 
@@ -380,28 +389,19 @@
 	display: flex;
 	flex-flow: row wrap;
 	justify-content: center;
-	width: 190px;
-	padding: 0 5px;
+	width: 170px;
 }
 
 .flex-container-layout-buttons > p {
-	flex: 1 0 100%;
-	font-size: 12px;
+	font-size: 16px;
 	font-weight: 600;
-	text-align: center;
-	margin: 0;
-	padding: 0;
-}
-
-.flex-container-layout-buttons > button {
-	margin: 0 5px;
 }
 /* end css flex container for the layout buttons */
 
 /* flex container for the zoom/pan buttons */
 .flex-container-zoom-pan-buttons{
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
 	align-items: center;
 }
 
@@ -410,7 +410,7 @@
 /* flex container for the pan buttons */
 .flex-container-zoom-buttons {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	align-items: center;
 	justify-content: center;
 }
@@ -420,7 +420,6 @@
 /* flex container for the pan buttons */
 .flex-container-pan-buttons{
 	width: 80px;
-	margin-bottom: 7px;
 	display: flex;
 	flex-flow: row wrap;
 	align-items: center;
@@ -520,7 +519,7 @@
 /* flex container for the export buttons */
 .flex-container-export {
 	display:flex;
-	flex-flow: column wrap;
+	flex-flow: row wrap;
 }
 /* end flex container for the export buttons */
 
@@ -529,9 +528,9 @@
 /* cytoscape CSS */
 
 #cy {
-	height: calc(100vh - 80px);
-	height: -webkit-calc(100vh - 80px);
-	height: -moz-calc(100vh - 80px);
+	height: calc(100vh - 105px);
+	height: -webkit-calc(100vh - 105px);
+	height: -moz-calc(100vh - 105px);
 	width: 100%;
 	z-index: 4;
 }
@@ -600,7 +599,7 @@
 }
 
 #exprThreshold{
-	width: 70px;
+	width: 160px;
 }
 /* end expression gradient CSS */
 
