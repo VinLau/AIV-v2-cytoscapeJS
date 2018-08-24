@@ -1,12 +1,12 @@
 /**
  * @fileOverview AIV2, Arabidopsis Interactions Viewer Two. Main JS file that powers the front-end of AIV 2.0. Shows PPIs and PDIs and additional API data for a given gene(s).
- * @version 2.0, Dec2017
- * @author Vincent Lau (major additions, AJAX, polishing, CSS, SVGs, UX/UI, tables, tooltips) <vincente.lau@mail.utoronto.ca>
- * @author Asher Pasha (base app, adding nodes & edges)
+ * @version 2.0, Jul2018
+ * @author Vincent Lau (major additions, AJAX, polishing, CSS, SVGs, UX/UI, filters, exports, tables, tooltips) <vincente.lau@mail.utoronto.ca>
+ * @author Asher Pasha (prototype base app, some logic of adding nodes & edges)
  * @copyright see MIT license on GitHub
  * @description please note that I seldom intentionally used data properties to nodes instead of classes as we cannot ( to my knowledge), select nodes by NOT having a class
  */
-(function(window, $, _, cytoscape, undefined) {
+(function(window, $, _, cytoscape, alertify, undefined) {
 	'use strict';
 
     /** @namespace {object} AIV */
@@ -182,9 +182,9 @@
 				AIV.genesList = genes.split("\n");
 
 				// Clear existing data
-				if (typeof AIV.cy !== 'undefined') {
+                AIV.resetUI();
+                if (typeof AIV.cy !== 'undefined') {
 					AIV.cy.destroy(); //destroy cytoscape app instance
-                    AIV.resetUI();
 					AIV.resetState();
                 }
 				AIV.initializeCy(false);
@@ -210,6 +210,10 @@
         this.coseParentNodesOnCyCore = false;
         this.locCompoundNodes = [];
         this.mapManOnDom = {};
+        // clear memoized memory
+		AIV.memoizedSanRefIDs.cache = new _.memoize.Cache;
+		AIV.memoizedRetRefLink.cache = new _.memoize.Cache;
+        AIV.memoizedPDITable.cache = new _.memoize.Cache;
     };
 
     /**
@@ -219,7 +223,7 @@
     AIV.resetUI = function() {
 		// reset the buttons
 		$('.submit-reset').prop('checked', false);
-		$('#exprPredLocChkbox').prop('checked', true);
+        $(".fa-eye-slash").toggleClass('fa-eye fa-eye-slash');
         // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
         $('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
         // Remove prior mapman definitions for that app state
@@ -253,11 +257,15 @@
 	AIV.getCySpreadLayout = function() {
 		let layout = {};
 		layout.name = 'cose';
-		// layout.minDist = 25;
+		// layout.minDist = 10;
         layout.nodeDimensionsIncludeLabels = true;
-		layout.nodeRepulsion = 25000;
 		// layout.padding = 1;
-        layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
+		if (AIV.cy.nodes().length > 750 && document.getElementById('circleLyChkbox').checked){
+			layout.name = 'circle';
+		}
+        else if (AIV.cy.nodes().length < 375){
+            layout.boundingBox = {x1:0 , y1:0, w:this.cy.width(), h: (this.cy.height() - this.DNANodeSize) }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
+        }
         layout.stop = function(){ //this callback gets ran when layout is finished
             AIV.defaultZoom = AIV.cy.zoom();
             AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
@@ -299,6 +307,7 @@
   				.style({
 					'label': 'data(name)', //'label' is alias for 'content'
 				  	'font-size': 10,
+					'min-zoomed-font-size': 8,
 				  	'background-color': this.nodeDefaultColor,
                     "text-wrap": "wrap", //mulitline support
                     'height': this.nodeSize,
@@ -310,7 +319,8 @@
 			.selector('node[?queryGene]') //If same properties as above, override them with these values for search genes
 				.style({
                     'font-size': 14,
-					'z-index': 100,
+                    'min-zoomed-font-size': 0.00000000001,
+                    'z-index': 100,
                     'height' : this.searchNodeSize,
 					'width'  : this.searchNodeSize,
 					'background-color': this.searchNodeColor,
@@ -335,6 +345,10 @@
                 .style({
                     'display' : 'none',
                 })
+			.selector('.DNAfilter') // hide chromosomes
+				.style({
+					'display' : 'none',
+				})
   			.selector('edge[?edgeWidth]') // ?edgeWidth qualifier is to differentiate between user-uploaded edges
   				.style({
 					'curve-style': 'data(curveStyle)',
@@ -352,6 +366,7 @@
 				.style({
                     'background-color': '#D3D3D3',
                     'font-size': '1.1em',
+                    'min-zoomed-font-size': 0.00000000001,
                     "text-valign": "center",
                     "text-halign": "center",
 					"border-style": "solid",
@@ -424,6 +439,7 @@
 			.selector('.highlighted')
 				.style({
                     'border-color' : '#979797',
+					'min-zoomed-font-size': 0.00000000001,
                     "text-background-opacity": 1,
                     "text-background-color": "yellow",
                     "text-background-shape": "roundrectangle",
@@ -779,7 +795,7 @@
                         fontawesome = 'terminal';
 					}
 					AIV.memoizedSanRefIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function(ref){
-                        cellContent += AIV.memoizedRetRefLink(ref, targetDNAGene).replace(/('_blank'>).*/, "$1") + /* replace innerHTML text returned */
+                        cellContent += AIV.memoizedRetRefLink(ref, targetDNAGene).replace(/("_blank">).*/, "$1") + /* replace innerHTML text returned */
 							`<i class="fas fa-${fontawesome} fa-lg"></i>` +
 							'</a>';
 					});
@@ -792,7 +808,7 @@
 			htmlTABLE += "</tr>";
 		});
 		htmlTABLE += "</tbody></table></div>";
-		// console.log("finished createPDITable function execution", queryPDIsInChr);
+		console.log("finished createPDITable function execution", queryPDIsInChr);
         return htmlTABLE;
     };
 
@@ -804,12 +820,11 @@
 	 */
 	AIV.addChrNodeQtips = function () {
         let that = this;
-        let memoizedPDITable = _.memoize(that.createPDItable);
+        AIV.memoizedPDITable = _.memoize(this.createPDItable);
         for (let chr of Object.keys(this.chromosomesAdded)){
             // console.log(this.chromosomesAdded[chr], `chr${chr}`);
             this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function(event){
                 var chrNode = event.target;
-                // console.log(`You're hovering over chr ${chr}`);
                 chrNode.qtip(
                     {
                         content:
@@ -819,7 +834,7 @@
                                 		text :`Chromosome ${chr}`,
 										button: 'Close' //close button
 									},
-                                text: memoizedPDITable(that.chromosomesAdded[chr])
+                                text: AIV.memoizedPDITable(that.chromosomesAdded[chr])
                             },
                         style    : { classes : 'qtip-light qtip-dna'},
                         show:
@@ -927,7 +942,7 @@
     AIV.showSynonyms = function(protein) {
         let syns = protein.data('synonyms');
         if (!syns){ return ""; } //exit if undefined
-        return `<p>Synoynms: ${syns}</p>`;
+        return `<p>Synoynms: ${syns}</p> <hr>`;
     };
 
     /**
@@ -942,6 +957,7 @@
         for (let i = 1; i < ( mapManNums + 1 ) ; i++) {
             baseString += `<p> MapMan Code ${i} : ` + protein.data('MapManCode' + i) + '</p>' + `<p> MapMan Annotation ${i} : ` + protein.data('MapManName' + i) + '</p>';
         }
+        baseString += "<hr>";
         // console.log(baseString);
         return baseString;
 	};
@@ -1098,7 +1114,7 @@
     AIV.returnReferenceLink = function(referenceStr, AGIIdentifier) {
     	let regexGroup; //this variable necessary to extract parts from the reference string param
     	if ( (regexGroup = referenceStr.match(/^PubMed[:]?(\d+)$/i)) ) { //assign and evaluate if true immediately
-            return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target='_blank'> PMID ${regexGroup[1]}</a>`;
+            return `<a href="https://www.ncbi.nlm.nih.gov/pubmed/${regexGroup[1]}" target="_blank"> PMID ${regexGroup[1]}</a>`;
         }
 		else if ( (regexGroup = referenceStr.match(/^Mind(\d+)$/i)) ){
             return `<a href="http://biodb.lumc.edu/mind/search_results.php?text=${AGIIdentifier}&SubmitForm=Search&start=0&count=25&search=all" target="_blank"> MIND ID ${regexGroup[1]}</a>`;
@@ -1290,9 +1306,6 @@
         let style = 'solid';
         let width = '11';
 
-        // console.log(PSICQUICdata);
-        // console.log("queryGene:", queryGeneAsABI);
-
 		let regex;
 		if (INTACTorBioGrid === "INTACT") {
 			// example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus.*psi-mi:"MI:(\d+"\(.*?\)).*(pubmed:\d+) WITH GI flags!
@@ -1320,7 +1333,7 @@
             if (match.index === regex.lastIndex) {
                 regex.lastIndex++;
             }
-            arrPPIsProteinsRaw.push( AIV.formatABI ( match[1] ) ); // 1st captured group, i.e. "At2g10000"
+            arrPPIsProteinsRaw.push( AIV.formatAGI ( match[1] ) ); // 1st captured group, i.e. "At2g10000"
 			miTermPSICQUIC.push(match[2]); // push the 2nd group (i.e '0018"(two hybrid)', yes with '"'!)
 			pubmedIdArr.push(match[3]); //look for third captured group (i.e. "23667124")
         }
@@ -1329,7 +1342,7 @@
             return index === selfArr.indexOf(item);
         });
 
-        // console.log(arrPPIsProteinsUnique);
+        console.log(arrPPIsProteinsUnique);
 
         /*
         Loop through each PPI interaction and add the corresponding edge
@@ -1432,7 +1445,7 @@
 			};
         this.parseProteinNodes(nodeID => reqJSON.AGI_IDs.push( nodeID ));
 
-        reqJSON.include_predicted = ($('#exprPredLocChkbox').is(':checked')); //true or false
+        reqJSON.include_predicted = $("#exprPredLocEye").hasClass('fa-eye');
 
         return reqJSON;
     };
@@ -1827,8 +1840,10 @@
 
                 // Update styling and add qTips as nodes have now been added to the cy core
 
-				console.log("am i lagging here?");
                 AIV.addInteractionRowsToDOM();
+                // Count # of nodes on added to app to ask if user wants performance mode
+                console.log(AIV.cy.nodes().length, 'nodes');
+                console.log(AIV.cy.edges().length, 'edges');
                 //Below lines are to push to a temp array to make a POST for gene summaries
                 let nodeAgiNames = [];
                 AIV.parseProteinNodes((nodeID) => nodeAgiNames.push(nodeID));
@@ -1841,20 +1856,21 @@
                 AIV.addNumberOfPDIsToNodeLabel();
                 AIV.addProteinNodeQtips();
                 AIV.addPPIEdgeQtips();
-                console.log("am i lagging over here?");
                 AIV.addEffectorNodeQtips();
                 AIV.cy.style(AIV.getCyStyle()).update();
                 AIV.setDNANodesPosition();
                 AIV.resizeEListener();
-                console.log("start layout!");
+                let perfStart = performance.now();
+                console.log("start layout!", perfStart);
                 AIV.cy.layout(AIV.getCySpreadLayout()).run();
-                console.log('done');
+                console.log('done layout', (performance.now()-perfStart)/1000);
 
                 document.getElementById('loading').classList.add('loaded'); //hide loading spinner
             	$('#loading').children().remove(); //delete the loading spinner divs
 			})
             .catch(function(err){
-
+                alertify.logPosition("top right");
+                alertify.error(`Error during fetching interaction data, try BAR if using PSICQUIC services, status code: ${err.status}`);
             })
             .then(AIV.returnSVGandMapManThenChain);
 
@@ -1889,7 +1905,8 @@
                 AIV.SUBA4LoadState = true;
             })
             .catch(function(err){
-
+                alertify.logPosition("top right");
+                alertify.error(`Error made when requesting to SUBA webservice, status code: ${err.status}`);
             })
             .then(function(){ // chain this AJAX call to the above as the mapman relies on the drawing of the SVG pie donuts, i.e. wait for above sync code to finish
                 if (!AIV.mapManLoadState) { //don't make another ajax call if we already have MapMan data in our nodes (this logic is for our checkbox)
@@ -1901,7 +1918,8 @@
                 }
             })
             .catch(function(err){
-
+                alertify.logPosition("top right");
+                alertify.error(`Error made when requesting to MapMan webservice (note: we cannot load more than 700 MapMan numbers), status code: ${err.status}`);
             })
             .then(function(resMapManJSON){
                 AIV.cy.startBatch();
@@ -1910,7 +1928,8 @@
                 AIV.mapManLoadState = true;
             })
             .catch(function(err){
-
+                alertify.logPosition("top right");
+                alertify.error(`Error made when made processing MapMan data`);
             });
     };
 
@@ -2022,7 +2041,10 @@
                 });
                 this.returnGeneNameCSS().update();
             })
-			.catch(err => (console.log("err in gene summary fetching", err)));
+			.catch(err => {
+                alertify.logPosition("top right");
+        		alertify.error(`Error in gene summary fetching, ${err}`);
+			});
 	};
 
     /**
@@ -2069,4 +2091,4 @@
 		// Initialize AIV
 		AIV.initialize();
     });
-})(window, jQuery, _, cytoscape);
+})(window, jQuery, _, cytoscape, alertify);

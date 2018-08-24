@@ -10,14 +10,27 @@
 	padding: 0;
 }
 
+.subheader {
+	font-weight: 800;
+	font-size: 16px;
+}
+
 /* icon CSS*/
-#showFormModal, #showUploadModal, #showLegendModal{
+.center-icon {
+	margin: 0 5px;
+}
+
+#showFormModal, #showUploadModal, #showLegendModal, .fa-eye{
 	color: #99cc00;
 	cursor: pointer;
 }
 
-#showCSVModal, #showPNGModal, #showJSONModal{
+#showCSVModal, #showPNGModal, #showJSONModal, .fa-eye-slash{
 	color: #cd1d54;
+	cursor: pointer;
+}
+
+#eyeColumn {
 	cursor: pointer;
 }
 
@@ -31,7 +44,19 @@
 	margin-bottom: 0;
 }
 
+.navbar{
+	-webkit-box-shadow: 0 8px 6px -7px black;
+	-moz-box-shadow: 0 8px 6px -7px black;
+	box-shadow: 0 8px 6px -7px black;
+}
+
 /*end of bootstrap overrides*/
+
+/* logo CSS */
+.logo {
+	padding-top: calc(105px - 56px * 1.5);
+}
+/* end logo css */
 
 /* form css */
 
@@ -392,10 +417,6 @@
 	width: 170px;
 }
 
-.flex-container-layout-buttons > p {
-	font-size: 16px;
-	font-weight: 600;
-}
 /* end css flex container for the layout buttons */
 
 /* flex container for the zoom/pan buttons */
@@ -443,9 +464,36 @@
 
 /*end flex container for ppi filter*/
 
+/* css grid to align filter items */
+/* finder width */
+#highlightNodesAGIs {
+	width: 435px;
+}
+/* end finfer width*/
+
+.filter-grid {
+	display: grid; /*grid-template-columns: 1fr 1fr;*/
+	grid-template-areas:
+					'finder finder'
+					'eppi-filter pppi-filter';
+}
+
+.finder {
+	grid-area: finder;
+}
+
+.pppi-filter {
+	grid-area: pppi-filter;
+}
+
+.eppi-filter {
+	grid-area: eppi-filter;
+}
+/* end css grid to align filter items */
+
 /* some spacing for the flex items */
 .filter-column {
-	margin: 0 5px;
+	margin: 0 2px;
 }
 /* end some spacing for the flex items */
 
@@ -482,17 +530,20 @@
 	width: 100%;
 	display: none;
 	border: 1px #dadada solid;
+	font-size: 14px;
+	text-align: left;
+	list-style: none;
 }
 
 #ref-checkboxes label{
-	background-color: #cdcdcd;
+	background-color: #f9f9f9;
 	margin: 0;
 	width: 100%;
 	display: block;
 }
 
 #ref-checkboxes label:hover {
-	background-color: #99cc00;
+	background-color: #f5f5f5;
 }
 
 /* end css for experimental filters */
@@ -503,9 +554,11 @@
 	flex-flow: column wrap;
 }
 
+/* end flex container for the dropdown*/
+
 /* styling the expression overlay dropdowns */
 #dropdownSource, #dropdownTissues{
-	max-width: 20rem;
+	max-width: 130px;
 }
 
 .not-allowed{
@@ -513,8 +566,6 @@
 	color: #878787;
 }
 /* end styling the expression overlay dropdowns */
-
-/* end flex container for the dropdown*/
 
 /* flex container for the export buttons */
 .flex-container-export {
@@ -536,6 +587,10 @@
 }
 
 /* qtip CSS*/
+.qtip hr {
+	margin: 5px;
+}
+
 .qtip-light > .qtip-titlebar {
 	font-size: 1.5rem;
 }

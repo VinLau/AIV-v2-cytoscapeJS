@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.16/cytoscape.min.js"></script>
+        <title>Large network</title>
+        <style>
+            #cy {
+                width: 1900px;
+                height: 900px;
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <p id="number"></p>
+        <div id="cy"></div>
+    </body>
+    <script>
+        let size = 500;
+        document.getElementById('number').textContent = size.toString() + " nodes";
+        var cy = cytoscape({
+            container: document.getElementById('cy')
+        });
+        for (let i = 0; i <= size; i++) {
+            cy.add({
+                group: "nodes",
+                data: {id : i},
+            });
+        }
+        for (var i = 0; i < size; i++) {
+            let randomSource = Math.floor(Math.random()*size + 1);
+            let randomTarget = Math.floor(Math.random()*size + 1);
+            cy.add({
+                group: "edges",
+                data: { source: randomSource, target: randomTarget}
+            })
+        }
+        let timeStart = performance.now();
+        console.log('start', timeStart);
+        cy.layout({
+            name: 'cose',
+            stop: function(){
+                let timePerf = performance.now() - timeStart;
+                console.log('time taken:', timePerf/1000);
+            }
+        }).run();
+    </script>
+</html>

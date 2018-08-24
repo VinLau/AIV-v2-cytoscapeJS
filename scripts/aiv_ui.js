@@ -71,6 +71,7 @@
         highlightNodes(AIVref);
         hideUnhideMapMan(AIVref);
         hideUnhideDonuts(AIVref);
+        hideUnhideDNA(AIVref);
         qTipsUI();
     }
 
@@ -276,7 +277,8 @@
     }
 
     function rerunLocalizationSVG(AIVOBJ){
-        document.getElementById('exprPredLocChkbox').addEventListener('change', function(event){
+        document.getElementById('exprPredLocDiv').addEventListener('click', function(event){
+            $("#exprPredLocEye").toggleClass('fa-eye fa-eye-slash');
             AIVOBJ.returnSVGandMapManThenChain();
         });
     }
@@ -354,13 +356,12 @@
 
     function expressionOverlayEListener(AIVObj){
         document.getElementById('exprnOverlayChkbox').addEventListener('change', function(event){
-            console.log("exprnOverlayChkbox");
+            // console.log("exprnOverlayChkbox");
             let exprLimChkbox = document.getElementById('exprLimitChkbox');
             let exprnOverlayChkd = event.target.checked;
             if (exprLimChkbox.checked){
-                console.log("I am here?");
                 if (!exprnOverlayChkd) {
-                    console.log("expr overlay unchecked");
+                    // console.log("expr overlay unchecked");
                     exprLimChkbox.click(); //turn off the threshold if turning off expr overlay
                 }
                 overlayExpression(AIVObj, true);
@@ -427,9 +428,9 @@
         let inputMode = document.querySelector('input[name=expression_mode]:checked').value;
         let expLdState = AIVObj.exprLoadState;
         let exprLdStateAbsOrRel = AIVObj.exprLoadState[inputMode];
-        console.log("load state", expLdState);
+        // console.log("load state", expLdState);
         if (!exprLdStateAbsOrRel){ // i.e. initial load of the expression data of either absolute or relative
-            console.log('initial load conditional');
+            // console.log('initial load');
             let geneList = [];
             AIVObj.cy.filter("node[name ^= 'At']").forEach(function(node){
                 let nodeID = node.data('name');
@@ -447,7 +448,7 @@
                 tissue: secondDropdown.options[ secondDropdown.selectedIndex ].text,
                 tissuesCompare: "",
             };
-            console.log(postObject);
+            // console.log(postObject);
             createExpressionAJAX(postObject, inputMode, AIVObj);
         }
         else if (exprLdStateAbsOrRel) { // if data alread loaded for that datamode, i.e. relative or absolute
@@ -504,7 +505,7 @@
                 }
             }
             let minThreshold = absMode ? 0 : -Math.abs(maxThreshold);
-            console.log(maxThreshold, "max", minThreshold, "min");
+            // console.log(maxThreshold, "max", minThreshold, "min");
             retnExprCSSLoadGradient(AIVRef, absOrRel, minThreshold, maxThreshold, true).update();
         }
     }
@@ -544,7 +545,7 @@
             lowerColor = 'rgb(0, 0, 255)';
             middleColor = 'rgb(255, 255, 0)';
             AIVObj.parseProteinNodes(function(protein){
-                console.log(protein.data('name'));
+                // console.log(protein.data('name'));
                 protein.data('relExpColor', retRelExpColor(softUpperBound, softLowerBound, protein.data('relExpLog2')));
             }, true);
             baseCSSObj
@@ -553,7 +554,7 @@
                     'background-color' : "data(relExpColor)",
                 });
         }
-        console.log('softupperbound', softUpperBound, 'softlowerbound', softLowerBound);
+        // console.log('softupperbound', softUpperBound, 'softlowerbound', softLowerBound);
         if (initLoad){
             // Below line: cache the canvas ctx and also use it as a truthy value if user chooses to turn the expr overlay switch on and off repeatedly so we don't need to redraw (perf boost)
             loadState[mode] = {
@@ -561,14 +562,14 @@
                 upperBd : upperBound,
                 lowerBd : lowerBound,
             };
-            console.log('what is this?', loadState[mode]);
+            // console.log('what is this?', loadState[mode]);
             document.getElementById("exprGradientCanvas").getContext("2d").drawImage(loadState[mode].cache.canvas, 0, 0);
         }
         return baseCSSObj;
     }
 
     function retRelExpColor (softUpperBd, softLowerBd, relGeneLogExpr){
-        console.log(relGeneLogExpr, "gene expr", softLowerBd, "lowerbd", softUpperBd, "upperbd");
+        // console.log(relGeneLogExpr, "gene expr", softLowerBd, "lowerbd", softUpperBd, "upperbd");
         if (relGeneLogExpr === 0) { // no expression, i.e. "N/A"/grey, probably don't need this as we have a non-zero CSS selector
             return 'rgb(205, 205, 205)';
         }
@@ -577,7 +578,7 @@
             if (green < 0) { //prevent rgb from going > 255 for when limit exceeded, i.e. user sets threshold
                 green = 255;
             }
-            console.log(green, 'green');
+            // console.log(green, 'green');
             return `rgb(255, ${green} ,0)`;
         }
         else { // yellow to blue, down-expression
@@ -693,6 +694,9 @@
                     auto_filter: {
                         delay: 500 //milliseconds
                     },
+                    paging: {
+                        results_per_page: ['Interactions Per Page:', [10, 25, 50, 100, 99999]]
+                    },
                     filters_row_index: 1,
                     state: true,
                     alternate_rows: true,
@@ -769,7 +773,8 @@
      * @param {object} AIVObj - reference to the AIV namespace object
      */
     function filterNonQueryGenes(AIVObj) {
-        document.getElementById('filterNonQueryCheckbox').addEventListener('change', function(event){
+        document.getElementById('filterNonQueryEyeDiv').addEventListener('click', function(event){
+            $("#filterNonQueryEye").toggleClass('fa-eye fa-eye-slash');
             AIVObj.cy.startBatch();
             AIVObj.cy.$('node[!queryGene][id ^= "Protein"]').toggleClass('filteredChildNodes');
             AIVObj.cy.$('node[id ^= "Effector"]').toggleClass('filteredChildNodes');
@@ -980,8 +985,9 @@
      * @param {object} AIVObj - reference to the AIV namespace object
      */
     function hideUnhideMapMan(AIVObj) {
-        document.getElementById('hideMapMan').addEventListener('change', function(event){
-            AIVObj.hideMapMan(event.target.checked);
+        document.getElementById('hideMapManDiv').addEventListener('click', function(event){
+            AIVObj.hideMapMan($("#hideMapManEye").hasClass('fa-eye'));
+            $("#hideMapManEye").toggleClass('fa-eye fa-eye-slash');
         });
     }
 
@@ -990,8 +996,20 @@
      * @param {object} AIVObj - reference to the AIV namespace object
      */
     function hideUnhideDonuts(AIVObj) {
-        document.getElementById('hideDonut').addEventListener('change', function(event){
-            AIVObj.hideDonuts(event.target.checked);
+        document.getElementById('hideDonutDiv').addEventListener('click', function(event){
+            AIVObj.hideDonuts($("#hideDonutEye").hasClass('fa-eye'));
+            $("#hideDonutEye").toggleClass('fa-eye fa-eye-slash');
+        });
+    }
+
+    /**
+     * @function hideUnhideDNA - event listener binding function for hiding DNA nodes
+     * @param {object} AIVObj - reference to the AIV namespace object
+     */
+    function hideUnhideDNA(AIVObj) {
+        document.getElementById('hideDNADiv').addEventListener('click', function(event){
+            AIVObj.cy.$('node[id ^= "DNA"]').toggleClass('DNAfilter', $("#hideDNAEye").hasClass('fa-eye'));
+            $("#hideDNAEye").toggleClass('fa-eye fa-eye-slash');
         });
     }
 
@@ -1194,6 +1212,30 @@
             },
             hide: {
                 event: 'unfocus mouseleave'
+            }
+        });
+
+        $('#about-sppi[title]').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'bottom center',
+                at: 'top center',
+            }
+        });
+
+        $('.aboutPSICQUIC[title]').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'bottom center',
+                at: 'top center',
+            }
+        });
+
+        $('#aboutCircle[title]').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'bottom center',
+                at: 'top center',
             }
         });
     }

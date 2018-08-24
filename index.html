@@ -11,7 +11,7 @@
               integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
         <!-- jQuery library -->
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
         <!-- Latest compiled and minified Bootstrap Javascript -->
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
@@ -21,41 +21,37 @@
         <link rel="stylesheet" href="styles/aiv.css">
 
         <!-- Cytoscape -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.15/cytoscape.min.js"></script>
 
         <!-- Cytoscape Canvas -->
-        <script src="https://cdn.rawgit.com/classcraft/cytoscape.js-canvas/21c1084d/src/cytoscape-canvas.js"></script>
-
-        <!-- Layout -->
-        <script src="https://cdn.rawgit.com/maxkfranz/weaver/v1.2.0/dist/weaver.min.js"></script>
-        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-spread/9ce8be33/cytoscape-spread.js"></script>
+        <script src="scripts/cytoscape-canvas.js"></script>
 
         <!-- qtip2 -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.js" integrity="sha256-a+PRq3NbyK3G08Boio9X6+yFiHpTSIrbE7uzZvqmDac=" crossorigin="anonymous"></script>
-        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-qtip/02ebf16c/cytoscape-qtip.js"></script>
+        <script src="scripts/cytoscape-qtip.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css"/>
 
         <!-- Cerebral Web Cytoscape Layout -->
         <script src="scripts/cerebralJSModified.js"></script>
         <script src="scripts/modifiedCerebralJSLayout.js"></script>
 
-        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-cose-bilkent/d810281d/cytoscape-cose-bilkent.js"></script>
+        <script src="scripts/cytoscape-cose-bilkent.js"></script>
 
         <!-- Highlight Js -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css" integrity="sha256-akwTLZec/XAFvgYgVH1T5/369lhA2Efr22xzCNl1nHs=" crossorigin="anonymous"/>
 
         <!-- Font Awesome -->
-        <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
 
         <!-- Google Font -->
         <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
 
         <!-- TableFilterJS -->
-        <script src="https://unpkg.com/tablefilter@latest/dist/tablefilter/tablefilter.js"></script>
+        <script src="scripts/tablefilter/tablefilter.js"></script>
 
         <!--TableCSVExportjs-->
-        <script src="https://cdn.rawgit.com/zachwick/TableCSVExport/398707ef/jquery.TableCSVExport.js"></script>
+        <script src="scripts/jquery.TableCSVExport.js"></script>
 
         <!-- Lodash -->
         <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
@@ -65,39 +61,37 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.1/clipboard.min.js" integrity="sha256-hIvIxeqhGZF+VVeM55k0mJvWpQ6gTkWk3Emc+NmowYA=" crossorigin="anonymous"></script>
 
         <!-- To simplify coding TODO: Remove this during launch -->
-        <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
-        <script src="./scripts/automateInput.js"></script>
+        <!--<script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>-->
+        <!--<script src="./scripts/automateInput.js"></script>-->
 
     </head>
 
     <body>
         <nav class="navbar navbar-default">
             <div class="flex-container-main">
-                <div class="flex-container-dropdowns">
-                    <a href="//bar.utoronto.ca" target="_blank">
-                        <img src="//bar.utoronto.ca/BAR/images/BAR.png">
-                    </a>
-                </div>
+                <a class="logo" href="//bar.utoronto.ca" target="_blank">
+                    <img src="//bar.utoronto.ca/BAR/images/BAR.png">
+                </a>
 
                 <div class="flex-container-title">
-                    <h5>Query</h5>
+                    <h5 class="subheader">Query AIV</h5>
                     <div class="flex-container-export">
                         <span id="showFormModal">
                             <i class="far fa-play-circle fa-2x"></i>
                         </span>
+                        <span id="showLegendModal" class="center-icon">
+                            <i class="far fa-question-circle fa-2x"></i>
+                        </span>
                         <span id="showUploadModal">
                             <i class="fa fa-upload fa-2x"></i>
                         </span>
-                        <span id="showLegendModal">
-                            <i class="far fa-question-circle fa-2x"></i>
-                        </span>
                     </div>
-                    <h5>Export</h5>
+                    <h5 class="subheader">Export</h5>
                     <div class="flex-container-export">
                         <span id="showCSVModal">
                             <i class="fas fa-table fa-2x"></i>
                         </span>
-                            <span id="showPNGModal">
+                        <span id="showPNGModal" class="center-icon">
                             <i class="fas fa-image fa-2x"></i>
                         </span>
                             <span id="showJSONModal">
@@ -107,7 +101,7 @@
                 </div>
 
                 <div class="flex-container-layout-buttons">
-                    <p> Layouts </p>
+                    <h5 class="subheader"> Layouts </h5>
                     <div class="flex-layout-buttons">
                         <button class="button-layout" id="spreadLayout"></button>
 
@@ -117,7 +111,7 @@
                     </div>
                     <div>
                         <div class="col-lg-6" id="mmDropdown">
-                            <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown"><span> MapMan Legend (Filter)</span> <span class="caret"></span></button>
+                            <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown"><span> MapMan Legend/Filter</span> <span class="caret"></span></button>
                             <ul id="bootstrapDropDownMM" class="dropdown-menu">
 
                             </ul>
@@ -160,57 +154,28 @@
 
                 </div>
 
-                <div class="filter-column">
-                    <section class="slider-checkbox">
-                        <input id="filterNonQueryCheckbox" type="checkbox" class="filter-switch submit-reset">
-                        <label class="label-checkbox" for="filterNonQueryCheckbox">
-                            Hide Non-Query Genes
-                        </label>
-                    </section>
-                    <section class="slider-checkbox">
-                        <input id="hideMapMan" type="checkbox" class="submit-reset">
-                        <label class="label-checkbox" for="hideMapMan">
-                            Hide MapMan Numbers
-                        </label>
-                    </section>
-                    <section class="slider-checkbox">
-                        <input id="hideDonut" type="checkbox" class="submit-reset">
-                        <label class="label-checkbox" for="hideDonut">
-                            Hide Localization Data
-                        </label>
-                    </section>
-                    <section class="slider-checkbox">
-                        <input id="exprPredLocChkbox" type="checkbox" checked>
-                        <label class="label-checkbox" for="exprPredLocChkbox">
-                            Incl. Predicted Localizations
-                        </label>
-                    </section>
+                <div class="filter-column" id="eyeColumn">
+                    <div id="filterNonQueryEyeDiv">
+                        <i id="filterNonQueryEye" class="far fa-eye"></i> Non-Query Genes
+                    </div>
+                    <div id="hideMapManDiv" class="label-checkbox">
+                        <i id="hideMapManEye" class="far fa-eye"></i> MapMan Numbers
+                    </div>
+                    <div id="hideDonutDiv" class="label-checkbox">
+                        <i id="hideDonutEye" class="far fa-eye"></i> Localization Data
+                    </div>
+                    <div id="exprPredLocDiv" class="label-checkbox">
+                        <i id="exprPredLocEye" class="far fa-eye"></i> Pred Localizations
+                    </div>
+                    <div id="hideDNADiv" class="label-checkbox">
+                        <i id="hideDNAEye" class="far fa-eye"></i> DNA (Chr) Nodes
+                    </div>
                 </div>
 
-                <div class="filter-column">
-                    <section class="slider-checkbox">
-                        <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
-                        <label class="label-checkbox" for="filterEPPIsCheckbox">
-                            Show Experimental PPIs with:
-                        </label>
-                    </section>
-                    <label for="EPPICorrThreshold" class="threshold-label">
-                        Correlation Coefficient greater than
-                    </label>
-                    <input id="EPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="-1.0" maxlength="2" disabled/>
-                    <div id="multi-select">
-                        <div id="pseudo-select-box">
-                            <select id="pseudo-select" class="not-allowed">
-                                <option>Specific publication(s)</option>
-                            </select>
-                            <div id="overSelect" class="not-allowed"></div>
-                        </div>
-                        <div id="ref-checkboxes">
-                            <!-- The checkboxes will be added dynamically here -->
-                        </div>
-                    </div>
-                    <div>
-                        <input id="highlightNodesAGIs" type="text" placeholder=' Filter AGIs eg "At3g10010,At5g10220"'>
+                <div class="filter-column filter-grid">
+                    <div class="finder">
+                        <label for="highlightNodesAGIs">Find AGIs</label>
+                        <input id="highlightNodesAGIs" type="text" placeholder=' Highlight delimited AGIs by "," eg "At3g10010, At5g10220"'>
                         <label for="highlightNodes" id="highlightNodes">
                             <i class="fas fa-filter"></i>
                         </label>
@@ -218,37 +183,60 @@
                             <i class="fas fa-times"></i>
                         </span>
                     </div>
-                </div>
-
-                <div class="flex-container-PPPI-filter filter-column">
-                    <section class="slider-checkbox">
-                        <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
-                        <label class="label-checkbox" for="filterPPPIsCheckbox">
-                            Show Predicted PPIs with:
-                        </label>
-                    </section>
-                    <div>
-                        <label for="PPPICorrThreshold">
+                    <div class="eppi-filter">
+                        <section class="slider-checkbox">
+                            <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
+                            <label class="label-checkbox" for="filterEPPIsCheckbox">
+                                Show Experimental PPIs with:
+                            </label>
+                        </section>
+                        <label for="EPPICorrThreshold" class="threshold-label">
                             Correlation Coefficient greater than
                         </label>
-                        <input id="PPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="-1.0" maxlength="2" disabled/>
+                        <input id="EPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="-1.0" maxlength="2" disabled/>
+                        <div id="multi-select">
+                            <div id="pseudo-select-box">
+                                <select id="pseudo-select" class="not-allowed">
+                                    <option>Filter by Specific Publication(s)</option>
+                                </select>
+                                <div id="overSelect" class="not-allowed"></div>
+                            </div>
+                            <div id="ref-checkboxes">
+                                <!-- The checkboxes will be added dynamically here -->
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label for="PPPIConfThreshold">
-                            Interolog Confidence greater than &nbsp
-                        </label>
-                        <input id="PPPIConfThreshold" class="threshold" type="number" min="0" max="90.0" step="1.0" value ="1.0" maxlength="2" disabled/>
+                    <div class="pppi-filter flex-container-PPPI-filter filter-column">
+                        <section class="slider-checkbox">
+                            <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
+                            <label class="label-checkbox" for="filterPPPIsCheckbox">
+                                Show Predicted PPIs with:
+                            </label>
+                        </section>
+                        <div>
+                            <label for="PPPICorrThreshold">
+                                Correlation Coefficient greater than
+                            </label>
+                            <input id="PPPICorrThreshold" class="threshold" type="number" min="-1.0" max="1.0" step="0.1" value ="-1.0" maxlength="2" disabled/>
+                        </div>
+                        <div>
+                            <label for="PPPIConfThreshold">
+                                Interolog Confidence greater than &nbsp
+                            </label>
+                            <input id="PPPIConfThreshold" class="threshold" type="number" min="0" max="90.0" step="1.0" value ="1.0" maxlength="2" disabled/>
+                        </div>
                     </div>
                 </div>
 
+
                 <div class="flex-container-dropdowns">
-                    <p>Expression Data Source</p>
+                    <p>Expression Source</p>
                     <select id="dropdownSource" disabled>
                         <option>Select Source</option>
                     </select>
-                    <p>Expression Tissue/Condition</p>
+                    <p>Expression Tissue</p>
                     <select id="dropdownTissues" class="not-allowed" disabled>
-                        <option>Select Tissue</option>
+                        <option>Select Tissues</option>
                     </select>
                 </div>
 
@@ -273,7 +261,7 @@
                         <section class="slider-checkbox">
                             <input id="exprLimitChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
                             <label class="label-checkbox" for="exprLimitChkbox">
-                                Limit Expr
+                                Limit Expression
                             </label>
                         </section>
                     </div>
@@ -330,17 +318,23 @@
                                 <div class="checkbox">
                                     <label><input id="published" type="checkbox" class="form-chkbox" value="">Show only interactions from published data sets</label>
                                 </div>
+                                <div class="checkbox">
+                                    <label><input id="circleLyChkbox" type="checkbox" class="form-chkbox" value="">Use circular layout for for larger networks </label>
+                                    <i id="aboutCircle" class="fas fa-info-circle" title="Larger networks require much more processing time for force-directed (spread) layouts, check for a Circos-like layout"></i>
+                                </div>
 
                                 <p>Select databases to query:</p>
 
                                 <div class="checkbox">
                                     <label class="not-allowed"><input id="queryBioGrid" type="checkbox" value="" class="form-chkbox form-chk-needed" disabled><span id="BioGridSpan">Query interactions from BioGrid</span></label>
-                                    <i id="spinnerBioGrid" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
+                                    <i class="fas fa-exclamation-circle aboutPSICQUIC" title="PSICQUIC services such as BioGrid are slower to request; not suggested for larger networks"></i>
+                                    <i id="spinnerBioGrid" class="fa fa-cog fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
                                     <label class="not-allowed"><input id="queryIntAct" type="checkbox" class="form-chkbox form-chk-needed" value="" disabled><span id="IntActSpan">Query interactions from IntAct</span></label>
-                                    <i id="spinnerIntAct" class="fa fa-refresh fa-spin" aria-hidden="true"></i>
+                                    <i class="fas fa-exclamation-circle aboutPSICQUIC" title="PSICQUIC services such as IntAct are slower to request; not suggested for larger networks"></i>
+                                    <i id="spinnerIntAct" class="fa fa-cog fa-spin" aria-hidden="true"></i>
                                 </div>
 
                                 <div class="checkbox">
@@ -519,7 +513,10 @@
                                     <th class="small-csv-column">Gene 2 (Target)</th>
                                     <th class="small-csv-column">Gene 1 Annotation</th>
                                     <th class="small-csv-column">Gene 2 Annotation</th>
-                                    <th class="small-csv-column">Interolog Confidence/S-PPI rank</th>
+                                    <th class="small-csv-column">
+                                        Interolog Confidence/S-PPI rank
+                                        <i id="about-sppi" class="fas fa-question-circle" title="Interlog confidence values are positive, the higher; the better. Conversely, S-PPI rankings are negative, the closer to 0, the better the ranking."></i>
+                                    </th>
                                     <th class="small-csv-column">Pearson Correlation</th>
                                     <th class="med-csv-column">Reference</th>
                                     <th class="med-csv-column">MI Term</th>
@@ -542,7 +539,7 @@
 
     </body>
     <!--alertify.js-->
-    <script src="https://cdn.rawgit.com/alertifyjs/alertify.js/v1.0.10/dist/js/alertify.js"></script>
+    <script src="scripts/alertify.js"></script>
     <!-- AIV 2.0 JS -->
     <script src="scripts/aiv.js"></script>
     <!-- AIV 2.0 UI Options JS -->
