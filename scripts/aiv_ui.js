@@ -549,7 +549,7 @@
                 protein.data('relExpColor', retRelExpColor(softUpperBound, softLowerBound, protein.data('relExpLog2')));
             }, true);
             baseCSSObj
-                .selector('node[relExpLog2 != 0]') //exclude nodes with nonzero expression
+                .selector('node[relExpLog2]') //exclude nodes with nonzero expression
                 .css({
                     'background-color' : "data(relExpColor)",
                 });
