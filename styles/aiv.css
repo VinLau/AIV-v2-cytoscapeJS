@@ -62,7 +62,7 @@
 
 /* gene input box*/
 #genes {
-	height: 300px;
+	height: 250px;
 }
 
 #genes.input-error::placeholder {
@@ -86,7 +86,7 @@
 .collapse + input{
 	display: none; /* hide the checkboxes */
 }
-.collapse + input + p{
+.collapse + input + div{
 	/*display:none;*/
 	height: 0;
 	width: 0;
@@ -95,13 +95,18 @@
 	transition: visibility 0s, opacity 0.5s linear;
 	overflow:hidden
 }
-.collapse + input:checked + p{
+.collapse + input:checked + div{
 	height: 100%;
 	width: 100%;
 	visibility: visible;
 	opacity: 1;
 	overflow:hidden
 	/*display:block;*/
+}
+
+.information p{
+	padding-top: 7px;
+	font-size: 12.5px;
 }
 /* end of expanding summary*/
 
@@ -121,6 +126,11 @@
 .modal { /* overide bootstrap css for a little more background on modals */
 	position: fixed;
 	top: 1vh !important;
+}
+
+#formModal .modal-dialog {
+	min-width: 350px;
+	max-width: 425px;
 }
 
 #LegendModal .modal-dialog{
@@ -174,6 +184,13 @@
 	overflow: auto;
 }
 /* end upload  CSS*/
+
+/* error form modal */
+.form-modal-msg {
+	color: red;
+}
+
+/* end error form modal */
 
 /* end modal css */
 
@@ -683,5 +700,21 @@
 }
 
 /* end table CSV CSS */
+
+/* effector dropdown */
+
+#effectorSelect {
+	width: 250px;
+}
+
+/* end effector dropdown */
+
+/* pointer css for some icons */
+
+#highlightNodes, #cancelHighlight, #addEffectorButton {
+	cursor: pointer;
+}
+
+/* end pointer css */
 
 /* end cytoscape CSS */

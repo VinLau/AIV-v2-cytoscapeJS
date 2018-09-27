@@ -30,6 +30,7 @@
      */
     function runUIFunctions(AIVref) {
         validateGeneForm();
+        effectorDropdownSelect2();
         enableInteractionsCheckbox();
         addExampleEListener();
         showFormOnLoad();
@@ -55,7 +56,7 @@
         filterExperimentalPPIsSwitch(AIVref);
         filterExperimentalPPIsInputEListener(AIVref);
         showReferenceChkboxes();
-        filterEdgesByRefFunctionality(AIVref);
+        filterEdgesByRefEListener(AIVref);
         filterPredictedPPIsSwitch(AIVref);
         filterPredictedPPIsInputsEListener(AIVref);
         localizationLayoutEventListener(AIVref);
@@ -247,28 +248,32 @@
                 return; //don't e.preventdefault()...
             }
 
-            if (geneFormValueLen % 10 === 0 && (key === "a" || key === "A")){
+            let latestEntryLen = geneFormValue.split('\n').pop().length;
+            console.log(latestEntryLen);
+            console.log(latestEntryLen % 10);
+
+            if (latestEntryLen % 10 === 0 && (key === "a" || key === "A")){
                 geneForm.value += "A";
             }
-            else if ((geneFormValueLen % 10 === 1) && (key === "t" || key === "T")){
+            else if ((latestEntryLen % 10 === 1) && (key === "t" || key === "T")){
                 geneForm.value += "t";
             }
-            else if ((geneFormValueLen % 10 === 2) && key.match(/[1-5]/)){
+            else if ((latestEntryLen % 10 === 2) && key.match(/[1-5]/)){
                 geneForm.value += key;
             }
-            else if ((geneFormValueLen % 10 === 3) && key.match(/[gmc]/i)){
+            else if ((latestEntryLen % 10 === 3) && key.match(/[gmc]/i)){
                 geneForm.value += key;
             }
-            else if ((geneFormValueLen % 10 === 4) ||
-                     (geneFormValueLen % 10 === 5) ||
-                     (geneFormValueLen % 10 === 6) ||
-                     (geneFormValueLen % 10 === 7) ||
-                     (geneFormValueLen % 10 === 8) &&
+            else if ((latestEntryLen % 10 === 4) ||
+                     (latestEntryLen % 10 === 5) ||
+                     (latestEntryLen % 10 === 6) ||
+                     (latestEntryLen % 10 === 7) ||
+                     (latestEntryLen % 10 === 8) &&
                      key.match(/\d/)){
                 geneForm.value += key;
             }
 
-            if (geneForm.value.length % 10 === 9){ //automatically add new lines after a person has entered 'At2g10000'
+            if (latestEntryLen % 10 === 9){ //automatically add new lines after a person has entered 'At2g10000'
                 geneForm.value += "\n";
             }
 
@@ -426,9 +431,8 @@
 
     function overlayExpression (AIVObj, resetSoftBounds){
         let inputMode = document.querySelector('input[name=expression_mode]:checked').value;
-        let expLdState = AIVObj.exprLoadState;
         let exprLdStateAbsOrRel = AIVObj.exprLoadState[inputMode];
-        // console.log("load state", expLdState);
+        // console.log("load state", AIVObj.exprLoadState);
         if (!exprLdStateAbsOrRel){ // i.e. initial load of the expression data of either absolute or relative
             // console.log('initial load');
             let geneList = [];
@@ -664,6 +668,51 @@
     }
 
     /**
+     * @function effectorDropdownSelect2 - UI functionality for adding the dropdown list of effectors in our database
+     */
+    function effectorDropdownSelect2() {
+        $.ajax({
+            url: "http://bar.utoronto.ca/~asher/vincent/get_effectors.php",
+            type: "GET"
+        })
+            .then((res)=>{
+                if (res.status === "success"){
+                    let effectorSelect$ = $('#effectorSelect');
+                    effectorSelect$.empty();
+                    for (let i = 0; i < res.data.length; i++){
+                        let option = res.data[i];
+                        let element = document.createElement('option');
+                        element.textContent = option;
+                        element.value = option;
+                        document.getElementById('effectorSelect').appendChild(element);
+                    }
+                    effectorSelect$.select2({
+                        dropdownParent: $('#formModal')
+                    });
+                    document.getElementById('addEffectorButton').addEventListener('click', function(e){
+                        let latestFormEntry = document.getElementById('genes').value.split('\n').pop();
+                        console.log(latestFormEntry);
+                        if (latestFormEntry.match(/^AT[1-5MC]G\d{5}$/i) || res.data.indexOf(latestFormEntry) >= 0){
+                            document.getElementById('genes').value += "\n" + effectorSelect$.val();
+                        }
+                        else if (latestFormEntry === "\n" || latestFormEntry === ""){
+                            document.getElementById('genes').value += effectorSelect$.val();
+                        }
+                        else{
+                            $('#formErrorModal').modal('show');
+                        }
+                    });
+                }
+                else {
+                    throw new Error('loading effectors failed');
+                }
+            })
+            .catch((err)=>{
+                document.getElementById('loadingEffectors').innerText = "Error loading effectors";
+            });
+    }
+
+    /**
      * @function enableInteractionsCheckbox - make recursive checkbox only work when BAR PPI is selected
      */
     function enableInteractionsCheckbox(){
@@ -813,49 +862,52 @@
         document.getElementById('filterEPPIsCheckbox').addEventListener('change', function(event){
             // when checkbox is off, remove filter, when checkbox is on remove them and add them back on...
             AIVObj.cy.$('.pearsonfilterEPPI').removeClass('pearsonfilterEPPI');
+            AIVObj.cy.$('.filterByReference').removeClass('filterByReference');
             // below logic is for cleaner UI to disable filters when switch is off
             if (event.target.checked){
                 document.getElementById('EPPICorrThreshold').removeAttribute("disabled");
                 document.getElementById('overSelect').classList.remove('not-allowed');
                 document.getElementById('pseudo-select').classList.remove('not-allowed');
+                // add filters back on
                 pearsonFilterEPPIonEles(AIVObj);
+                filterEdgesByRefFunctionality(AIVObj);
             }
             else {
                 document.getElementById('EPPICorrThreshold').setAttribute("disabled", "");
                 document.getElementById('overSelect').classList.add('not-allowed');
                 document.getElementById('pseudo-select').classList.add('not-allowed');
-
-                // below logic will recheck every checkbox in the reference box
-                let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
-                [].forEach.call(uncheckedBoxes, function(node) { //nodelist hack for unsupported browsers
-                    node.click(); //recheck
-                });
             }
         });
     }
 
+    /***
+     * @function filterEdgesByRefFunctionality - The function for filtering edges by references to be referenced in the event listener
+     * @param AIVObj - reference to the AIV namespace object
+     */
+    function filterEdgesByRefFunctionality(AIVObj){
+        let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
+        [].forEach.call(uncheckedBoxes, function(node){ //nodelist hack for unsupported browsers
+            // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
+            let selector = `edge[reference = '${node.value}']`;
+            let edges = AIVObj.cy.$(selector);
+            edges.connectedNodes('node[!queryGene][id ^="Protein"], node[!queryGene][id ^="Effector"]').forEach(function(ele){
+                if (ele.connectedEdges(selector).size() === ele.degree()) {
+                    ele.addClass('filterByReference');
+                }
+            });
+            edges.addClass('filterByReference'); // hide the edge now
+        });
+    }
+
     /**
-     * @function filterEdgesByRefFunctionality - add switch/checkbox functionality to filter EPPIs...
+     * @function filterEdgesByRefEListener - add switch/checkbox functionality to filter EPPIs...
      * If you are confused about the logic go to function desc in pearsonFilterEPPIonEles
      * @param {object} AIVObj - reference to the AIV namespace object
      */
-    function filterEdgesByRefFunctionality(AIVObj){
+    function filterEdgesByRefEListener(AIVObj){
         document.getElementById('ref-checkboxes').addEventListener('change', function(e){
             AIVObj.cy.$('.filterByReference').removeClass('filterByReference');
-            let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
-
-            [].forEach.call(uncheckedBoxes, function(node){ //nodelist hack for unsupported browsers
-                // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
-                let selector = `edge[reference = '${node.value}']`;
-                let edges = AIVObj.cy.$(selector);
-                edges.connectedNodes('node[!queryGene][id ^="Protein"], node[!queryGene][id ^="Effector"]').forEach(function(ele){
-                    if (ele.connectedEdges(selector).size() === ele.degree()) {
-                        ele.addClass('filterByReference');
-                    }
-                });
-                edges.addClass('filterByReference'); // hide the edge now
-            });
-
+            filterEdgesByRefFunctionality(AIVObj);
         });
     }
 
@@ -1025,12 +1077,6 @@
         AIVObjReference.cy.reset(); //resets pan and zoom positions
         if (!coseOrNot){
             AIVObjReference.removeLocalizationCompoundNodes();
-        }
-        let nodeListCheckboxes = document.querySelectorAll('input:checked.filter-switch'); // NodeList of checked UI checkboxes (not form checkboxes)
-        if (nodeListCheckboxes.length > 0) { //reset UI checkboxes
-            [].forEach.call(nodeListCheckboxes, function(node){ //nodeList forEach hack (some browsers don't support NodeList.forEach
-                node.click(); // turn off checkbox, setting .checked DOES not fire events!
-            });
         }
     }
 

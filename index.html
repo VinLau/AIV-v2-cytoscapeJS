@@ -31,11 +31,20 @@
         <script src="scripts/cytoscape-qtip.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css"/>
 
+        <!-- Cytoscape Context menus -->
+        <link rel="stylesheet" href="styles/cytoscape-context-menus.css">
+        <script src="scripts/cytoscape-context-menus.js"></script>
+
         <!-- Cerebral Web Cytoscape Layout -->
         <script src="scripts/cerebralJSModified.js"></script>
         <script src="scripts/modifiedCerebralJSLayout.js"></script>
 
+        <!-- cose-bilkent layout -->
         <script src="scripts/cytoscape-cose-bilkent.js"></script>
+
+        <!-- Select2 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/js/select2.min.js" integrity="sha256-FA14tBI8v+/1BtcH9XtJpcNbComBEpdawUZA6BPXRVw=" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" integrity="sha256-xJOZHfpxLR/uhh1BwYFS5fhmOAdIRQaiOul5F/b7v3s=" crossorigin="anonymous" />
 
         <!-- Highlight Js -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
@@ -61,7 +70,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.1/clipboard.min.js" integrity="sha256-hIvIxeqhGZF+VVeM55k0mJvWpQ6gTkWk3Emc+NmowYA=" crossorigin="anonymous"></script>
 
         <!-- To simplify coding TODO: Remove this during launch -->
-        <!--<script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>-->
+        <script src="https://cdn.rawgit.com/Q42/LiveJS/bf827065/livejs.js"></script>
         <!--<script src="./scripts/automateInput.js"></script>-->
 
     </head>
@@ -185,7 +194,7 @@
                     </div>
                     <div class="eppi-filter">
                         <section class="slider-checkbox">
-                            <input id="filterEPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
+                            <input id="filterEPPIsCheckbox" type="checkbox" class="submit-reset">
                             <label class="label-checkbox" for="filterEPPIsCheckbox">
                                 Show Experimental PPIs with:
                             </label>
@@ -208,7 +217,7 @@
                     </div>
                     <div class="pppi-filter flex-container-PPPI-filter filter-column">
                         <section class="slider-checkbox">
-                            <input id="filterPPPIsCheckbox" type="checkbox" class="filter-switch submit-reset">
+                            <input id="filterPPPIsCheckbox" type="checkbox" class="submit-reset">
                             <label class="label-checkbox" for="filterPPPIsCheckbox">
                                 Show Predicted PPIs with:
                             </label>
@@ -223,7 +232,7 @@
                             <label for="PPPIConfThreshold">
                                 Interolog Confidence greater than &nbsp
                             </label>
-                            <input id="PPPIConfThreshold" class="threshold" type="number" min="0" max="90.0" step="1.0" value ="1.0" maxlength="2" disabled/>
+                            <input id="PPPIConfThreshold" class="threshold" type="number" min="0" max="90.0" step="1.0" value ="0.0" maxlength="2" disabled/>
                         </div>
                     </div>
                 </div>
@@ -259,7 +268,7 @@
                     </form>
                     <div class="flex-container-export">
                         <section class="slider-checkbox">
-                            <input id="exprLimitChkbox" type="checkbox" class="filter-switch not-allowed submit-reset">
+                            <input id="exprLimitChkbox" type="checkbox" class="not-allowed submit-reset">
                             <label class="label-checkbox" for="exprLimitChkbox">
                                 Limit Expression
                             </label>
@@ -290,28 +299,40 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <div class="flex-container-header">
-                            <h4>Welcome to Arabidopsis Interactions Viewer 2.0</h4>
+                            <h4>Arabidopsis Interactions Viewer 2.0</h4>
                             <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fas fa-window-close"></i></button>
                         </div>
                         <br>
-                        <h6>Visualize predicted and experimentally validated protein-protein/DNA interactions</h6>
+                        <h6>Visualize predicted & experimentally validated protein-protein/DNA interactions</h6>
                         <br>
                         <label class="collapse" for="aboutUs">Click to learn more</label>
                         <input id="aboutUs" type="checkbox">
-                        <p>The Arabidopsis Interactions Viewer queries a database of 70944 predicted and 36352 confirmed Arabidopsis interacting
-                            proteins. We have also included 2.8 million experimentally determined protein-DNA interactions. The predicted interactions (interologs) were generated by Drs Matt Geisler and Jane Geisler-Lee at the Southern Illinois University. Their current version is Interactome 2.0. The confirmed Arabidopsis interacting proteins come from
-                            BIND, the Biomolecular Interaction Network Database, from high-density Arabidopsis protein microarrays (Popescu et al.,
+                        <div class="information">
+                            <p>The Arabidopsis Interactions Viewer queries a database of 70,944 predicted and 36352 confirmed Arabidopsis interacting proteins. We have also included 2.8 million experimentally determined protein-DNA interactions. </p>
+                            <p>The predicted interactions (interologs) were generated by Drs Matt Geisler and Jane Geisler-Lee at the Southern Illinois University (Geisler-Lee et al., 2007). Their current version is Interactome 2.0. The confirmed Arabidopsis interacting proteins come from BioGRID (Chatr-aryamontri et al. 2017), BIND - the Biomolecular Interaction Network Database, from high-density Arabidopsis protein microarrays (Popescu et al.,
                             2007; Popescu et al., 2009), from Braun et al.'s Arabidopsis Interactome 2011 , from Wolf Frommer's Membrane protein
-                            INteractome Database MIND, and over 1190 other literature sources. The interactions in BIND were identified using several
-                            different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links to
-                            BIND/MIND/AI/PubMed records that are in the output of this viewer to view further information. The DNA-protein data were generously provided by O'Mailey et al. (2016), Gaudinier et al. (2011), Taylor-Teeples (2015), Li et al. (2014), and Brady et al. (2011). All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database. Additional protein function data is from MapMan. Built with CytoscapeJS, much thanks to Max Franz and Asher Pasha for development advice. Developed by Vincent Lau
-                            <a href="https://github.com/VinLau/AIV-v2-cytoscapeJS" target="_blank">Github Repo</a></p>
+                                INteractome Database MIND, and over 1,190 other literature sources.</p>
+                            <p> The protein-protein interactions in these sources were identified using several different methods, such as yeast two hybrid screens, but also via traditional biochemical methods. Use the links in the reference column that are in the tabular output of this viewer to view further information, or mouse-over the edges. </p>
+                            <p> The DNA-protein data were generously provided by O'Malley et al. (2016), Gaudinier et al. (2011), Taylor-Teeples et al. (2015), Li et al. (2014), and Brady et al. (2011) and were mostly generated by DAP-seq, with some generated by Y1H. </p>
+                            <p> All subcellular localisation data is from SUBA, the Arabidopsis Subcellular Database (Hooper et al., 2017). Additional protein function data is from MapMan (Usadel et al., 2009).</p>
+                            <p> Developed by Vincent Lau
+                            <a href="https://github.com/VinLau/AIV-v2-cytoscapeJS" target="_blank">Github Repo</a> Built with CytoscapeJS, much thanks to Max Franz and Asher Pasha for development advice. </p>
+                        </div>
                     </div>
                     <div class="modal-body">
                         <form id="input_form">
                             <div class="form-group">
                                 <label for="genes">Please enter a list of genes:</label>
                                 <textarea class="form-control gene-form" id="genes" rows="15" placeholder="At2g34970"></textarea>
+                                <br>
+                                <p>Or select from a list of effectors</p>
+                                <select id="effectorSelect">
+                                    <option id="loadingEffectors" value="none">Loading effectors...</option>
+                                </select>
+                                <span id="addEffectorButton">
+                                    <i class="fas fa-plus-circle"></i>
+                                </span>
+                                <br>
                                 <br>
                                 <p>Select options:</p>
 
@@ -532,6 +553,23 @@
                         <button type="button" id="exportCSV" class="btn btn-default">
                             Download CSV
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- incomplete form alert -->
+        <div id="formErrorModal" class="modal fade centered-modal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="flex-container-header">
+                            <h4 class="form-modal-msg">Incomplete Form Warning</h4>
+                            <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fas fa-window-close"></i></button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <h4 class="form-modal-msg">Please check form value before adding effectors/submission! </h4>
                     </div>
                 </div>
             </div>

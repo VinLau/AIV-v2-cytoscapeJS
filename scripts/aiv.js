@@ -167,6 +167,17 @@
             // Get the list of genes
             let genes = $.trim($('#genes').val());
 
+            genes = AIV.formatAGI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
+
+            let geneArr = genes.split('\n');
+            let effectorArr = [...document.getElementById('effectorSelect').options].map(option => option.value);
+            for (let i = 0; i < geneArr.length; i++) {
+                if(!geneArr[i].match(/^AT[1-5MC]G\d{5}$/i) && effectorArr.indexOf(geneArr[i]) === -1){
+                    $('#formErrorModal').modal('show');
+                    throw new Error('wrong submission');
+                }
+            }
+
             if (genes !== '' && $('.form-chk-needed:checked').length > 0) {
                 document.getElementById('loading').classList.remove('loaded'); //remove previous loading spinner
                 let iconNode = document.createElement("i");
@@ -177,14 +188,13 @@
 
                 $('#formModal').modal('hide'); // hide modal
 
-                genes = AIV.formatAGI(genes); //Processing very useful to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
-
-                AIV.genesList = genes.split("\n");
+                AIV.genesList = geneArr;
 
                 // Clear existing data
                 AIV.resetUI();
                 if (typeof AIV.cy !== 'undefined') {
                     AIV.cy.destroy(); //destroy cytoscape app instance
+                    AIV.cy.contextMenus('get').destroy(); // delete bound right-click menus
                     AIV.resetState();
                 }
                 AIV.initializeCy(false);
@@ -286,10 +296,19 @@
         layout.stop = function(){ //this callback gets ran when layout is finished
             AIV.defaultZoom = AIV.cy.zoom();
             AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
+            AIV.cy.style() // see removeAndAddNodesForCompoundNodes for rationale of re-updating stylesheet
+                .selector('.filterByReference').style({'display': 'none'})
+                .selector('.pearsonfilterEPPI').style({'display': 'none'})
+                .selector('.pearsonAndInterologfilterPPPI').style({'display': 'none'})
+                .update();
         };
         return layout;
     };
 
+    /**
+     * @namespace {object} AIV
+     * @function getCyCerebralLayout - Returns layout for Cytoscape
+     */
     AIV.getCyCerebralLayout = function (){
         AIV.defaultZoom = 1; // reset zoom
         AIV.defaultPan = {x: 0, y:0}; // reset pan
@@ -588,13 +607,29 @@
 
         let newNodes = [];
 
+        // the reasoning behind having this style being updated and then removed again in the layout.stop when the cose-bilkent layout is finished is because running the layout with hidden nodes does NOT manuever the nodes around nicely (i.e. they're all in one spot); this is a workaround
+        this.cy.style()
+            .selector('.filterByReference')
+            .style({'display': 'element'})
+            .selector('.pearsonfilterEPPI')
+            .style({'display': 'element'})
+            .selector('.pearsonAndInterologfilterPPPI')
+            .style({'display': 'element'})
+            .update(); // update the elements in the graph with the new style
+
         // console.log("removeAndAddNodesForCompoundNodes 2", oldNodes.size());
         oldNodes.forEach(function(oldNode){
             let newData = Object.assign({}, oldNode.data()); // let us make a copy of the previous object not directly mutate it. Hopefully the JS garbage collector will clear the memory "https://stackoverflow.com/questions/37352850/cytoscape-js-delete-node-from-memory"
+
+            let filterClasses = "";
+            if (oldNode.hasClass('filterByReference')){filterClasses += "filterByReference";}
+            if (oldNode.hasClass('pearsonfilterEPPI')){filterClasses += " pearsonfilterEPPI ";}
+            if (oldNode.hasClass('pearsonAndInterologfilterPPPI')){filterClasses += " pearsonAndInterologfilterPPPI";}
             newData.parent = oldNode.data("localization");
             newNodes.push({
                 group: "nodes",
                 data: newData,
+                classes: filterClasses,
             });
         });
 
@@ -912,7 +947,7 @@
     AIV.parseProteinNodes = function(cb, needNodeRef=false){
         this.cy.filter("node[id ^= 'Protein_At']").forEach(function(node){
             let nodeID = node.data('name');
-            if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get ABI IDs, i.e. exclude effectors
+            if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) { //only get AGI IDs, i.e. exclude effectors
                 if (needNodeRef){
                     cb(node);
                 }
@@ -1036,7 +1071,7 @@
             return refLinks; //can be "" or have a bunch of links..., "NA" should return ""
         }
         else { //if interlog confidence is less than zero, show external docker link
-            return "<p><a href='http://bar.utoronto.ca/~rsong/formike/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
+            return "<p><a href='http://bar.utoronto.ca/protein_docker/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
         }
     };
 
@@ -1125,6 +1160,9 @@
         else if ( (regexGroup = referenceStr.match(/doi:(.*)/i)) ){
             return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> DOI ${regexGroup[1]} </a>`;
         }
+        else if ( (regexGroup = referenceStr.match(/biogrid:(.*)/i)) ){
+            return `<a href="https://thebiogrid.org/interaction/${regexGroup[1]}" target="_blank"> BioGrid ${regexGroup[1]}</a>`;
+        }
         else if ( (regexGroup = referenceStr.match(/(\d+)/)) ) { //for BIND database (now closed)
             return `<a href="https://academic.oup.com/nar/article/29/1/242/1116175" target="_blank">BIND ID ${referenceStr}</a>`;
         }
@@ -1158,7 +1196,6 @@
         for (let geneQuery of Object.keys(data)) {
 
             let dataSubset = data[geneQuery]; //'[]' expression to access an object property
-            console.log(dataSubset);
 
             // Add Nodes for each query
             for (let i = 0; i < dataSubset.length; i++) {
@@ -1173,14 +1210,14 @@
                 let {index, source, target, reference, published, interolog_confidence, correlation_coefficient, mi} = edgeData;
 
                 // Source, note that source is NEVER DNA
-                if (source.match(/^At/i)) {
+                if (source.match(/^AT[1-5MC]G\d{5}$/i)) {
                     typeSource = 'Protein';
                 } else {
                     typeSource = 'Effector';
                 }
 
                 // Target
-                if (target.match(/^At/i)) {
+                if (target.match(/^AT[1-5MC]G\d{5}$/i)) {
                     if (index === '2') {
                         typeTarget = 'DNA';
                     } else {
@@ -1232,6 +1269,8 @@
                 }
             }
         } //end of adding nodes and edges
+
+        console.log('pubmedarr', publicationsPPIArr);
 
         this.buildRefDropdown(publicationsPPIArr);
 
@@ -1297,10 +1336,10 @@
      * @namespace {object} AIV
      * @function - parsePSICQUICInteractionsData - Take in non-BAR PSICQUICdata param which is the text response we get back from the AJAX call and parse it via regex (based on whether it is from INTACT or BioGrid). Then add unique edges and nodes.
      * @param {string} PSICQUICdata - should be a bunch of PSICQUIC formatted text
-     * @param {string} queryGeneAsABI - should be something like "At3g10000"
+     * @param {string} queryGeneAsAGI - should be something like "At3g10000"
      * @param {string} INTACTorBioGrid - should either be "INTACT" or "BioGrid"
      */
-    AIV.parsePSICQUICInteractionsData = function(PSICQUICdata, queryGeneAsABI, INTACTorBioGrid){
+    AIV.parsePSICQUICInteractionsData = function(PSICQUICdata, queryGeneAsAGI, INTACTorBioGrid){
         // INTACT and BioGrid PPIs are experimentally validated by default hence these 3 colors, style, width
         let edgeColour = '#99cc00';
         let style = 'solid';
@@ -1309,15 +1348,15 @@
         let regex;
         if (INTACTorBioGrid === "INTACT") {
             // example uniprotkb:(?!At3g18130)(At\d[gcm]\d{5})\(locus.*psi-mi:"MI:(\d+"\(.*?\)).*(pubmed:\d+) WITH GI flags!
-            regex = new RegExp("uniprotkb:(?!" + queryGeneAsABI +")(At\\d[gcm]\\d{5})\\(locus.*psi-mi:\"MI:(\\d+\"\\(.*?\\)).*(pubmed:\\d+)", "gi");
+            regex = new RegExp("uniprotkb:(?!" + queryGeneAsAGI +")(At\\d[gcm]\\d{5})\\(locus.*psi-mi:\"MI:(\\d+\"\\(.*?\\)).*(pubmed:\\d+)", "gi");
         }
         else if (INTACTorBioGrid === "BioGrid"){
             // example \|entrez gene\/locuslink:(?!At3g18130)(At\d[gcm]\d{5})[\t|].*psi-mi:"MI:(\d+"\(.*?\)).*(pubmed:\d+) WITH GI flags!
-            regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsABI + ")(At\\d[gcm]\\d{5})[\\t|].*psi-mi:\"MI:(\\d+\"\\(.*?\\)).*(pubmed:\\d+)", "gi");
+            regex = new RegExp("\\|entrez gene\\/locuslink:(?!" + queryGeneAsAGI + ")(At\\d[gcm]\\d{5})[\\t|].*psi-mi:\"MI:(\\d+\"\\(.*?\\)).*(pubmed:\\d+)", "gi");
         }
 
         let match;
-        let arrPPIsProteinsRaw = []; // array will be populated with ABI identifiers of genes that interact with the queryGeneAsABI via regex...
+        let arrPPIsProteinsRaw = []; // array will be populated with ABI identifiers of genes that interact with the queryGeneAsAGI via regex...
         let miTermPSICQUIC = []; // array to be populated with MI terms with their annotations i.e. ['0018"(two hybrid)', ...]
         let pubmedIdArr = []; // array to store string of pubmed IDs
 
@@ -1353,9 +1392,9 @@
             if ( AIV.cy.getElementById(`Protein_${proteinItem}`).empty()) { //Check if node already on cy core (don't need to do an array check as form nodes added in the then() after the Promise.all)
                 AIV.addNode(proteinItem, "Protein");
             }
-            if ( AIV.cy.getElementById(`Protein_${queryGeneAsABI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
-                    AIV.addEdges( queryGeneAsABI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid, null, miTermPSICQUIC[index] ); // 0 represents experimentally validated in our case and we leave R as null
-                    AIV.addTableRow("Protein-Protein", INTACTorBioGrid, queryGeneAsABI, proteinItem, "PSICQUIC confirmed", "N/A", pubmedIdArr[index], miTermPSICQUIC[index]);
+            if ( AIV.cy.getElementById(`Protein_${queryGeneAsAGI}_Protein_${proteinItem}`).empty() ) { //Check if edge already added
+                    AIV.addEdges( queryGeneAsAGI, "Protein", proteinItem, "Protein", edgeColour, style, width, pubmedIdArr[index], true, 0, INTACTorBioGrid, null, miTermPSICQUIC[index] ); // 0 represents experimentally validated in our case and we leave R as null
+                    AIV.addTableRow("Protein-Protein", INTACTorBioGrid, queryGeneAsAGI, proteinItem, "PSICQUIC confirmed", "N/A", pubmedIdArr[index], miTermPSICQUIC[index]);
             }
         });
 
@@ -1414,8 +1453,8 @@
                 <td class="small-csv-column">${dbSource}</td>
                 <td class="small-csv-column">${sourceGene}</td>
                 <td class="small-csv-column">${targetGene}</td>
-                <td class="${sourceGene}-annotate small-csv-column">Fetching Data</td>
-                <td class="${targetGene}-annotate small-csv-column">Fetching Data</td>
+                <td class="${sourceGene}-annotate small-csv-column"></td>
+                <td class="${targetGene}-annotate small-csv-column"></td>
                 <td class="small-csv-column">${interoConf === 0 ? "N/A" : interoConf }</td>
                 <td class="small-csv-column">${pearsonCC}</td>
                 <td class="med-csv-column">${referencesCleaned.match(/.*undefined.*/) ? "None" : referencesCleaned}</td>
@@ -1825,7 +1864,12 @@
                 console.log("initial lag?");
                 // Add Query node (user inputed in HTML form)
                 for (let i = 0; i < AIV.genesList.length; i++) {
-                    AIV.addNode(AIV.genesList[i], 'Protein', true);
+                    if (AIV.genesList[i].match(/^AT[1-5MC]G\d{5}$/i)) {
+                        AIV.addNode(AIV.genesList[i], 'Protein', true);
+                    }
+                    else {
+                        AIV.addNode(AIV.genesList[i], 'Effector', true);
+                    }
                 }
 
                 // Parse data and make cy elements object
@@ -1841,9 +1885,8 @@
                 // Update styling and add qTips as nodes have now been added to the cy core
 
                 AIV.addInteractionRowsToDOM();
-                // Count # of nodes on added to app to ask if user wants performance mode
-                console.log(AIV.cy.nodes().length, 'nodes');
-                console.log(AIV.cy.edges().length, 'edges');
+                // console.log(AIV.cy.nodes().length, 'nodes');
+                // console.log(AIV.cy.edges().length, 'edges');
                 //Below lines are to push to a temp array to make a POST for gene summaries
                 let nodeAgiNames = [];
                 AIV.parseProteinNodes((nodeID) => nodeAgiNames.push(nodeID));
@@ -1860,6 +1903,7 @@
                 AIV.cy.style(AIV.getCyStyle()).update();
                 AIV.setDNANodesPosition();
                 AIV.resizeEListener();
+                AIV.addContextMenus();
                 let perfStart = performance.now();
                 console.log("start layout!", perfStart);
                 AIV.cy.layout(AIV.getCySpreadLayout()).run();
@@ -1882,7 +1926,7 @@
      */
     AIV.returnSVGandMapManThenChain = function () {
         return $.ajax({
-            url: "https://bar.utoronto.ca/~vlau/testing_suba4.php",
+            url: "https://bar.utoronto.ca/~vlau/suba4.php",
             type: "POST",
             data: JSON.stringify( AIV.returnLocalizationPOSTJSON() ),
             contentType : 'application/json',
@@ -2017,21 +2061,24 @@
                 for(let gene of Object.keys(res)){
                     let desc = res[gene].brief_description || "";
                     let synonyms = res[gene].synonyms;
-                    $(`.${gene}-annotate`).text(`${res[gene].brief_description}`);
                     let firstSyn = synonyms[0];
                     let selector = this.cy.$(`#Protein_${gene}`);
-                    if (selector.length > 0){ // only get Protein_AGI that exist on app
-                        if (firstSyn !== null){
+                    if (firstSyn !== null){
+                        $(`.${gene}-annotate`).text(firstSyn + "\n" + `${res[gene].brief_description}`);
+                        if (selector.length > 0) { // only get proteins
                             selector.data({
-                                'annotatedName' : firstSyn + "\n" + selector.data('name'),
-                                'desc'          : desc,
-                                'synonyms'      : synonyms,
+                                'annotatedName': firstSyn + "\n" + selector.data('name'),
+                                'desc': desc,
+                                'synonyms': synonyms,
                             });
                         }
-                        else {
+                    }
+                    else {
+                        $(`.${gene}-annotate`).text(`${res[gene].brief_description}`);
+                        if (selector.length > 0) { // only get proteins
                             selector.data({
-                                'annotatedName' : selector.data('name'),
-                                'desc'          : desc,
+                                'annotatedName': selector.data('name'),
+                                'desc': desc,
                             });
                         }
                     }
@@ -2072,6 +2119,26 @@
             data: JSON.stringify(ABIs),
             contentType: "application/json",
             dataType: "json"
+        });
+    };
+
+    /**
+     * @function addContextMenus - add a right click menu to the current nodes on the cy app
+     */
+    AIV.addContextMenus = function () {
+        this.cy.contextMenus({
+            menuItems: [
+                {
+                    id: 'remove',
+                    content: '&nbsp; remove',
+                    image: {src: "images/trash-can.svg", width: 12, height: 12, x: 6, y: 6},
+                    selector: 'node',
+                    onClickFunction: function (event) {
+                        var target = event.target || event.cyTarget;
+                        target.remove();
+                    },
+                }
+            ]
         });
     };
 
