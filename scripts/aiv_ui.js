@@ -760,7 +760,6 @@
                         'string',
                         'string',
                         'string',
-                        'string',
                         'formatted-number',
                         'formatted-number',
                         'string',
@@ -888,7 +887,7 @@
         let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
         [].forEach.call(uncheckedBoxes, function(node){ //nodelist hack for unsupported browsers
             // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
-            let selector = `edge[reference = '${node.value}']`;
+            let selector = `edge[reference *= '${node.value}']`;
             let edges = AIVObj.cy.$(selector);
             edges.connectedNodes('node[!queryGene][id ^="Protein"], node[!queryGene][id ^="Effector"]').forEach(function(ele){
                 if (ele.connectedEdges(selector).size() === ele.degree()) {
