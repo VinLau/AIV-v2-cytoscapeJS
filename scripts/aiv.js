@@ -18,7 +18,6 @@
      * @property {boolean} mapManLoadState - Boolean property representing if mapMan AJAX call was successful
      * @property {boolean} SUBA4LoadState - Boolean property representing if SUBA4 AJAX call was successful
      * @property {object} exprLoadState - State of the expression values the user has loaded for the current query genes
-     * @property {string} temptempHtmlTableStr - Temporary variable to store HTML table to later be added to DOM
      * @property {number} nodeSize - "Global" default data such as default node size
      * @property {number} DNANodeSize - Important for adjusting the donut sizes
      * @property {number} searchNodeSize - Size for search genes
@@ -38,7 +37,6 @@
     AIV.mapManLoadState = false;
     AIV.SUBA4LoadState = false;
     AIV.exprLoadState = {absolute: false, relative: false};
-    AIV.temptempHtmlTableStr = "";
     AIV.nodeSize = 35;
     AIV.DNANodeSize = 55;
     AIV.searchNodeSize = 65;
@@ -61,7 +59,7 @@
     AIV.coseParentNodesOnCyCore  = false;
     AIV.defaultZoom = 1;
     AIV.defaultPan = {x: 0, y:0};
-    AIV.miFilter =["0469" , "0463", "0467", "0190", "1014", "0915", "0914", "0407", "0686", "0045", "0462", "1178"];
+    AIV.miFilter =["0469" , "0463", "0467", "0190", "1014", "0915", "0914", "0407", "0686", "0045", "0462"];
     AIV.miTerms =
     {
         "0004" : "affinity chromotography technology",
@@ -197,6 +195,8 @@
                     AIV.cy.contextMenus('get').destroy(); // delete bound right-click menus
                     AIV.resetState();
                 }
+                // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
+                $('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
                 AIV.initializeCy(false);
 
                 AIV.loadData();
@@ -212,7 +212,6 @@
      * @function resetState - Reset existing built-in state data from previous query
      */
     AIV.resetState = function() {
-        this.tempHtmlTableStr = "";
         this.chromosomesAdded = {};
         this.mapManLoadState = false;
         this.SUBA4LoadState = false;
@@ -234,8 +233,6 @@
         // reset the buttons
         $('.submit-reset').prop('checked', false);
         $(".fa-eye-slash").toggleClass('fa-eye fa-eye-slash');
-        // cy.destroy() removes all child nodes in the #cy div, unfortunately we need one for the expr gradient, so reinstate it manually
-        $('#cy').append('<canvas id="exprGradientCanvas" width="70" height="300"></canvas>');
         // Remove prior mapman definitions for that app state
         $('#bootstrapDropDownMM').empty();
 
@@ -267,7 +264,6 @@
     AIV.getCySpreadLayout = function() {
         let layout = {};
         layout.name = 'cose';
-        // layout.minDist = 10;
         layout.nodeDimensionsIncludeLabels = true;
         // layout.padding = 1;
         if (AIV.cy.nodes().length > 750 && document.getElementById('circleLyChkbox').checked){
@@ -885,7 +881,7 @@
             htmlTABLE += "</tr>";
         });
         htmlTABLE += "</tbody></table></div>";
-        console.log("finished createPDITable function execution", queryPDIsInChr);
+        // console.log("finished createPDITable function execution", queryPDIsInChr);
         return htmlTABLE;
     };
 
@@ -1119,14 +1115,13 @@
 
     /**
      * @namespace {object} AIV
-     * @function addPPIEdgeQtips - Add qTips (tooltips) to protein protein interaction edges
+     * @function addPPIEdgeQtips - Add qTips (tooltips) to protein protein interaction edges, also adds qTips to protein-effector edges
      */
     AIV.addPPIEdgeQtips = function() {
         let that = this;
-        this.cy.on('mouseover', 'edge[source^="Protein"][target^="Protein"]', function(event){
+        this.cy.on('mouseover', 'edge[source^="Protein"][target^="Protein"], edge[source^="Protein"][target^="Effector"], edge[source^="Effector"][target^="Protein"]', function(event){
             let ppiEdge = event.target;
             let edgeData = ppiEdge.data();
-            console.log(edgeData)
             ppiEdge.qtip(
                 {
                     content:
@@ -1295,7 +1290,6 @@
                     let edgeSelector = `${typeSource}_${source}_${typeTarget}_${target}`;
                     if ( AIV.cy.$id(edgeSelector).empty() ) { //Check if edge already added from perhaps the PSICQUIC webservices
                         this.addEdges(source, typeSource, target, typeTarget, reference, published, interolog_confidence, dbSrc, correlation_coefficient, mi);
-                        this.addTableRow("protein-protein", dbSrc, source, target, interolog_confidence, correlation_coefficient, reference, mi);
                     }
                     else { //PSICQUIC edges added first
                         if (mi !== null && mi !== undefined){
@@ -1320,7 +1314,6 @@
                     if (this.cy.getElementById(`${typeSource}_${source}_DNA_Chr${target.charAt(2)}`).length === 0){ // If we don't already have an edge from this gene to a chromosome
                         this.addEdges(source, typeSource, `Chr${target.charAt(2)}`, typeTarget /*DNA*/, reference, published, interolog_confidence, dbSrc, correlation_coefficient, mi);
                     }
-                    this.addTableRow("protein-DNA", dbSrc, source, target, interolog_confidence, correlation_coefficient, reference, mi);
                 }
             }
         } //end of adding nodes and edges
@@ -1328,7 +1321,7 @@
         let filteredPubsArr = [].concat.apply([], publicationsPPIArr.map(function (innerArr) {
             return innerArr.split('\n').filter(function (item) {
                 // if we have MIND/BIOGRID/BIND identifiers, filter them out as they're not really references for building our dropdown list
-                if (!item.match(/biogrid:(.*)/i)){
+                if (!item.match(/biogrid:(.*)/i) && !item.match(/Mind(\d+)$/i) && !item.match(/^(\d+)$/i)){
                     return item;
                 }
             });
@@ -1451,7 +1444,6 @@
             miTermPSICQUIC[index] = miTermPSICQUIC[index].replace('"', ' '); // replace for " inside '0018"(two hybrid)' to become '0018 (two hybrid)'
             if ( AIV.cy.$id(edgeSelector).empty() ) { //Check if edge already added from BAR
                     AIV.addEdges( queryGeneAsAGI, "Protein", proteinItem, "Protein", preappendedRef, true, 0, INTACTorBioGrid, null, miTermPSICQUIC[index] ); // 0 represents experimentally validated in our case and we leave R as null
-                    AIV.addTableRow("Protein-Protein", INTACTorBioGrid, queryGeneAsAGI, proteinItem, "PSICQUIC confirmed", "N/A", preappendedRef, miTermPSICQUIC[index]);
             }
             else { // account for edges already added, we just have to edit some edge data (refs and miTERMs)
                 let updatedRefData = AIV.cy.$id(edgeSelector).data('reference') + '\n' + preappendedRef;
@@ -1472,6 +1464,7 @@
 
     /**
      * @function addTableRow - take in a bunch of params and add it to an HTML table row string, to be held in a state variable
+     * @description - NO LONGER USED, here for reference as it was a base for the createTableFromEdges function
      * @param {string} intType - interaction type, protein-protein or protein-dna
      * @param {string} dbSource - database source, ex BAR
      * @param {string} sourceGene - AGI source gene
@@ -1529,10 +1522,82 @@
     };
 
     /**
-     * @function addInteractionRowsToDOM - using jQuery, add the state variable that contains the html table string to the DOM
+     * @function createTableFromEdges - this funciton will scan through our recently added Cy PPI edges and then our state variable of chromosomes to build a neat HTML table to be appended to the #csvTable modal
      */
-    AIV.addInteractionRowsToDOM = function(){
-        $('#csvTable').find("tbody").append(this.tempHtmlTableStr);
+    AIV.createTableFromEdges = function (){
+        let htmlString = "";
+
+        // process PPI edges first
+        this.cy.edges('[target *= "Protein"], [target *= "Effector"]').forEach(function(ppiEdge){
+            let tempData = ppiEdge.data();
+
+            let cleanRefs = "";
+            let sourceGene = tempData.source.split('_')[1];
+            let [typeTarget, targetGene] = tempData.target.split('_');
+            if (tempData.reference){ //non-falsy value
+                AIV.memoizedSanRefIDs(tempData.reference).forEach(function(ref){
+                    cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene)} </p>`;
+                });
+            }
+
+            htmlString +=
+                `<tr>
+                    <td class="small-csv-column">Protein-${typeTarget}</td>
+                    <td class="small-csv-column">${sourceGene}</td>
+                    <td class="small-csv-column">${targetGene}</td>
+                    <td class="${sourceGene}-annotate small-csv-column"></td>
+                    <td class="${targetGene}-annotate small-csv-column"></td>
+                    <td class="small-csv-column">${tempData.interologConfidence === 0 ? "N/A" : tempData.interologConfidence }</td>
+                    <td class="small-csv-column">${tempData.pearsonR}</td>
+                    <td class="lg-csv-column">${cleanRefs.match(/.*undefined.*/) ? "None" : cleanRefs}</td>
+                    <td class="med-csv-column">${tempData.miAnnotated}</td>
+                    <td class="${sourceGene}-loc lg-csv-column">Fetching Data</td>
+                    <td class="${targetGene}-ppi-loc lg-csv-column">Fetching Data</td>
+                </tr>`;
+        });
+
+        // now process PDI edges (or rather the state data in memory)
+        for (let chr of Object.keys(AIV.chromosomesAdded)) {
+            for (let i = 0; i < AIV.chromosomesAdded[chr].length; i++) {
+                let tempDNAData = AIV.chromosomesAdded[chr][i];
+
+                let cleanRefs = "";
+                let sourceGene = tempDNAData.source;
+                let targetGene = tempDNAData.target;
+                if (tempDNAData.reference){ //non-falsy value
+                    AIV.memoizedSanRefIDs(tempDNAData.reference).forEach(function(ref){
+                        cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene)} </p>`;
+                    });
+                }
+
+                let miHTML = "";
+                if (tempDNAData.mi !== null && tempDNAData.mi !== undefined){
+                    let miArray = tempDNAData.mi.split('|');
+                    miArray.forEach(function(miTerm){
+                        if (AIV.miTerms[miTerm] !== undefined){
+                            miHTML += `<p>${miTerm} (${AIV.miTerms[miTerm]})</p>`;
+                        }
+                    });
+                }
+
+                htmlString +=
+                `<tr>
+                    <td class="small-csv-column">Protein-DNA</td>
+                    <td class="small-csv-column">${sourceGene}</td>
+                    <td class="small-csv-column">${targetGene}</td>
+                    <td class="${sourceGene}-annotate small-csv-column"></td>
+                    <td class="${targetGene}-annotate small-csv-column"></td>
+                    <td class="small-csv-column">${tempDNAData.interolog_confidence === 0 ? "N/A" : tempDNAData.interolog_confidence }</td>
+                    <td class="small-csv-column">${tempDNAData.correlation_coefficient}</td>
+                    <td class="lg-csv-column">${cleanRefs}</td>
+                    <td class="med-csv-column">${miHTML}</td>
+                    <td class="${sourceGene}-loc lg-csv-column">Fetching Data</td>
+                    <td class="${targetGene}-pdi-loc lg-csv-column">Nucleus (assumed)</td>
+                </tr>`;
+            }
+        }
+
+        $('#csvTable').find("tbody").append(htmlString);
     };
 
     /**
@@ -1948,7 +2013,8 @@
 
                 // Update styling and add qTips as nodes have now been added to the cy core
 
-                AIV.addInteractionRowsToDOM();
+                AIV.createTableFromEdges();
+                // AIV.addInteractionRowsToDOM();
                 // console.log(AIV.cy.nodes().length, 'nodes');
                 // console.log(AIV.cy.edges().length, 'edges');
                 //Below lines are to push to a temp array to make a POST for gene summaries
