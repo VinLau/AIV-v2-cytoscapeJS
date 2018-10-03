@@ -537,7 +537,7 @@
 	bottom: 0
 }
 
-#ref-checkboxes{
+#refCheckboxes{
 	position: absolute;
 	left: 0;
 	right: 0;
@@ -552,14 +552,14 @@
 	list-style: none;
 }
 
-#ref-checkboxes label{
+#refCheckboxes label{
 	background-color: #f9f9f9;
 	margin: 0;
 	width: 100%;
 	display: block;
 }
 
-#ref-checkboxes label:hover {
+#refCheckboxes label:hover {
 	background-color: #f5f5f5;
 }
 

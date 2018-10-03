@@ -13,12 +13,14 @@
             let AIV = window.aivNamespace.AIV;
             // below functions should bind to AIV is they're more app-level features
             AIV.mapManDropDown = mapManDropDown;
+            AIV.filterAllElistener = filterAllElistener;
             runUIFunctions(AIV);
         }
         else { // if not loaded, try again after 1 second
             setTimeout(function(){
                 let AIV = window.aivNamespace.AIV;
                 AIV.mapManDropDown = mapManDropDown;
+                AIV.filterAllElistener = filterAllElistener;
                 runUIFunctions(AIV);
             }, 1000);
         }
@@ -881,20 +883,76 @@
 
     /***
      * @function filterEdgesByRefFunctionality - The function for filtering edges by references to be referenced in the event listener
+     * @description - TODO I feel like this function is a little too convulated and perhaps inefficient, there are many ways to solve the 'filtering' edges problem but the issue is:
+     * 1) We want desire when a person selects a filter that it only filters out an edge that no longer has any 'checked' filters that support it, meaning we can't do a simple substring/search for an edge
+     * 2) The performance of this function is contigent on whether the user decides to filter an intermediate amount; we don't have user testing data to know if that's true
+     * The performance of this function roughly is (num of unchecked boxes) * (edges that do not have a filter) * (num of delimited refs per edge) * (num of checkboxes); thankfully all of these terms are small (for ex, rarely does an edge more than 4 references).
+     * The best way to solve this is to likely use cytoscapeJS's filtering selectors but I haven't been able to think of a clever selector other than all possible combinations of the checked boxes
      * @param AIVObj - reference to the AIV namespace object
      */
     function filterEdgesByRefFunctionality(AIVObj){
-        let uncheckedBoxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
-        [].forEach.call(uncheckedBoxes, function(node){ //nodelist hack for unsupported browsers
-            // get PPIs with the value in the dropdown menu and hide any nodes if the edges fit the filter
-            let selector = `edge[reference *= '${node.value}']`;
+        let uncheckedRefsArr = [];
+        [].forEach.call(document.querySelectorAll('input:not(:checked).ref-checkbox'), function(node){ //nodelist hack for unsupported browsers
+            uncheckedRefsArr.push(node.value);
+        });
+        let checkedRefsArr = [];
+        [].forEach.call(document.querySelectorAll('input:checked.ref-checkbox'), function(node) { //nodelist hack for unsupported browsers
+            checkedRefsArr.push(node.value);
+        });
+        if (checkedRefsArr.length > 0){ document.getElementById('allCheck').checked = false; } // if user filters all of the checkboxes and then clicks a filter, change its check status
+        uncheckedRefsArr.forEach(function(refValue){
+            let selector = `edge[reference *= '${refValue}']`;
             let edges = AIVObj.cy.$(selector);
-            edges.connectedNodes('node[!queryGene][id ^="Protein"], node[!queryGene][id ^="Effector"]').forEach(function(ele){
+
+            let filteredEdges = edges.filter(function (edge){
+                if (edge.hasClass('filterByReference')) {
+                    return false; // only continue our operation on an edge if we haven't already filtered it
+                }
+
+                let edgeRefData = edge.data('reference'); // string of refs delimited by newlines
+                let returnBool = true;
+                for (let refCheckedValue of checkedRefsArr){
+                    if (edgeRefData.includes(refCheckedValue)){
+                        returnBool = false;
+                        break;
+                    }
+                }
+                return returnBool;
+            });
+
+            filteredEdges.connectedNodes('node[!queryGene][id ^="Protein"], node[!queryGene][id ^="Effector"]').forEach(function(ele){
                 if (ele.connectedEdges(selector).size() === ele.degree()) {
                     ele.addClass('filterByReference');
                 }
             });
-            edges.addClass('filterByReference'); // hide the edge now
+            filteredEdges.addClass('filterByReference'); // hide the edge now
+        });
+    }
+
+    /**
+     * @function filterAllElistener - filter all of the references by clicking through all the checked checkboxes if checked, if #allCheck is unchecked, recheck all references
+     * @description - note that I decided NOT to click through all the checkboxes as that would be much slower and user-unfriendly; the cost is that I am taking the risk that all of the checkboxes filtered are pubmeds/dois/AI-1
+     */
+    function filterAllElistener(AIVObj){
+        document.getElementById('allCheck').addEventListener('click',function(event){
+            if (event.target.checked) {
+                let nodeListChkdCheckboxes = document.querySelectorAll('input:checked.ref-checkbox');
+                AIVObj.cy.edges('[reference *= "pubmed"], [reference *= "doi"], [reference *= "AI-1"]').addClass('filterByReference');
+                if (nodeListChkdCheckboxes.length > 0) { //reset form checkboxes
+                    [].forEach.call(nodeListChkdCheckboxes, function(node){
+                        node.checked = false;
+                    });
+                }
+            }
+            else {
+                let nodeListUnchkdCheckboxes = document.querySelectorAll('input:not(:checked).ref-checkbox');
+                if (nodeListUnchkdCheckboxes.length > 0) { //reset form checkboxes
+                    AIVObj.cy.$('.filterByReference').removeClass('filterByReference');
+                    [].forEach.call(nodeListUnchkdCheckboxes, function(node){
+                        node.checked = true;
+                    });
+                }
+            }
         });
     }
 
@@ -904,7 +962,7 @@
      * @param {object} AIVObj - reference to the AIV namespace object
      */
     function filterEdgesByRefEListener(AIVObj){
-        document.getElementById('ref-checkboxes').addEventListener('change', function(e){
+        document.getElementById('refCheckboxes').addEventListener('change', function(e){
             AIVObj.cy.$('.filterByReference').removeClass('filterByReference');
             filterEdgesByRefFunctionality(AIVObj);
         });
@@ -915,7 +973,7 @@
      */
     function showReferenceChkboxes() {
         let expanded = false;
-        let checkboxes = $("#ref-checkboxes");
+        let checkboxes = $("#refCheckboxes");
         document.getElementById('pseudo-select-box').addEventListener('click', function(e){
             if (!document.getElementById('filterEPPIsCheckbox').checked){
                 return; // exit immediately if user doesnt have filter on

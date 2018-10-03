@@ -241,7 +241,7 @@
         $(".inf").remove();
 
         //reset the reference filters for the next query
-        $("#ref-checkboxes").empty();
+        $("#refCheckboxes").empty();
     };
 
     /**
@@ -969,7 +969,7 @@
                             solo : true,
                             event: `${event.type}`, // Use the same show event as triggered event handler
                             ready: true, // Show the tooltip immediately upon creation
-                            delay: 200 // Don't hammer the user with tooltips as s/he is scrollin over the graph
+                            delay: 300 // Don't hammer the user with tooltips as s/he is scrollin over the graph
                         },
                     hide : false
                 }
@@ -1141,7 +1141,7 @@
                         {
                             solo : true,
                             event: `${event.type}`, // Use the same show event as triggered event handler
-                            delay: 200
+                            delay: 500
                         },
                     hide : false
                 }
@@ -1269,8 +1269,8 @@
                         publicationsPPIArr.push(reference);
                     }
                 }
-                // reformat the reference string to have the database name preappended to it with '-', keep newline delimiter, filter method is to clean up our array as the database unfortunately has a few double/triple newline delimiters
-                reference = reference.split('\n').filter(x => !!x).map(x => dbSrc + "-" + x).join('\n');
+                // reformat the reference string to have the database name preappended to it with '-', keep newline delimiter
+                reference = reference.split('\n').map(x => dbSrc + "-" + x).join('\n');
 
                 // Coerce scientific notation to fixed decimal point number
                 interolog_confidence = scientificToDecimal(interolog_confidence);
@@ -1384,7 +1384,7 @@
                     `;
             }
         });
-        $('#ref-checkboxes').append(inputsLabelsHTML);
+        $('#refCheckboxes').append(inputsLabelsHTML);
     };
 
     /**
@@ -1990,7 +1990,6 @@
         Promise.all(promisesArr)
             .then(function(promiseRes) {
                 // console.log("Response:", promiseRes);
-                console.log("initial lag?");
                 // Add Query node (user inputed in HTML form)
                 for (let i = 0; i < AIV.genesList.length; i++) {
                     if (AIV.genesList[i].match(/^AT[1-5MC]G\d{5}$/i)) {
@@ -2034,10 +2033,12 @@
                 AIV.setDNANodesPosition();
                 AIV.resizeEListener();
                 AIV.addContextMenus();
-                let perfStart = performance.now();
-                console.log("start layout!", perfStart);
                 AIV.cy.layout(AIV.getCySpreadLayout()).run();
-                console.log('done layout', (performance.now()-perfStart)/1000);
+
+                $('#refCheckboxes').prepend(
+                    "<label for='allCheck'><input type='checkbox' id='allCheck'> Filter All/Reset</label>"
+                );
+                AIV.filterAllElistener(AIV);
 
                 document.getElementById('loading').classList.add('loaded'); //hide loading spinner
                 $('#loading').children().remove(); //delete the loading spinner divs
@@ -2128,7 +2129,6 @@
 
         // DNA
         postObj.querydna = $('#queryDna').is(':checked');
-        console.log(postObj);
 
         let serviceURL = 'http://bar.utoronto.ca/~asher/vincent/get_interactions_dapseq.php';
 
