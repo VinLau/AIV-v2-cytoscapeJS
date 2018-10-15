@@ -169,6 +169,7 @@
 
             for (let i = 0; i < geneArr.length; i++) { // gene form input verification
                 if(!geneArr[i].match(/^AT[1-5MC]G\d{5}$/i) && effectorArr.indexOf(geneArr[i]) === -1){
+                    document.getElementById('errorModalBodyMsg').innerText = "Please check form value before adding effectors/submission! Genes should be delimited by newlines and follow the AGI format.";
                     $('#formErrorModal').modal('show');
                     throw new Error('wrong submission');
                 }
@@ -200,8 +201,11 @@
                 AIV.initializeCy(false);
 
                 AIV.loadData();
-            } else {
-                $('#genes').addClass('input-error').focus().attr('placeholder', 'Input formatted genes like so:\nAt2g34970\nAt1g04880');
+            }
+            else if ($('.form-chk-needed:checked').length <= 0) {
+                document.getElementById('errorModalBodyMsg').innerText = "Please check a protein database!"
+                $('#formErrorModal').modal('show');
+                throw new Error('wrong submission');
             }
         });
 

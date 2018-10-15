@@ -322,7 +322,7 @@
                     <div class="modal-body">
                         <form id="input_form">
                             <div class="form-group">
-                                <label for="genes">Please enter a list of genes:</label>
+                                <label for="genes">Enter a list of genes seperated by newlines:</label>
                                 <textarea class="form-control gene-form" id="genes" rows="15" placeholder="At2g34970"></textarea>
                                 <br>
                                 <p>Or select from a list of effectors</p>
@@ -363,7 +363,7 @@
                                 </div>
 
                                 <div class="checkbox">
-                                    <label class="" ><input id="recursive" type="checkbox" class="form-chkbox form-chk-needed" value="">Search for interactions between interactors</label>
+                                    <label class="" ><input id="recursive" type="checkbox" class="form-chkbox" value="">Search for interactions between interactors</label>
                                 </div>
 
                                 <div class="checkbox">
@@ -568,7 +568,7 @@
                         </div>
                     </div>
                     <div class="modal-body">
-                        <h4 class="form-modal-msg">Please check form value before adding effectors/submission! </h4>
+                        <h4 id="errorModalBodyMsg" class="form-modal-msg"></h4>
                     </div>
                 </div>
             </div>

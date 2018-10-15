@@ -721,14 +721,20 @@
         let barPPICheckbox = document.getElementById('queryBAR');
         barPPICheckbox.addEventListener('change', function(){
             var recursiveCheckbox = document.getElementById("recursive");
+            var dnaCheckbox = document.getElementById("queryDna");
             if (barPPICheckbox.checked) {
                 recursiveCheckbox.disabled = false;
                 recursiveCheckbox.parentNode.classList.remove('not-allowed');
+                dnaCheckbox.disabled = false;
+                dnaCheckbox.parentNode.classList.remove('not-allowed');
             }
             else {
                 recursiveCheckbox.parentNode.classList.add('not-allowed');
                 recursiveCheckbox.disabled = true;
                 recursiveCheckbox.checked = false;
+                dnaCheckbox.parentNode.classList.add('not-allowed');
+                dnaCheckbox.disabled = true;
+                dnaCheckbox.checked = false;
             }
         });
     }
@@ -826,8 +832,7 @@
         document.getElementById('filterNonQueryEyeDiv').addEventListener('click', function(event){
             $("#filterNonQueryEye").toggleClass('fa-eye fa-eye-slash');
             AIVObj.cy.startBatch();
-            AIVObj.cy.$('node[!queryGene][id ^= "Protein"]').toggleClass('filteredChildNodes');
-            AIVObj.cy.$('node[id ^= "Effector"]').toggleClass('filteredChildNodes');
+            AIVObj.cy.$('node[!queryGene][id ^= "Protein"], node[!queryGene][id ^= "Effector"]').toggleClass('filteredChildNodes');
             AIVObj.cy.endBatch();
         });
     }
