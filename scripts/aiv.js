@@ -699,10 +699,10 @@
         var name = chrNum; // Just for 'm' and 'c'
 
         if (chrNum === "M") {
-            name = "Chloroplast";
+            name = "Mitochondria";
         }
         else if (chrNum === "C"){
-            name = "Mitochondria";
+            name = "Chloroplast";
         }
 
         // console.log("addDNANodes", DNAObjectData, "chrNum");
