@@ -1312,6 +1312,14 @@
             }
         });
 
+        $('#exportCSV').qtip({
+            style: {classes: 'qtip-light'},
+            position: {
+                my: 'bottom center',
+                at: 'top center',
+            }
+        });
+
         $('#exprnOverlayChkAndLabel[title]').qtip({
             style: {classes: 'qtip-light'},
             position: {
