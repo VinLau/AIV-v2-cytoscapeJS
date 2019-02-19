@@ -2101,6 +2101,7 @@
                 alertify.error(`Error made when requesting to MapMan webservice (note: we cannot load more than 700 MapMan numbers), status code: ${err.status}`);
             })
             .then(function(resMapManJSON){
+                if (resMapManJSON.status === "fail"){ throw new Error ('MapMan server call failed!')}
                 AIV.cy.startBatch();
                 AIV.processMapMan(resMapManJSON);
                 AIV.cy.endBatch();
@@ -2108,7 +2109,7 @@
             })
             .catch(function(err){
                 alertify.logPosition("top right");
-                alertify.error(`Error made when made processing MapMan data`);
+                alertify.error(`Error processing MapMan data; ${err}`);
             });
     };
 
