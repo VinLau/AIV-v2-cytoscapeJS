@@ -164,6 +164,7 @@
 
             // Get the list of genes
             let genes = $.trim($('#genes').val());
+            genes = AIV.formatAGI(genes); //Format to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
             let geneArr = genes.split('\n');
             let effectorArr = [...document.getElementById('effectorSelect').options].map(option => option.value);
 
@@ -174,8 +175,6 @@
                     throw new Error('wrong submission');
                 }
             }
-
-            genes = AIV.formatAGI(genes); //Format to keep "At3g10000" format when identifying unique nodes, i.e. don't mixup between AT3G10000 and At3g10000 and add a node twice
 
             if (genes !== '' && $('.form-chk-needed:checked').length > 0) {
                 document.getElementById('loading').classList.remove('loaded'); //remove previous loading spinner
@@ -1826,7 +1825,7 @@
      * @returns {string} - url for the HTTP request
      */
     AIV.createGETMapManURL = function () {
-        let mapmanURL = "https://bar.utoronto.ca/~asher/vincent/bar_mapman.php?request=[";
+        let mapmanURL = "//bar.utoronto.ca/interactions2/cgi-bin/bar_mapman.php?request=[";
         this.parseProteinNodes((nodeID) => mapmanURL +=`"${nodeID}",`);
         mapmanURL = mapmanURL.slice(0,-1); //remove last ','
         mapmanURL += "]";
@@ -2101,7 +2100,7 @@
                 alertify.error(`Error made when requesting to MapMan webservice (note: we cannot load more than 700 MapMan numbers), status code: ${err.status}`);
             })
             .then(function(resMapManJSON){
-                if (resMapManJSON.status === "fail"){ throw new Error ('MapMan server call failed!')}
+                if (typeof resMapManJSON !== 'undefined' && resMapManJSON.status === "fail"){ throw new Error ('MapMan server call failed!')}
                 AIV.cy.startBatch();
                 AIV.processMapMan(resMapManJSON);
                 AIV.cy.endBatch();
@@ -2135,7 +2134,7 @@
         // DNA
         postObj.querydna = $('#queryDna').is(':checked');
 
-        let serviceURL = 'http://bar.utoronto.ca/~asher/vincent/get_interactions_dapseq.php';
+        let serviceURL = '//bar.utoronto.ca/interactions2/cgi-bin/get_interactions_dapseq.php';
 
         return $.ajax({
             url: serviceURL,
@@ -2156,7 +2155,7 @@
         for (let i = 0; i < this.genesList.length; i++) {
             returnArr.push(
                 $.ajax({
-                    url: `https://cors-anywhere.herokuapp.com/http://www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/interactor/${this.genesList[i]}`, //todo: take off cors anywhere
+                    url: `//bar.utoronto.ca/interactions2/cgi-bin/psicquic_intact_proxy.php?request=${this.genesList[i]}`,
                     type: 'GET',
                     dataType: 'text'
                 })
@@ -2175,7 +2174,7 @@
         for (let i = 0; i < this.genesList.length; i++) {
             returnArr.push(
                 $.ajax({
-                    url: `https://cors-anywhere.herokuapp.com/http://tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/${this.genesList[i]}`, //todo: take off cors anywhere
+                    url: `//bar.utoronto.ca/interactions2/cgi-bin/psicquic_biogrid_proxy.php?request=${this.genesList[i]}`,
                     type: 'GET',
                     dataType: 'text'
                 })
@@ -2249,7 +2248,7 @@
      */
     AIV.createGeneSummariesAjaxPromise = function(ABIs) {
         return $.ajax({
-            url: "http://bar.utoronto.ca/~asher/vincent/gene_summaries_POST.php",
+            url: "//bar.utoronto.ca/interactions2/cgi-bin/gene_summaries_POST.php",
             type: "POST",
             data: JSON.stringify(ABIs),
             contentType: "application/json",

@@ -251,8 +251,8 @@
             }
 
             let latestEntryLen = geneFormValue.split('\n').pop().length;
-            console.log(latestEntryLen);
-            console.log(latestEntryLen % 10);
+            // console.log(latestEntryLen);
+            // console.log(latestEntryLen % 10);
 
             if (latestEntryLen % 10 === 0 && (key === "a" || key === "A")){
                 geneForm.value += "A";
@@ -295,7 +295,7 @@
      */
     function getXMLSourcesModifyDropdown(){
         $.ajax({
-            url: "http://bar.utoronto.ca/~asher/vincent/getXML.php?species=arabidopsis",
+            url: "//bar.utoronto.ca/interactions2/cgi-bin/getXML.php?species=arabidopsis",
             type: "GET"
         })
             .then((res)=>{
@@ -320,7 +320,7 @@
                 return;
             }
             $.ajax({
-               url: "http://bar.utoronto.ca/~asher/vincent/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
+               url: "//bar.utoronto.ca/interactions2/cgi-bin/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
                type: "GET",
             })
                 .then((res) =>{
@@ -472,7 +472,7 @@
 
     function createExpressionAJAX(listOfAGIsAndExprsnModes, mode, AIVObj) {
         return $.ajax({
-            url: "http://bar.utoronto.ca/~asher/vincent/getSample.php",
+            url: "//bar.utoronto.ca/interactions2/cgi-bin/getSample.php",
             type: "POST",
             data: JSON.stringify( listOfAGIsAndExprsnModes ),
             contentType : 'application/json',
@@ -634,10 +634,11 @@
      */
     function checkBIOGRIDServerStatus(){
         $.ajax({
-            url: "https://cors-anywhere.herokuapp.com/www.ebi.ac.uk/Tools/webservices/psicquic/intact/webservices/current/search/query/species:human?firstResult=0&maxResults=1", //TODO: change to our proxy
+            url: "//bar.utoronto.ca/interactions2/cgi-bin/psicquic_biogrid_proxy.php?request=AT1G01010",
             type: "GET"
         })
-            .then(()=>{
+            .then((res, text, xhr)=>{
+                if (xhr.status !== 200 ) throw Error;
                 document.getElementById("spinnerBioGrid").style.display = 'none';
                 $("<img src='images/activeServer.png'/>").insertAfter("#BioGridSpan");
                 document.getElementById("queryBioGrid").parentNode.classList.remove('not-allowed');
@@ -654,10 +655,11 @@
      */
     function checkINTACTServerStatus(){
         $.ajax({
-            url: "https://cors-anywhere.herokuapp.com/tyersrest.tyerslab.com:8805/psicquic/webservices/current/search/interactor/arf7", //TODO: change to our proxy
+            url: "//bar.utoronto.ca/interactions2/cgi-bin/psicquic_intact_proxy.php?request=AT1G01010",
             type: "GET"
         })
-            .then(()=>{
+            .then((res, text, xhr)=>{
+                if (xhr.status !== 200 ) throw Error;
                 document.getElementById("spinnerIntAct").style.display = 'none';
                 $("<img src='images/activeServer.png'/>").insertAfter("#IntActSpan");
                 document.getElementById("queryIntAct").parentNode.classList.remove('not-allowed');
@@ -674,7 +676,7 @@
      */
     function effectorDropdownSelect2() {
         $.ajax({
-            url: "http://bar.utoronto.ca/~asher/vincent/get_effectors.php",
+            url: "//bar.utoronto.ca/interactions2/cgi-bin/get_effectors.php",
             type: "GET"
         })
             .then((res)=>{
