@@ -865,14 +865,17 @@
                     if (pValueHashTable[queryGene + '_' + targetDNAGene] === 0){ //i.e. experimental PDI
                        cellContent = "<td class='experimental-pdi-cell'>";
                        fontawesome = 'flask';
+                       if (pubmedRefHashTable[queryGene + '_' + targetDNAGene] === "doi:10.1016/j.cell.2016.04.038"){ // TODO: change this to  DAP-Seq PMID once db is updated
+                           fontawesome = 'dna';
+                       }
                     }
                     else if (pValueHashTable[queryGene + '_' + targetDNAGene] > 0){ // i.e. predicted PDI
                         cellContent = "<td class='predicted-pdi-cell'>";
                         fontawesome = 'terminal';
                     }
                     AIV.memoizedSanRefIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function(ref){
-                        cellContent += AIV.memoizedRetRefLink(ref, targetDNAGene).replace(/("_blank">).*/, "$1") + /* replace innerHTML text returned */
-                            `<i class="fas fa-${fontawesome} fa-lg"></i>` +
+                        cellContent += AIV.memoizedRetRefLink(ref, targetDNAGene, queryGene).replace(/("_blank">).*/, "$1") + /* replace innerHTML text returned */
+                            `<i class="fas fa-${fontawesome}"></i>` +
                             '</a>';
                     });
                     htmlTABLE += cellContent + '</td>';
@@ -1092,8 +1095,8 @@
      * @namespace {object} AIV
      * @function createPPIEdgeText - decides whether to show the docker link or not based on the interolog confidence (based on whether it is IFF the interolog confidence is negative). Then use the 3 params to create an external link elsewhere on the BAR.
      *
-     * @param {string} source - as the source protein in ABI form i.e. "At3g10000"
-     * @param {string} target - as the target protein in ABI form i.e. "At4g40000"
+     * @param {string} source - as the source protein in AGI form i.e. "At3g10000"
+     * @param {string} target - as the target protein in AGI form i.e. "At4g40000"
      * @param {string} reference - string of DOI or PMIDs, delimited by \n, i.e. "doi:10.1126/science.1203659 \ndoi:10.1126/science.1203877".. whatever came through the GET request via 'reference' prop
      * @param {number|string} interologConf - represents the interolog confidence value of the PPI, can be "NA" if the edge is from INTACT/BioGrid
      */
@@ -1103,7 +1106,7 @@
         var refLinks = "";
         if (reference) { //non-falsy value (we may have changed it to false in the addEdges() call)
             AIV.memoizedSanRefIDs( reference ).forEach(function(ref){
-                refLinks += '<p> Ref: ' + AIV.memoizedRetRefLink(ref, target) + '</p>';
+                refLinks += '<p> Ref: ' + AIV.memoizedRetRefLink(ref, target, source) + '</p>';
             });
         }
 
@@ -1183,10 +1186,12 @@
      * 5) BioGrid interaction ID
      * 6) BINDID (Biomolecular Interaction Network Database, NOTE: Not live as of Nov 2017)
      * @param {string} referenceStr - as the link given to the function that could be any the of above or none
-     * @param {string} AGIIdentifier - is used for the biodb link
+     * @param {string} AGIIdentifier - is used for the biodb link (target gene)
+     * @param {string} TF - AGI for query/TF gene, used for DAP-Seq link
      * @return {string} - a link from the above list
      */
-    AIV.returnReferenceLink = function(referenceStr, AGIIdentifier) {
+    AIV.returnReferenceLink = function(referenceStr, AGIIdentifier, TF) {
+        console.trace(referenceStr, AGIIdentifier, TF);
         let regexGroup; //this variable necessary to extract parts from the reference string param
         let db = referenceStr.match(/^([A-Z]+)-*/i)[1] + " - ";
         if ( (regexGroup = referenceStr.match(/PubMed[:]?(\d+)$/i)) ) { //assign and evaluate if true immediately
@@ -1199,6 +1204,10 @@
             return `<a href="http://interactome.dfci.harvard.edu/A_thaliana/index.php" target="_blank"> ${db} (A. th. Interactome) ${referenceStr} </a>`;
         }
         else if ( (regexGroup = referenceStr.match(/doi:(.*)/i)) ){
+            if (regexGroup[0] === "doi:10.1016/j.cell.2016.04.038"){
+                console.log(regexGroup, AGIIdentifier, TF);
+                return `<a href="//bar.utoronto.ca/DAP-Seq-API?target=${AGIIdentifier}&tf=${TF}" target="_blank"> DAP-Seq (O'Malley 2016)</a>`
+            }
             return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> ${db} DOI ${regexGroup[1]} </a>`;
         }
         else if ( (regexGroup = referenceStr.match(/biogrid:(.*)/i)) ){
@@ -1214,7 +1223,14 @@
      * @function memoizedRetRefLink - memoized version of the returnReferenceLink pure function for performance
      * @param {Function} AIV.returnReferenceLink - returnReferenceLink function defintiion
      */
-    AIV.memoizedRetRefLink = _.memoize(AIV.returnReferenceLink);
+    AIV.memoizedRetRefLink = _.memoize(AIV.returnReferenceLink, function(){
+        if (arguments[0] === "doi:10.1016/j.cell.2016.04.038"){ // TODO: change this to PMID of dap-seq paper
+            return JSON.stringify(arguments)
+        }
+        else {
+            return JSON.stringify(arguments[0])
+        }
+    });
 
     /**
      * @namespace {object} AIV
@@ -1492,7 +1508,7 @@
 
         let referencesCleaned = "";
         this.memoizedSanRefIDs(ref).forEach(function(ref){
-            referencesCleaned += `<p> ${AIV.memoizedRetRefLink(ref, targetGene)} </p>`;
+            referencesCleaned += `<p> ${AIV.memoizedRetRefLink(ref, targetGene, sourceGene)} </p>`;
         });
 
         let miFormattedHTML = "";
@@ -1539,7 +1555,7 @@
             let [typeTarget, targetGene] = tempData.target.split('_');
             if (tempData.reference){ //non-falsy value
                 AIV.memoizedSanRefIDs(tempData.reference).forEach(function(ref){
-                    cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene)} </p>`;
+                    cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene, sourceGene)} </p>`;
                 });
             }
 
@@ -1569,7 +1585,7 @@
                 let targetGene = tempDNAData.target;
                 if (tempDNAData.reference){ //non-falsy value
                     AIV.memoizedSanRefIDs(tempDNAData.reference).forEach(function(ref){
-                        cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene)} </p>`;
+                        cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene, sourceGene)} </p>`;
                     });
                 }
 
