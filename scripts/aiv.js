@@ -2214,10 +2214,10 @@
                     let firstSyn = synonyms[0];
                     let selector = this.cy.$(`#Protein_${gene}`);
                     if (firstSyn !== null){
-                        $(`.${gene}-annotate`).text(firstSyn + "\n" + `${res[gene].brief_description}`);
+                        $(`.${gene}-annotate`).text(firstSyn + " " + `${res[gene].brief_description}`);
                         if (selector.length > 0) { // only get proteins
                             selector.data({
-                                'annotatedName': firstSyn + "\n" + selector.data('name'),
+                                'annotatedName': firstSyn + " "+ selector.data('name'),
                                 'desc': desc,
                                 'synonyms': synonyms,
                             });
