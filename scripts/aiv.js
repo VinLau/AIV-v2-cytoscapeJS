@@ -1858,30 +1858,24 @@
      */
     AIV.processMapMan = function (MapManJSON) {
         if (!this.mapManLoadState) { //if MapMan data not yet fully parsed after API call, i.e. initial load
-            MapManJSON.forEach(function(geneMapMan) { // Iterate through each result item and inside however many annotations it has
-                var particularGene = AIV.cy.$('node[id = "Protein_' + geneMapMan.request.agi + '"]');
-                particularGene.data("numOfMapMans", geneMapMan.result.length); //for use in the qTip
-                geneMapMan.result.forEach(function (resultItem, index) {
-                    var MapManCodeN = 'MapManCode' +  (index + 1); //i.e. MapManCode1
-                    var MapManNameN = 'MapManName' +  (index + 1); //i.e. MapManName1
-                    particularGene.data({ //Add this data to object to be called via the qTip
-                        [MapManCodeN] : chopMapMan(resultItem.code),
-                        [MapManNameN] : chopMapMan(resultItem.name)
-                    });
-
-                    //Now call SVG modifying function for the first iteration, Nick agreed to only show the first MapMan on the Donut, also add this MapMan to our checklist/legend
-                    if (index === 0) {
-                        let mapManBIN = resultItem.code.split(".")[0]; // get MapMan BIN (leftmost number, i.e. get 29 from 29.12.3)
-                        particularGene.data('mapManOverlay', mapManBIN);
-                        modifySVGString(particularGene, mapManBIN);
-                        if (!AIV.mapManOnDom.hasOwnProperty(mapManBIN)){
-                            AIV.mapManOnDom[mapManBIN] = 1;
-                        }
-                        else {
-                            AIV.mapManOnDom[mapManBIN] = AIV.mapManOnDom[mapManBIN] + 1;
-                        }
-                    }
+            MapManJSON.result.genes.forEach(function(geneMapMan) { // Iterate through each result item and inside however many annotations it has
+                var particularGene = AIV.cy.$('node[id = "Protein_' + geneMapMan.identifier[0].toUpperCase() + geneMapMan.identifier.slice(1).toLowerCase() + '"]');
+                particularGene.data("numOfMapMans", 1); //for use in the qTip
+                var MapManCodeN = 'MapManCode' +  1; //i.e. MapManCode1
+                var MapManNameN = 'MapManName' +  1; //i.e. MapManName1
+                particularGene.data({ //Add this data to object to be called via the qTip
+                    'MapManCode1' : chopMapMan(geneMapMan.bincode),
+                    'MapManName1' : chopMapMan(geneMapMan.binname)
                 });
+                let mapManBIN = geneMapMan.bincode.split(".")[0]; // get MapMan BIN (leftmost number, i.e. get 29 from 29.12.3)
+                particularGene.data('mapManOverlay', mapManBIN);
+                modifySVGString(particularGene, mapManBIN);
+                if (!AIV.mapManOnDom.hasOwnProperty(mapManBIN)){
+                    AIV.mapManOnDom[mapManBIN] = 1;
+                }
+                else {
+                    AIV.mapManOnDom[mapManBIN] = AIV.mapManOnDom[mapManBIN] + 1;
+                }
             });
             // Last, use the mapManOnDom state variable to add the list of checkboxes to our #bootstrapDropDownMM
             // example li item <li><a href="#" class="small" data-value="27" tabIndex="-1"><input type="checkbox"/ checked="true"> MapMan 27 - RNA</a></li>
