@@ -1206,7 +1206,7 @@
         else if ( (regexGroup = referenceStr.match(/doi:(.*)/i)) ){
             if (regexGroup[0] === "doi:10.1016/j.cell.2016.04.038"){
                 console.log(regexGroup, AGIIdentifier, TF);
-                return `<a href="//bar.utoronto.ca/DAP-Seq-API?target=${AGIIdentifier}&tf=${TF}" target="_blank"> DAP-Seq (O'Malley 2016)</a>`
+                return `<a href="https://bar.utoronto.ca/DAP-Seq-API?target=${AGIIdentifier}&tf=${TF}" target="_blank"> DAP-Seq (O'Malley 2016)</a>`
             }
             return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> ${db} DOI ${regexGroup[1]} </a>`;
         }
@@ -1841,7 +1841,7 @@
      * @returns {string} - url for the HTTP request
      */
     AIV.createGETMapManURL = function () {
-        let mapmanURL = "//bar.utoronto.ca/interactions2/cgi-bin/bar_mapman.php?request=[";
+        let mapmanURL = "https://bar.utoronto.ca/interactions2/cgi-bin/bar_mapman.php?request=[";
         this.parseProteinNodes((nodeID) => mapmanURL +=`"${nodeID}",`);
         mapmanURL = mapmanURL.slice(0,-1); //remove last ','
         mapmanURL += "]";
@@ -2258,7 +2258,7 @@
      */
     AIV.createGeneSummariesAjaxPromise = function(ABIs) {
         return $.ajax({
-            url: "//bar.utoronto.ca/interactions2/cgi-bin/gene_summaries_POST.php",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/gene_summaries_POST.php",
             type: "POST",
             data: JSON.stringify(ABIs),
             contentType: "application/json",

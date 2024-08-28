@@ -295,7 +295,7 @@
      */
     function getXMLSourcesModifyDropdown(){
         $.ajax({
-            url: "//bar.utoronto.ca/interactions2/cgi-bin/getXML.php?species=arabidopsis",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/getXML.php?species=arabidopsis",
             type: "GET"
         })
             .then((res)=>{
@@ -320,7 +320,7 @@
                 return;
             }
             $.ajax({
-               url: "//bar.utoronto.ca/interactions2/cgi-bin/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
+               url: "https://bar.utoronto.ca/interactions2/cgi-bin/getTissues.php?species=arabidopsis&dataSource=" + event.target.value,
                type: "GET",
             })
                 .then((res) =>{
@@ -472,7 +472,7 @@
 
     function createExpressionAJAX(listOfAGIsAndExprsnModes, mode, AIVObj) {
         return $.ajax({
-            url: "//bar.utoronto.ca/interactions2/cgi-bin/getSample.php",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/getSample.php",
             type: "POST",
             data: JSON.stringify( listOfAGIsAndExprsnModes ),
             contentType : 'application/json',
@@ -634,7 +634,7 @@
      */
     function checkBIOGRIDServerStatus(){
         $.ajax({
-            url: "//bar.utoronto.ca/interactions2/cgi-bin/psicquic_biogrid_proxy.php?request=AT1G01010",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/psicquic_biogrid_proxy.php?request=AT1G01010",
             type: "GET"
         })
             .then((res, text, xhr)=>{
@@ -655,7 +655,7 @@
      */
     function checkINTACTServerStatus(){
         $.ajax({
-            url: "//bar.utoronto.ca/interactions2/cgi-bin/psicquic_intact_proxy.php?request=AT1G01010",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/psicquic_intact_proxy.php?request=AT1G01010",
             type: "GET"
         })
             .then((res, text, xhr)=>{
@@ -676,7 +676,7 @@
      */
     function effectorDropdownSelect2() {
         $.ajax({
-            url: "//bar.utoronto.ca/interactions2/cgi-bin/get_effectors.php",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/get_effectors.php",
             type: "GET"
         })
             .then((res)=>{
