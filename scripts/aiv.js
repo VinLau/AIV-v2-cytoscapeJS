@@ -2070,7 +2070,7 @@
      */
     AIV.returnSVGandMapManThenChain = function () {
         return $.ajax({
-            url: "https://bar.utoronto.ca/~vlau/suba4.php",
+            url: "https://bar.utoronto.ca/interactions2/cgi-bin/suba4.php",
             type: "POST",
             data: JSON.stringify( AIV.returnLocalizationPOSTJSON() ),
             contentType : 'application/json',
