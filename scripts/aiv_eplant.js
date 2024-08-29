@@ -4,7 +4,7 @@
  *
  */
 /*global cytoscape */
-(function(window, $, cytoscape, undefined) {
+(function (window, $, cytoscape, undefined) {
 	'use strict';
 
 	// The AIV namespace
@@ -13,7 +13,7 @@
 	/**
 	 * Initialize
 	 */
-	AIV.initialize = function() {
+	AIV.initialize = function () {
 		// Bind User events
 		this.bindUIEvents();
 
@@ -24,26 +24,26 @@
 	/**
 	 * Bind UI Events
 	 */
-	AIV.bindUIEvents = function() {
+	AIV.bindUIEvents = function () {
 		// Example button
-		$('#example').click(function() {
+		$('#example').click(function () {
 			$('#genes').val('At5g20920\nAt2g34970');
 		});
 
 		// Settings button
-		$('#settings').click(function(e) {
+		$('#settings').click(function (e) {
 			e.preventDefault();
 			$('#wrapper').toggleClass('toggled');
 		});
 
 		// About button
-		$('#showAboutModal').click(function(e) {
+		$('#showAboutModal').click(function (e) {
 			e.preventDefault();
 			$('#AboutModal').modal('show');
 		});
 
 		// Submit button
-		$('#submit').click(function(e) {
+		$('#submit').click(function (e) {
 			// Stop system submit, unless needed later on
 			e.preventDefault();
 
@@ -86,7 +86,7 @@
 	/**
 	 * Initailize Cytoscape
 	 */
-	AIV.intializeCy = function() {
+	AIV.intializeCy = function () {
 		this.cy = cytoscape({
 			container: $('#cy'),
 		});
@@ -100,7 +100,7 @@
 	 * This is from Ian's ePlant code
 	 * @returns {Object} Cytoscape stylesheet
 	 */
-	AIV.setCytoscapeStyles = function() {
+	AIV.setCytoscapeStyles = function () {
 		var styleSheet = cytoscape
 			.stylesheet()
 			.selector('node')
@@ -250,7 +250,7 @@
 	 * Sets Cytoscape configurations.
 	 * @returns {void}
 	 */
-	AIV.setCyConf = function() {
+	AIV.setCyConf = function () {
 		this.cyConf = {
 			wheelSensitivity: 0.2,
 			layout: { name: 'null' },
@@ -262,17 +262,17 @@
 		};
 
 		// Ready event handler
-		this.cyConf.ready = $.proxy(function() {
+		this.cyConf.ready = $.proxy(function () {
 			// Save Cytoscape
 			this.cy = $(this.domContainer).cytoscape('get');
 
 			// Use Cytoscape Automove to make protein compounds move in sync
 			var proteinPairMove = this.cy.automove({
-				nodesMatching: function(node) {
+				nodesMatching: function (node) {
 					var type = node._private.data.id.substring(9);
 					return type === 'PROTEIN_NODE' || type === 'QUERY_NODE';
 				},
-				reposition: function(node) {
+				reposition: function (node) {
 					var pos = node.position();
 					// Set the back node to have the same position
 					var backNode = node.siblings();
@@ -298,7 +298,7 @@
 			this.cy.on(
 				'mouseover',
 				'node',
-				$.proxy(function(event) {
+				$.proxy(function (event) {
 					var nodeID = event.cyTarget.data('id');
 					// Check that the node is not a compound node
 					if (nodeID !== 'COMPOUND_DNA' && nodeID !== 'COMPOUND_PROTEIN') {
@@ -314,7 +314,7 @@
 			this.cy.on(
 				'mouseout',
 				'node',
-				$.proxy(function(event) {
+				$.proxy(function (event) {
 					var nodeID = event.cyTarget.data('id');
 					if (nodeID !== 'COMPOUND_DNA' && nodeID !== 'COMPOUND_PROTEIN') {
 						this.nodeMouseOutHandler(this, event);
@@ -325,7 +325,7 @@
 			this.cy.on(
 				'tap',
 				'node',
-				$.proxy(function(event) {
+				$.proxy(function (event) {
 					var nodeID = event.cyTarget.data('id');
 					if (nodeID !== 'COMPOUND_DNA' && nodeID !== 'COMPOUND_PROTEIN') {
 						if (nodeID.substring(0, 3) !== 'chr') {
@@ -339,7 +339,7 @@
 			this.cy.on(
 				'position',
 				'node',
-				$.proxy(function(event) {
+				$.proxy(function (event) {
 					// Get node
 					var node = event.cyTarget;
 
@@ -362,7 +362,7 @@
 	 * Load data main function
 	 * @returns {boolean} True if the data is loaded
 	 */
-	AIV.loadData = function() {
+	AIV.loadData = function () {
 		let success = false; // results
 
 		let req = '?request=[';
@@ -380,16 +380,16 @@
 			type: 'GET',
 			dataType: 'json',
 		})
-			.done(function(data) {
+			.done(function (data) {
 				console.log(data);
 			})
-			.fail(function() {});
+			.fail(function () {});
 
 		return success;
 	};
 
 	// Ready to run
-	$(function() {
+	$(function () {
 		// Initailize AIV
 		AIV.initialize();
 	});

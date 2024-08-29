@@ -6,7 +6,7 @@
  * @copyright see MIT license on GitHub
  * @description please note that I seldom intentionally used data properties to nodes instead of classes as we cannot ( to my knowledge), select nodes by NOT having a class
  */
-(function(window, $, _, cytoscape, alertify, undefined) {
+(function (window, $, _, cytoscape, alertify, undefined) {
 	'use strict';
 
 	/** @namespace {object} AIV */
@@ -142,7 +142,7 @@
 	 * @namespace {object} AIV
 	 * @function initialize - Call bindUIEvents as the DOM has been prepared and add namespace variable
 	 */
-	AIV.initialize = function() {
+	AIV.initialize = function () {
 		// Set AIV namespace in window
 		window.aivNamespace = {};
 		window.aivNamespace.AIV = AIV;
@@ -154,9 +154,9 @@
 	 * @namespace {object} AIV
 	 * @function bindSubmit - Add functionality to buttons when DOM is loaded
 	 */
-	AIV.bindSubmit = function() {
+	AIV.bindSubmit = function () {
 		// Submit button
-		$('#submit').click(function(e) {
+		$('#submit').click(function (e) {
 			// Stop system submit, unless needed later on
 			e.preventDefault();
 
@@ -212,7 +212,7 @@
 	 * @namespace {object} AIV
 	 * @function resetState - Reset existing built-in state data from previous query
 	 */
-	AIV.resetState = function() {
+	AIV.resetState = function () {
 		this.chromosomesAdded = {};
 		this.mapManLoadState = false;
 		this.SUBA4LoadState = false;
@@ -230,7 +230,7 @@
 	 * @namespace {object} AIV
 	 * @function resetUI - Reset UI features that are run once a query was executed
 	 */
-	AIV.resetUI = function() {
+	AIV.resetUI = function () {
 		// reset the buttons
 		$('.submit-reset').prop('checked', false);
 		$('.fa-eye-slash').toggleClass('fa-eye fa-eye-slash');
@@ -251,7 +251,7 @@
 	 * @param {string} AGI
 	 * @returns {string} - formmated AGI, i.e. At3g10000
 	 */
-	AIV.formatAGI = function(AGI) {
+	AIV.formatAGI = function (AGI) {
 		AGI = AGI.replace(/T/g, 't');
 		AGI = AGI.replace(/G/g, 'g');
 		AGI = AGI.replace(/a/g, 'A');
@@ -262,7 +262,7 @@
 	 * @namespace {object} AIV
 	 * @function getCySpreadLayout - Returns spread layout for Cytoscape
 	 */
-	AIV.getCySpreadLayout = function() {
+	AIV.getCySpreadLayout = function () {
 		let layout = {};
 		layout.name = 'cose';
 		layout.nodeDimensionsIncludeLabels = true;
@@ -272,7 +272,7 @@
 		} else if (AIV.cy.nodes().length < 375) {
 			layout.boundingBox = { x1: 0, y1: 0, w: this.cy.width(), h: this.cy.height() - this.DNANodeSize }; //set boundaries to allow for clearer PDIs (DNA nodes are locked to start at x:50,y:0)
 		}
-		layout.stop = function() {
+		layout.stop = function () {
 			//this callback gets ran when layout is finished
 			AIV.defaultZoom = AIV.cy.zoom();
 			AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
@@ -284,13 +284,13 @@
 	 * @namespace {object} AIV
 	 * @function getCyCOSEBilkentLayout - Returns layout for Cytoscape
 	 */
-	AIV.getCyCOSEBilkentLayout = function() {
+	AIV.getCyCOSEBilkentLayout = function () {
 		let layout = {};
 		layout.name = 'cose-bilkent';
 		layout.padding = 5;
 		layout.animate = 'end';
 		layout.fit = true;
-		layout.stop = function() {
+		layout.stop = function () {
 			//this callback gets ran when layout is finished
 			AIV.defaultZoom = AIV.cy.zoom();
 			AIV.defaultPan = Object.assign({}, AIV.cy.pan()); //make a copy instead of takign reference
@@ -311,7 +311,7 @@
 	 * @namespace {object} AIV
 	 * @function getCyCerebralLayout - Returns layout for Cytoscape
 	 */
-	AIV.getCyCerebralLayout = function() {
+	AIV.getCyCerebralLayout = function () {
 		AIV.defaultZoom = 1; // reset zoom
 		AIV.defaultPan = { x: 0, y: 0 }; // reset pan
 		return window.cerebralNamespace.options;
@@ -321,7 +321,7 @@
 	 * @namespace {object} AIV
 	 * @function getCyStyle - Returns initial stylesheet of Cytoscape
 	 */
-	AIV.getCyStyle = function() {
+	AIV.getCyStyle = function () {
 		return cytoscape
 			.stylesheet()
 			.selector('node')
@@ -528,7 +528,7 @@
 	 * @function initializeCy - initialize Cytoscape with some default settings
 	 * @param {boolean} upload - boolean to determine how to initialize stylesheet based on if user is entering their own JSON
 	 */
-	AIV.initializeCy = function(upload) {
+	AIV.initializeCy = function (upload) {
 		this.cy = cytoscape({
 			container: document.getElementById('cy'),
 
@@ -548,7 +548,7 @@
 	 * @description - not currently used, see stylesheet
 	 * @param {number} interolog_confidence - expects a interolog confidence value from the GET request
 	 */
-	AIV.getWidth = function(interolog_confidence) {
+	AIV.getWidth = function (interolog_confidence) {
 		if (interolog_confidence > 10 || (interolog_confidence >= -1 && interolog_confidence <= -2401)) {
 			return '7';
 		} else if (interolog_confidence > 5 || (interolog_confidence > -2401 && interolog_confidence <= -4802)) {
@@ -576,7 +576,7 @@
 	 * @param {number} interolog_confidence
 	 * @returns {string} - hexcode for color
 	 */
-	AIV.getEdgeColor = function(correlation_coefficient, published, index, interolog_confidence) {
+	AIV.getEdgeColor = function (correlation_coefficient, published, index, interolog_confidence) {
 		correlation_coefficient = Math.abs(parseFloat(correlation_coefficient)); // Make the value positive
 		if (index === '2') {
 			//PDIs
@@ -608,7 +608,7 @@
 	 * @param {string} type - as the type of node it is, i.e. "Protein"
 	 * @param {boolean} [searchGene=false] - optional parameter that signifies node is a search query gene, will be used directly as a true false value into the data properties of the node
 	 */
-	AIV.addNode = function(node, type, searchGene = false) {
+	AIV.addNode = function (node, type, searchGene = false) {
 		let node_id = type + '_' + node;
 
 		// Add the node
@@ -621,7 +621,7 @@
 	 * @function addCompoundNode - generic function to add compound nodes to the cy core
 	 * @param idOfParent - id of compound node, 'id', example "nucleus"
 	 */
-	AIV.addCompoundNode = function(idOfParent) {
+	AIV.addCompoundNode = function (idOfParent) {
 		AIV.cy.add({
 			group: 'nodes',
 			data: {
@@ -635,7 +635,7 @@
 	/**
 	 * @function addLocalizationCompoundNodes - specifically add compound nodes to cy core by going into our localization state variable
 	 */
-	AIV.addLocalizationCompoundNodes = function() {
+	AIV.addLocalizationCompoundNodes = function () {
 		for (let i = 0; i < this.locCompoundNodes.length; i++) {
 			// console.log(this.locCompoundNodes[i]);
 			this.addCompoundNode(this.locCompoundNodes[i]);
@@ -646,7 +646,7 @@
 	/**
 	 * @function removeLocalizationCompoundNodes - Remove compound nodes from cy core so we can make a nicer layout after the users clicks on cose-bilkent layout and then goes back to the spread layout for example.
 	 */
-	AIV.removeLocalizationCompoundNodes = function() {
+	AIV.removeLocalizationCompoundNodes = function () {
 		if (!this.coseParentNodesOnCyCore) {
 			return;
 		} // exit if compound nodes not added yet
@@ -658,7 +658,7 @@
 	/**
 	 * @function removeAndAddNodesForCompoundNodes - Unfortuantely cytoscapejs cannot add compound nodes on the fly so we have to remove old nodes and add them back on with a parent property, hence this function
 	 */
-	AIV.removeAndAddNodesForCompoundNodes = function() {
+	AIV.removeAndAddNodesForCompoundNodes = function () {
 		// console.log("removeAndAddNodesForCompoundNodes 1", this.cy.elements('node[ id ^= "Protein_"]').size());
 		let oldEdges = this.cy.elements('edge');
 		oldEdges.remove();
@@ -679,7 +679,7 @@
 			.update(); // update the elements in the graph with the new style
 
 		// console.log("removeAndAddNodesForCompoundNodes 2", oldNodes.size());
-		oldNodes.forEach(function(oldNode) {
+		oldNodes.forEach(function (oldNode) {
 			let newData = Object.assign({}, oldNode.data()); // let us make a copy of the previous object not directly mutate it. Hopefully the JS garbage collector will clear the memory "https://stackoverflow.com/questions/37352850/cytoscape-js-delete-node-from-memory"
 
 			let filterClasses = '';
@@ -710,7 +710,7 @@
 	 * @param {object} DNAObjectData - as the interaction data as it comes in the GET request i.e.
 	 *                                 {source: .., target:.., index: 2, ..}
 	 */
-	AIV.addDNANodesToAIVObj = function(DNAObjectData) {
+	AIV.addDNANodesToAIVObj = function (DNAObjectData) {
 		var chrNum = DNAObjectData.target.charAt(2).toUpperCase(); //if it was At2g04880 then it'd '2'
 		var name = chrNum; // Just for 'm' and 'c'
 
@@ -740,7 +740,7 @@
 	 * @param {string} chrNumber - as the chromosomal number i.e. "2" or "M"
 	 * @param {string} chrName - as the name of the chromsome i.e. "2" or "Mitochondria"
 	 */
-	AIV.addChromosomeToCytoscape = function(DNAObject, chrNumber, chrName) {
+	AIV.addChromosomeToCytoscape = function (DNAObject, chrNumber, chrName) {
 		this.cy.add({
 			group: 'nodes',
 			data: {
@@ -766,7 +766,7 @@
 	 * @param {number | string | null} R - the correlation coefficient of the coexpression data (microarray)
 	 * @param {string} miTermsString - string of miTerms, can be delimited by a '|'
 	 */
-	AIV.addEdges = function(
+	AIV.addEdges = function (
 		source,
 		typeSource,
 		target,
@@ -789,7 +789,7 @@
 		// need to do a check for where the database came from as it is parsed differently and that INTACT/BIOGRID already come with MI term annotations
 		if (miTermsString !== null && miTermsString !== undefined && databaseSource === 'BAR') {
 			let miArray = miTermsString.split('|');
-			miArray.forEach(function(miTerm) {
+			miArray.forEach(function (miTerm) {
 				if (AIV.miTerms[miTerm] !== undefined) {
 					mi.push(`${miTerm} (${AIV.miTerms[miTerm]})`);
 				}
@@ -818,7 +818,7 @@
 	 * @namespace {object} AIV
 	 * @function addNumberOfPDIsToNodeLabel - This function will take the name property of a DNA Chr node and parse it nicely for display on the cy core
 	 */
-	AIV.addNumberOfPDIsToNodeLabel = function() {
+	AIV.addNumberOfPDIsToNodeLabel = function () {
 		for (let chr of Object.keys(this.chromosomesAdded)) {
 			let prevName = this.cy.getElementById(`DNA_Chr${chr}`).data('name');
 			this.cy
@@ -831,7 +831,7 @@
 	 * @namespace {object} AIV
 	 * @function setDNANodesPosition - Lock the position of the DNA nodes at the bottom of the cy app
 	 */
-	AIV.setDNANodesPosition = function() {
+	AIV.setDNANodesPosition = function () {
 		let xCoord = 50;
 		let viewportWidth = this.cy.width();
 		this.cy.$("node[id ^='DNA_Chr']:locked").unlock(); //if locked (for example during hide settings, unlock)
@@ -848,7 +848,7 @@
 	 * @namespace {object} AIV
 	 * @function resizeEListener - Resize UI listener when app is loaded, i.e. reposition the chr nodes if the browser size changes
 	 */
-	AIV.resizeEListener = function() {
+	AIV.resizeEListener = function () {
 		this.cy.on('resize', this.setDNANodesPosition.bind(AIV));
 	};
 
@@ -858,14 +858,14 @@
 	 * @param {Array.<Object>} arrayPDIdata - array of interaction data i.e. [ {source: .., target:.., index: 2, ..}, {}, {}]
 	 * @returns {string} - a nicely parsed HTML table
 	 */
-	AIV.createPDItable = function(arrayPDIdata) {
+	AIV.createPDItable = function (arrayPDIdata) {
 		console.log(arrayPDIdata);
 		let queryPDIsInChr = {};
 		let targets = [];
 		let pubmedRefHashTable = {};
 		let pValueHashTable = {};
 		let htmlTABLE = "<div class='pdi-table-scroll-pane'><table><tbody><tr><th></th>";
-		arrayPDIdata.forEach(function(PDI) {
+		arrayPDIdata.forEach(function (PDI) {
 			//populate local data to be used in another loop
 			// console.log("looping through each element of PDI array", PDI);
 			if (!queryPDIsInChr.hasOwnProperty(PDI.source)) {
@@ -884,7 +884,7 @@
 			htmlTABLE += `<th>${protein}<br>(${queryPDIsInChr[protein].length} PDIs)</th>`;
 		}
 		htmlTABLE += '</tr>';
-		targets.forEach(function(targetDNAGene) {
+		targets.forEach(function (targetDNAGene) {
 			//process remaining rows for each target DNA gene
 			htmlTABLE += `<tr><td>${targetDNAGene}</td>`;
 			for (let queryGene of Object.keys(queryPDIsInChr)) {
@@ -906,7 +906,7 @@
 						cellContent = "<td class='predicted-pdi-cell'>";
 						fontawesome = 'terminal';
 					}
-					AIV.memoizedSanRefIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function(ref) {
+					AIV.memoizedSanRefIDs(pubmedRefHashTable[queryGene + '_' + targetDNAGene]).forEach(function (ref) {
 						cellContent +=
 							AIV.memoizedRetRefLink(ref, targetDNAGene, queryGene).replace(
 								/("_blank">).*/,
@@ -933,12 +933,12 @@
 	 * Note we have to run a for loop on this to check where to add the qTips.
 	 * Moreover the text is created from another function which will nicely return a HTML table
 	 */
-	AIV.addChrNodeQtips = function() {
+	AIV.addChrNodeQtips = function () {
 		let that = this;
 		AIV.memoizedPDITable = _.memoize(this.createPDItable);
 		for (let chr of Object.keys(this.chromosomesAdded)) {
 			// console.log(this.chromosomesAdded[chr], `chr${chr}`);
-			this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function(event) {
+			this.cy.on('mouseover', `node[id^='DNA_Chr${chr}']`, function (event) {
 				var chrNode = event.target;
 				chrNode.qtip({
 					content: {
@@ -968,8 +968,8 @@
 	 * Namely we check the state of the AJAX call for that particular protein to decide whether to
 	 * make another AJAX call or to simply load the previously fetched data
 	 */
-	AIV.addProteinNodeQtips = function() {
-		this.cy.on('mouseover', 'node[id^="Protein"]', function(event) {
+	AIV.addProteinNodeQtips = function () {
+		this.cy.on('mouseover', 'node[id^="Protein"]', function (event) {
 			let protein = event.target;
 			let agiName = protein.data('name');
 			let exprOverlayChkbox = document.getElementById('exprnOverlayChkbox');
@@ -980,7 +980,7 @@
 						text: 'Protein ' + agiName,
 						button: 'Close',
 					},
-					text: function(event, api) {
+					text: function (event, api) {
 						let HTML = '';
 						HTML += AIV.showDesc(protein);
 						HTML += AIV.showSynonyms(protein);
@@ -1014,8 +1014,8 @@
 	 * @param {function} cb -  callback function
 	 * @param {boolean} [needNodeRef=false] - optional boolean to determine if callback should be performed on node object reference
 	 */
-	AIV.parseProteinNodes = function(cb, needNodeRef = false) {
-		this.cy.filter("node[id ^= 'Protein_At']").forEach(function(node) {
+	AIV.parseProteinNodes = function (cb, needNodeRef = false) {
+		this.cy.filter("node[id ^= 'Protein_At']").forEach(function (node) {
 			let nodeID = node.data('name');
 			if (nodeID.match(/^AT[1-5MC]G\d{5}$/i)) {
 				//only get AGI IDs, i.e. exclude effectors
@@ -1033,7 +1033,7 @@
 	 * @param {object} protein - reference to the particular protein which we are adding a qTip
 	 * @returns {string} - a nicely formmated HTML string
 	 */
-	AIV.showDesc = function(protein) {
+	AIV.showDesc = function (protein) {
 		let desc = protein.data('desc');
 		if (!desc) {
 			return '';
@@ -1046,7 +1046,7 @@
 	 * @param {object} protein - reference to the particular protein which we are adding a qTip
 	 * @returns {string} - a nicely formmated HTML string
 	 */
-	AIV.showSynonyms = function(protein) {
+	AIV.showSynonyms = function (protein) {
 		let syns = protein.data('synonyms');
 		if (!syns) {
 			return '';
@@ -1059,7 +1059,7 @@
 	 * @param {object} protein - reference to the particular protein which we are adding a qTip
 	 * @returns {string} - a nicely formmated HTML string of its mapman codes
 	 */
-	AIV.showMapMan = function(protein) {
+	AIV.showMapMan = function (protein) {
 		let mapManNums = protein.data('numOfMapMans');
 		if (!mapManNums) {
 			return '';
@@ -1084,7 +1084,7 @@
 	 * @param {object} protein - reference to the particular protein which we are adding a qTip
 	 * @returns {string} - a nicely formmated HTML string of a node's localizations in PCT form
 	 */
-	AIV.displaySUBA4qTipData = function(protein) {
+	AIV.displaySUBA4qTipData = function (protein) {
 		let locData = protein.data('localizationData');
 		if (!locData) {
 			return '';
@@ -1103,8 +1103,8 @@
 	 * @namespace {object} AIV
 	 * @function addEffectorNodeQtips - Add qTips (tooltips) to effector nodes, this should simply just show the name when hovered over
 	 */
-	AIV.addEffectorNodeQtips = function() {
-		this.cy.on('mouseover', 'node[id^="Effector"]', function(event) {
+	AIV.addEffectorNodeQtips = function () {
+		this.cy.on('mouseover', 'node[id^="Effector"]', function (event) {
 			var effector = event.target;
 			effector.qtip({
 				overwrite: false, //make sure tooltip won't be overriden once created
@@ -1141,7 +1141,7 @@
 		var refLinks = '';
 		if (reference) {
 			//non-falsy value (we may have changed it to false in the addEdges() call)
-			AIV.memoizedSanRefIDs(reference).forEach(function(ref) {
+			AIV.memoizedSanRefIDs(reference).forEach(function (ref) {
 				refLinks += '<p> Ref: ' + AIV.memoizedRetRefLink(ref, target, source) + '</p>';
 			});
 		}
@@ -1167,12 +1167,12 @@
 	 * @namespace {object} AIV
 	 * @function addPPIEdgeQtips - Add qTips (tooltips) to protein protein interaction edges, also adds qTips to protein-effector edges
 	 */
-	AIV.addPPIEdgeQtips = function() {
+	AIV.addPPIEdgeQtips = function () {
 		let that = this;
 		this.cy.on(
 			'mouseover',
 			'edge[source^="Protein"][target^="Protein"], edge[source^="Protein"][target^="Effector"], edge[source^="Effector"][target^="Protein"]',
-			function(event) {
+			function (event) {
 				let ppiEdge = event.target;
 				let edgeData = ppiEdge.data();
 				ppiEdge.qtip({
@@ -1214,7 +1214,7 @@
 	 *
 	 * @param {string} JSONReferenceString - as a string of links delimited by newlines "\n"
 	 */
-	AIV.sanitizeReferenceIDs = function(JSONReferenceString) {
+	AIV.sanitizeReferenceIDs = function (JSONReferenceString) {
 		let returnArray = JSONReferenceString.split('\n');
 		returnArray = returnArray.filter((item) => item !== '');
 		// console.log("sanitized ,", returnArray);
@@ -1243,7 +1243,7 @@
 	 * @param {string} TF - AGI for query/TF gene, used for DAP-Seq link
 	 * @return {string} - a link from the above list
 	 */
-	AIV.returnReferenceLink = function(referenceStr, AGIIdentifier, TF) {
+	AIV.returnReferenceLink = function (referenceStr, AGIIdentifier, TF) {
 		console.trace(referenceStr, AGIIdentifier, TF);
 		let regexGroup; //this variable necessary to extract parts from the reference string param
 		let db = referenceStr.match(/^([A-Z]+)-*/i)[1] + ' - ';
@@ -1273,7 +1273,7 @@
 	 * @function memoizedRetRefLink - memoized version of the returnReferenceLink pure function for performance
 	 * @param {Function} AIV.returnReferenceLink - returnReferenceLink function defintiion
 	 */
-	AIV.memoizedRetRefLink = _.memoize(AIV.returnReferenceLink, function() {
+	AIV.memoizedRetRefLink = _.memoize(AIV.returnReferenceLink, function () {
 		if (arguments[0] === 'doi:10.1016/j.cell.2016.04.038') {
 			// TODO: change this to PMID of dap-seq paper
 			return JSON.stringify(arguments);
@@ -1298,7 +1298,7 @@
 	 * iv ) After all this is finished, we run a bunch of functions that add qTips and Styling
 	 * @param {object} data - response JSON we get from the get_interactions_dapseq PHP webservice at the BAR
 	 */
-	AIV.parseBARInteractionsData = function(data) {
+	AIV.parseBARInteractionsData = function (data) {
 		let publicationsPPIArr = []; //local variable to store all unique publications that came from the JSON
 		for (let geneQuery of Object.keys(data)) {
 			let dataSubset = data[geneQuery]; //'[]' expression to access an object property
@@ -1382,7 +1382,7 @@
 						if (mi !== null && mi !== undefined) {
 							let tempMiArr = [];
 							let miArray = mi.split('|');
-							miArray.forEach(function(miTerm) {
+							miArray.forEach(function (miTerm) {
 								if (AIV.miTerms[miTerm] !== undefined) {
 									tempMiArr.push(`${miTerm} (${AIV.miTerms[miTerm]})`);
 								}
@@ -1421,8 +1421,8 @@
 
 		let filteredPubsArr = [].concat.apply(
 			[],
-			publicationsPPIArr.map(function(innerArr) {
-				return innerArr.split('\n').filter(function(item) {
+			publicationsPPIArr.map(function (innerArr) {
+				return innerArr.split('\n').filter(function (item) {
 					// if we have MIND/BIOGRID/BIND identifiers, filter them out as they're not really references for building our dropdown list
 					if (!item.match(/biogrid:(.*)/i) && !item.match(/Mind(\d+)$/i) && !item.match(/^(\d+)$/i)) {
 						return item;
@@ -1467,7 +1467,7 @@
 	 * @function buildRefDropdown - helper function that will build the dynamic reference dropdown, take in an array of PPI ref strings
 	 * @param arrayOfPubs - an array of publications for ex, ["None", "PubMed19095804", ...]
 	 */
-	AIV.buildRefDropdown = function(arrayOfPubs) {
+	AIV.buildRefDropdown = function (arrayOfPubs) {
 		let tempArrPubs = arrayOfPubs;
 		let whereNoneIs = tempArrPubs.indexOf('None');
 		if (whereNoneIs !== -1) {
@@ -1475,7 +1475,7 @@
 			tempArrPubs.splice(whereNoneIs, 1);
 		}
 		let inputsLabelsHTML = '';
-		tempArrPubs.forEach(function(ref) {
+		tempArrPubs.forEach(function (ref) {
 			if (!document.getElementById(`${ref}-checkbox`)) {
 				// check if DOM node exists before appending
 				let bindIDText = '';
@@ -1500,7 +1500,7 @@
 	 * @param {string} queryGeneAsAGI - should be something like "At3g10000"
 	 * @param {string} INTACTorBioGrid - should either be "INTACT" or "BioGrid"
 	 */
-	AIV.parsePSICQUICInteractionsData = function(PSICQUICdata, queryGeneAsAGI, INTACTorBioGrid) {
+	AIV.parsePSICQUICInteractionsData = function (PSICQUICdata, queryGeneAsAGI, INTACTorBioGrid) {
 		// INTACT and BioGrid PPIs are experimentally validated by default hence these 3 colors, style, width
 
 		let regex;
@@ -1549,7 +1549,7 @@
         Need index to add PubMedID (as far as we know there is only one pubmed ID per interaction) so we can simply map out the index.
         Note we check if an edge already exists as there seems to be rarely a duplicate in the PSICQUIC response data
          */
-		arrPPIsProteinsRaw.forEach(function(proteinItem, index) {
+		arrPPIsProteinsRaw.forEach(function (proteinItem, index) {
 			if (AIV.cy.$id(`Protein_${proteinItem}`).empty()) {
 				//Check if node already on cy core (don't need to do an array check as form nodes added in the then() after the Promise.all)
 				AIV.addNode(proteinItem, 'Protein');
@@ -1583,7 +1583,7 @@
 			}
 		});
 
-		let pubmedIdArrUnique = pubmedIdArr.filter(function(item, index, selfArr) {
+		let pubmedIdArrUnique = pubmedIdArr.filter(function (item, index, selfArr) {
 			// delete duplicates
 			return index === selfArr.indexOf(item);
 		});
@@ -1602,7 +1602,7 @@
 	 * @param {string} ref - if a published interaction, pubmed or DOI or MIND etc
 	 * @param miTerm - MI term that describes what type of a experiment was performed
 	 */
-	AIV.addTableRow = function(intType, dbSource, sourceGene, targetGene, interoConf, pearsonCC, ref, miTerm) {
+	AIV.addTableRow = function (intType, dbSource, sourceGene, targetGene, interoConf, pearsonCC, ref, miTerm) {
 		//store in a state variable for performance boot rather than adding one row at a time to DOM
 
 		/**
@@ -1618,14 +1618,14 @@
 		}
 
 		let referencesCleaned = '';
-		this.memoizedSanRefIDs(ref).forEach(function(ref) {
+		this.memoizedSanRefIDs(ref).forEach(function (ref) {
 			referencesCleaned += `<p> ${AIV.memoizedRetRefLink(ref, targetGene, sourceGene)} </p>`;
 		});
 
 		let miFormattedHTML = '';
 		if (miTerm !== null && miTerm !== undefined && dbSource === 'BAR') {
 			let miArray = miTerm.split('|');
-			miArray.forEach(function(miTerm) {
+			miArray.forEach(function (miTerm) {
 				if (AIV.miTerms[miTerm] !== undefined) {
 					miFormattedHTML += `<p>${miTerm} (${AIV.miTerms[miTerm]})</p>`;
 				}
@@ -1654,11 +1654,11 @@
 	/**
 	 * @function createTableFromEdges - this funciton will scan through our recently added Cy PPI edges and then our state variable of chromosomes to build a neat HTML table to be appended to the #csvTable modal
 	 */
-	AIV.createTableFromEdges = function() {
+	AIV.createTableFromEdges = function () {
 		let htmlString = '';
 
 		// process PPI edges first
-		this.cy.edges('[target *= "Protein"], [target *= "Effector"]').forEach(function(ppiEdge) {
+		this.cy.edges('[target *= "Protein"], [target *= "Effector"]').forEach(function (ppiEdge) {
 			let tempData = ppiEdge.data();
 
 			let cleanRefs = '';
@@ -1666,7 +1666,7 @@
 			let [typeTarget, targetGene] = tempData.target.split('_');
 			if (tempData.reference) {
 				//non-falsy value
-				AIV.memoizedSanRefIDs(tempData.reference).forEach(function(ref) {
+				AIV.memoizedSanRefIDs(tempData.reference).forEach(function (ref) {
 					cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene, sourceGene)} </p>`;
 				});
 			}
@@ -1698,7 +1698,7 @@
 				let targetGene = tempDNAData.target;
 				if (tempDNAData.reference) {
 					//non-falsy value
-					AIV.memoizedSanRefIDs(tempDNAData.reference).forEach(function(ref) {
+					AIV.memoizedSanRefIDs(tempDNAData.reference).forEach(function (ref) {
 						cleanRefs += `<p> ${AIV.memoizedRetRefLink(ref, targetGene, sourceGene)} </p>`;
 					});
 				}
@@ -1706,7 +1706,7 @@
 				let miHTML = '';
 				if (tempDNAData.mi !== null && tempDNAData.mi !== undefined) {
 					let miArray = tempDNAData.mi.split('|');
-					miArray.forEach(function(miTerm) {
+					miArray.forEach(function (miTerm) {
 						if (AIV.miTerms[miTerm] !== undefined) {
 							miHTML += `<p>${miTerm} (${AIV.miTerms[miTerm]})</p>`;
 						}
@@ -1739,7 +1739,7 @@
 	 * @function returnLocalizationPOSTJSON - Create and return SUBA URL string for AJAX call
 	 * @returns {Object} - an object with the string of AGIs and the predicted localizations
 	 */
-	AIV.returnLocalizationPOSTJSON = function() {
+	AIV.returnLocalizationPOSTJSON = function () {
 		var reqJSON = {
 			AGI_IDs: [],
 		};
@@ -1761,12 +1761,12 @@
 	 *
 	 * @param {object} SUBADATA as the response JSON we get from our SUBA4 backend (at the BAR)
 	 */
-	AIV.addLocalizationDataToNodes = function(SUBADATA) {
+	AIV.addLocalizationDataToNodes = function (SUBADATA) {
 		AIV.cy.startBatch();
 
 		AIV.locCompoundNodes = [];
 
-		Object.keys(SUBADATA).forEach(function(geneAGIName) {
+		Object.keys(SUBADATA).forEach(function (geneAGIName) {
 			let nodeID = geneAGIName; //AT1G04170 to At1g04170
 			let geneSUBAData = SUBADATA[geneAGIName];
 			if (Object.keys(geneSUBAData.data).length) {
@@ -1801,7 +1801,7 @@
 			let retObj = [];
 			let deno = 0;
 			subaLocData.forEach((locScore) => (deno += Object.values(locScore)[0])); // use [0] because only one property is in the obj i.e. [{"nucleus": 20},{"cytosol": 10}]
-			subaLocData.forEach(function(locScore) {
+			subaLocData.forEach(function (locScore) {
 				retObj.push({ [Object.keys(locScore)[0]]: Object.values(locScore)[0] / deno });
 			});
 			return retObj;
@@ -1820,7 +1820,7 @@
 	 *
 	 * Credits to: https://medium.com/@heyoka/scratch-made-svg-donut-pie-charts-in-html5-2c587e935d72
 	 */
-	AIV.createSVGPieDonutCartStr = function(AGIGene) {
+	AIV.createSVGPieDonutCartStr = function (AGIGene) {
 		let nodeData = AGIGene.data();
 		let AGIGeneLocData = nodeData.localizationData;
 		let cyNodeSize = nodeData.queryGene ? this.searchNodeSize : this.nodeSize;
@@ -1843,7 +1843,7 @@
 
 		if (AGIGeneLocData.length > 0) {
 			// need check as nodes without loc data with crash app
-			AGIGeneLocData.forEach(function(locPercentage) {
+			AGIGeneLocData.forEach(function (locPercentage) {
 				pctAndColorArray.push({
 					pct: Object.values(locPercentage)[0] * 100, //convert to % for easier parsing later
 					color: AIV.locColorAssignments[Object.keys(locPercentage)[0]],
@@ -1858,7 +1858,7 @@
 		var allSegsLength = 0;
 
 		// Based on the sorted array we created above, let's add some 'donut segments' to the SVG string
-		pctAndColorArray.forEach(function(pctAndColor) {
+		pctAndColorArray.forEach(function (pctAndColor) {
 			SVGstr += `<circle class="donut-segment" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}"  fill="transparent" stroke="${
 				pctAndColor.color
 			}" stroke-width="${strokeWidth}" stroke-dasharray="${pctAndColor.pct * scaling} ${
@@ -1883,7 +1883,7 @@
 	 * and add borders for those nodes which have experimental SUBA values
 	 * @returns {object} - a AIV css style update object ( not ran yet, it runs with update() )
 	 */
-	AIV.returnBGImageSVGasCSS = function() {
+	AIV.returnBGImageSVGasCSS = function () {
 		return AIV.cy
 			.style() //specifying style instead of stylesheet updates instead of replaces the cy CSS
 			.selector('node[id ^= "Protein_At"]')
@@ -1901,8 +1901,8 @@
 	/**
 	 * @function transferLocDataToTable - parse every protein and effector node on the DOM and modify the 'csv' table accordingly (add an unordered list of localization percentage scores)
 	 */
-	AIV.transferLocDataToTable = function() {
-		this.parseProteinNodes(function(node) {
+	AIV.transferLocDataToTable = function () {
+		this.parseProteinNodes(function (node) {
 			let ulString = '<ul>';
 			let locData = node.data('localizationData');
 			for (let i = 0; i < locData.length; i++) {
@@ -1918,7 +1918,7 @@
 			$(`.${nodeID}-ppi-loc`).html(ulString); //only change ppis, pdis are assumed to be nuclear
 		}, true);
 
-		this.cy.filter("node[id ^= 'Effector']").forEach(function(effector) {
+		this.cy.filter("node[id ^= 'Effector']").forEach(function (effector) {
 			$(`.${effector.data('name')}-ppi-loc`).text('extracellular(assumed)');
 		});
 	};
@@ -1928,9 +1928,9 @@
 	 * @function hideDonuts - un/hides donuts by changing display attribute inside the svg
 	 * @param {boolean} hide - boolean to determine if we are hiding or not
 	 */
-	AIV.hideDonuts = function(hide) {
+	AIV.hideDonuts = function (hide) {
 		this.cy.startBatch();
-		this.cy.$('node[?svgDonut]').forEach(function(node) {
+		this.cy.$('node[?svgDonut]').forEach(function (node) {
 			//check for nodes with an SVG donut
 			let newSVGString = decodeURIComponent(node.data('svgDonut'));
 			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', '');
@@ -1953,7 +1953,7 @@
 	 * Data returned is an array of objects, MapMan code is nested inside "result[0].parent.code" for each AGI
 	 * @returns {string} - url for the HTTP request
 	 */
-	AIV.createGETMapManURL = function() {
+	AIV.createGETMapManURL = function () {
 		let mapmanURL = 'https://bar.utoronto.ca/interactions2/cgi-bin/bar_mapman.php?request=[';
 		this.parseProteinNodes((nodeID) => (mapmanURL += `"${nodeID}",`));
 		mapmanURL = mapmanURL.slice(0, -1); //remove last ','
@@ -1969,10 +1969,10 @@
 	 *
 	 * @param {object} MapManJSON - the JSON response we receive from the MapMan API
 	 */
-	AIV.processMapMan = function(MapManJSON) {
+	AIV.processMapMan = function (MapManJSON) {
 		if (!this.mapManLoadState) {
 			//if MapMan data not yet fully parsed after API call, i.e. initial load
-			MapManJSON.result.genes.forEach(function(geneMapMan) {
+			MapManJSON.result.genes.forEach(function (geneMapMan) {
 				// Iterate through each result item and inside however many annotations it has
 				var particularGene = AIV.cy.$(
 					'node[id = "Protein_' +
@@ -2026,7 +2026,7 @@
 			document.getElementById('bootstrapDropDownMM').appendChild(df);
 			AIV.mapManDropDown(AIV);
 		} else {
-			this.parseProteinNodes(function(proteinNode) {
+			this.parseProteinNodes(function (proteinNode) {
 				modifySVGString(proteinNode, proteinNode.data('mapManOverlay'));
 			}, true);
 		}
@@ -2071,9 +2071,9 @@
 	 * @function hideMapMan - un/hides MapMan centre by un/enabling visibility attribute inside the svg
 	 * @param {boolean} hide - boolean to determine if we are hiding or not
 	 */
-	AIV.hideMapMan = function(hide) {
+	AIV.hideMapMan = function (hide) {
 		this.cy.startBatch();
-		this.cy.$('node[?MapManCode1]').forEach(function(node) {
+		this.cy.$('node[?MapManCode1]').forEach(function (node) {
 			//check for nodes with a MapMan
 			let newSVGString = decodeURIComponent(node.data('svgDonut'));
 			newSVGString = newSVGString.replace('data:image/svg+xml;utf8,', '');
@@ -2092,13 +2092,13 @@
 	 * @namespace {object} AIV
 	 * @function effectorsLocHouseCleaning - purpose of this function is to fill in the localization data for effectors as they do not undergo the same parsing as protein nodes. Specifically they belong to the extracellular matrix (ECM), so if one exists on the app, modify the compound state variable correctly if not added already
 	 */
-	AIV.effectorsLocHouseCleaning = function() {
+	AIV.effectorsLocHouseCleaning = function () {
 		let effectorSelector = this.cy.filter("node[id ^= 'Effector']");
 		if (effectorSelector.length > 0) {
 			if (this.locCompoundNodes.indexOf('extracellular') === -1) {
 				this.locCompoundNodes.push('extracellular');
 			}
-			effectorSelector.forEach(function(effector) {
+			effectorSelector.forEach(function (effector) {
 				//put effectors in ECM
 				effector.data('localization', 'extracellular');
 			});
@@ -2110,7 +2110,7 @@
 	 * @function loadData - Load data main function
 	 * @returns {boolean} - True if the data is laoded
 	 */
-	AIV.loadData = function() {
+	AIV.loadData = function () {
 		// Dynamically build an array of promises for the Promise.all call later
 		var promisesArr = [];
 
@@ -2126,7 +2126,7 @@
 		// console.log(promisesArr);
 
 		Promise.all(promisesArr)
-			.then(function(promiseRes) {
+			.then(function (promiseRes) {
 				// console.log("Response:", promiseRes);
 				// Add Query node (user inputed in HTML form)
 				for (let i = 0; i < AIV.genesList.length; i++) {
@@ -2183,7 +2183,7 @@
 				document.getElementById('loading').classList.add('loaded'); //hide loading spinner
 				$('#loading').children().remove(); //delete the loading spinner divs
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				alertify.logPosition('top right');
 				alertify.error(
 					`Error during fetching interaction data, try BAR if using PSICQUIC services, status code: ${err.status}`,
@@ -2196,7 +2196,7 @@
 	 * @function returnSVGandMapManThenChain - Return a promise chain that makes two ajax calls to our SUBA4 localziation API and the MapMan API to draw the SVG piechart background-images. This chain contains some logic with the load state. This logic is for when the user selects the switch for 'predicted' localization data. Note that this implementation will make re-calls to the SUBA4 API when the user hits the switch (as opposed to saving the predicted and experimental data to memory).
 	 * @return {Promise.<TResult>}
 	 */
-	AIV.returnSVGandMapManThenChain = function() {
+	AIV.returnSVGandMapManThenChain = function () {
 		return $.ajax({
 			url: 'https://bar.utoronto.ca/interactions2/cgi-bin/suba4.php',
 			type: 'POST',
@@ -2204,7 +2204,7 @@
 			contentType: 'application/json',
 			dataType: 'json',
 		})
-			.then(function(SUBAJSON) {
+			.then(function (SUBAJSON) {
 				AIV.addLocalizationDataToNodes(SUBAJSON);
 
 				//Loop through ATG protein nodes and add a SVG string property for bg-image css
@@ -2220,11 +2220,11 @@
 				AIV.transferLocDataToTable();
 				AIV.SUBA4LoadState = true;
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				alertify.logPosition('top right');
 				alertify.error(`Error made when requesting to SUBA webservice, status code: ${err.status}`);
 			})
-			.then(function() {
+			.then(function () {
 				// chain this AJAX call to the above as the mapman relies on the drawing of the SVG pie donuts, i.e. wait for above sync code to finish
 				if (!AIV.mapManLoadState) {
 					//don't make another ajax call if we already have MapMan data in our nodes (this logic is for our checkbox)
@@ -2235,13 +2235,13 @@
 					});
 				}
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				alertify.logPosition('top right');
 				alertify.error(
 					`Error made when requesting to MapMan webservice (note: we cannot load more than 700 MapMan numbers), status code: ${err.status}`,
 				);
 			})
-			.then(function(resMapManJSON) {
+			.then(function (resMapManJSON) {
 				if (typeof resMapManJSON !== 'undefined' && resMapManJSON.status === 'fail') {
 					throw new Error('MapMan server call failed!');
 				}
@@ -2250,7 +2250,7 @@
 				AIV.cy.endBatch();
 				AIV.mapManLoadState = true;
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				alertify.logPosition('top right');
 				alertify.error(`Error processing MapMan data; ${err}`);
 			});
@@ -2260,7 +2260,7 @@
 	 * @function createBARAJaxPromise - programatically figures out how to build the BAR URL get request
 	 * @returns {Promise.<{res: object, ajaxCallType: string}>|*}
 	 */
-	AIV.createBARAjaxPromise = function() {
+	AIV.createBARAjaxPromise = function () {
 		// AGI IDs
 		let postObj = {};
 		postObj.loci = '';
@@ -2293,7 +2293,7 @@
 	 * @function createINTACTAjaxPromise - Parse through the gene form and create a bunch of AJAX requests to the INTACT PSICQUIC webservice
 	 * @returns {Array} - array of ajax promises that return objects when resolved
 	 */
-	AIV.createINTACTAjaxPromise = function() {
+	AIV.createINTACTAjaxPromise = function () {
 		var returnArr = []; //return an array of AJAX promises to be concatenated later
 		for (let i = 0; i < this.genesList.length; i++) {
 			returnArr.push(
@@ -2311,7 +2311,7 @@
 	 * @function createINTACTAjaxPromise - Parse through the gene form and create a bunch of AJAX requests to the BioGrid PSICQUIC webservice
 	 * @returns {Array} - array of ajax promises that return objects when resolved
 	 */
-	AIV.createBioGridAjaxPromise = function() {
+	AIV.createBioGridAjaxPromise = function () {
 		var returnArr = []; //return an array of AJAX promises to be concatenated later
 		for (let i = 0; i < this.genesList.length; i++) {
 			returnArr.push(
@@ -2329,7 +2329,7 @@
 	 * @function fetchGeneAnnoForTable - Take an array of AGIs and perform an ajax call to get gene summaries... then modify the DOM directly
 	 * @param ABIsArr
 	 */
-	AIV.fetchGeneAnnoForTable = function(ABIsArr) {
+	AIV.fetchGeneAnnoForTable = function (ABIsArr) {
 		// console.log(ABIsArr);
 		this.createGeneSummariesAjaxPromise(ABIsArr)
 			.then((res) => {
@@ -2359,7 +2359,7 @@
 						}
 					}
 				}
-				this.cy.filter("node[id ^= 'Effector']").forEach(function(effector) {
+				this.cy.filter("node[id ^= 'Effector']").forEach(function (effector) {
 					$(`.${effector.data('name')}-annotate`).text('null');
 				});
 				this.returnGeneNameCSS().update();
@@ -2374,7 +2374,7 @@
 	 * @function returnGeneNameCSS - return a style object such to change the labels
 	 * @return {Object} - cytoscape css object
 	 */
-	AIV.returnGeneNameCSS = function() {
+	AIV.returnGeneNameCSS = function () {
 		return this.cy.style().selector('node[id ^= "Protein_At"]').css({
 			label: 'data(annotatedName)',
 		});
@@ -2385,7 +2385,7 @@
 	 * @param {Array.<string>} ABIs - array of ABIs i.e. ["At5g04340","At4g30930"]
 	 * @returns {Object} - jQuery AJAX promise object
 	 */
-	AIV.createGeneSummariesAjaxPromise = function(ABIs) {
+	AIV.createGeneSummariesAjaxPromise = function (ABIs) {
 		return $.ajax({
 			url: 'https://bar.utoronto.ca/interactions2/cgi-bin/gene_summaries_POST.php',
 			type: 'POST',
@@ -2398,7 +2398,7 @@
 	/**
 	 * @function addContextMenus - add a right click menu to the current nodes on the cy app
 	 */
-	AIV.addContextMenus = function() {
+	AIV.addContextMenus = function () {
 		this.cy.contextMenus({
 			menuItems: [
 				{
@@ -2406,7 +2406,7 @@
 					content: '&nbsp; remove',
 					image: { src: 'images/trash-can.svg', width: 12, height: 12, x: 6, y: 6 },
 					selector: 'node',
-					onClickFunction: function(event) {
+					onClickFunction: function (event) {
 						var target = event.target || event.cyTarget;
 						target.remove();
 					},
@@ -2420,14 +2420,14 @@
 	 * @param {Object} el - DOM node
 	 * @param {Object} attrs - attribute object, eg {"src" : "www.google.ca", "data-value" : "kek"}
 	 */
-	AIV.helperSetAttributes = function(el, attrs) {
+	AIV.helperSetAttributes = function (el, attrs) {
 		for (let key in attrs) {
 			el.setAttribute(key, attrs[key]);
 		}
 	};
 
 	// Ready to run
-	$(function() {
+	$(function () {
 		// Initialize AIV
 		AIV.initialize();
 	});
