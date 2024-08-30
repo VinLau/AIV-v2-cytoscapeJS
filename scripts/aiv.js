@@ -1114,7 +1114,7 @@
             return refLinks; //can be "" or have a bunch of links..., "NA" should return ""
         }
         else { //if interlog confidence is less than zero, show external docker link
-            return "<p><a href='http://bar.utoronto.ca/protein_docker/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
+            return "<p><a href='https://bar.utoronto.ca/protein_docker/?id1=" + modifyProString(source) + "&id2=" + modifyProString(target) + "' target='_blank'> " + "Predicted Structural Interaction " + "</a></p>" + refLinks;
         }
     };
 
@@ -1208,7 +1208,7 @@
                 console.log(regexGroup, AGIIdentifier, TF);
                 return `<a href="https://bar.utoronto.ca/DAP-Seq-API?target=${AGIIdentifier}&tf=${TF}" target="_blank"> DAP-Seq (O'Malley 2016)</a>`
             }
-            return `<a href="http://dx.doi.org/${regexGroup[1]}" target="_blank"> ${db} DOI ${regexGroup[1]} </a>`;
+            return `<a href="https://dx.doi.org/${regexGroup[1]}" target="_blank"> ${db} DOI ${regexGroup[1]} </a>`;
         }
         else if ( (regexGroup = referenceStr.match(/biogrid:(.*)/i)) ){
             return `<a href="https://thebiogrid.org/interaction/${regexGroup[1]}" target="_blank"> ${db} BioGrid ${regexGroup[1]}</a>`;
@@ -2144,7 +2144,7 @@
         // DNA
         postObj.querydna = $('#queryDna').is(':checked');
 
-        let serviceURL = '//bar.utoronto.ca/interactions2/cgi-bin/get_interactions_dapseq.php';
+        let serviceURL = 'https://bar.utoronto.ca/interactions2/cgi-bin/get_interactions_dapseq.php';
 
         return $.ajax({
             url: serviceURL,
@@ -2165,7 +2165,7 @@
         for (let i = 0; i < this.genesList.length; i++) {
             returnArr.push(
                 $.ajax({
-                    url: `//bar.utoronto.ca/interactions2/cgi-bin/psicquic_intact_proxy.php?request=${this.genesList[i]}`,
+                    url: `https://bar.utoronto.ca/interactions2/cgi-bin/psicquic_intact_proxy.php?request=${this.genesList[i]}`,
                     type: 'GET',
                     dataType: 'text'
                 })
@@ -2184,7 +2184,7 @@
         for (let i = 0; i < this.genesList.length; i++) {
             returnArr.push(
                 $.ajax({
-                    url: `//bar.utoronto.ca/interactions2/cgi-bin/psicquic_biogrid_proxy.php?request=${this.genesList[i]}`,
+                    url: `https://bar.utoronto.ca/interactions2/cgi-bin/psicquic_biogrid_proxy.php?request=${this.genesList[i]}`,
                     type: 'GET',
                     dataType: 'text'
                 })

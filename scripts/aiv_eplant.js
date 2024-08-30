@@ -344,7 +344,7 @@
 
 	/**
 	 * Load data main function
-	 * @returns {boolean} True if the data is laoded
+	 * @returns {boolean} True if the data is loaded
 	 */
 	AIV.loadData = function() {
 		let success = false;	// results
@@ -357,7 +357,7 @@
 			}
 		}
 		req += "]";
-		var serviceURL = '//bar.utoronto.ca/eplant/cgi-bin/get_interactions_dapseq.php' + req;
+		var serviceURL = 'https://bar.utoronto.ca/eplant/cgi-bin/get_interactions_dapseq.php' + req;
 
 		$.ajax({
 			url: serviceURL,
