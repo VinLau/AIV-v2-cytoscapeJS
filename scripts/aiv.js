@@ -1718,7 +1718,7 @@
         let radius, strokeWidth;
         radius = strokeWidth = cyNodeSize/2;
         let SVGstr = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg>';
-        SVGstr += `<svg width="${SVGwidthheight}" height="${SVGwidthheight}" class="donut" xmlns="https://www.w3.org/2000/svg">`;
+        SVGstr += `<svg width="${SVGwidthheight}" height="${SVGwidthheight}" class="donut" xmlns="http://www.w3.org/2000/svg">`;
         SVGstr += `<circle class="donut-hole" cx="${donutCxCy}" cy="${donutCxCy}" r="${radius}" fill="transparent"></circle>`;
 
         //The below donut segment will appear for genes without SUBA data... it will be all grey
